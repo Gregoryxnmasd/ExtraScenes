@@ -21,11 +21,21 @@ public class PlayerStateSnapshot {
         this.flying = player.isFlying();
         this.flySpeed = player.getFlySpeed();
         this.walkSpeed = player.getWalkSpeed();
-        this.health = player.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null
+        Attribute maxHealthAttribute = resolveMaxHealthAttribute();
+        this.health = maxHealthAttribute != null && player.getAttribute(maxHealthAttribute) != null
                 ? player.getHealth()
                 : 20.0;
         this.potionEffects = player.getActivePotionEffects();
         this.helmet = player.getInventory().getHelmet();
+    }
+
+    private static Attribute resolveMaxHealthAttribute() {
+        for (Attribute attribute : Attribute.values()) {
+            if ("GENERIC_MAX_HEALTH".equals(attribute.name()) || "MAX_HEALTH".equals(attribute.name())) {
+                return attribute;
+            }
+        }
+        return null;
     }
 
     public GameMode getGameMode() {

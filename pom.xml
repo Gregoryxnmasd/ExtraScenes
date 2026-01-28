@@ -29,10 +29,6 @@
             <id>dmulloy2</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
         </repository>
-        <repository>
-            <id>titan</id>
-            <url>https://repo.titanbuilt.net/</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -45,8 +41,9 @@
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>5.3.0</version>
-            <scope>provided</scope>
+            <version>5.4.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/ProtocolLib (6).jar</systemPath>
         </dependency>
         <dependency>
             <groupId>me.clip</groupId>
@@ -57,8 +54,9 @@
         <dependency>
             <groupId>com.ticxo.modelengine</groupId>
             <artifactId>ModelEngine</artifactId>
-            <version>4.0.0</version>
-            <scope>provided</scope>
+            <version>4.0.9</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/ModelEngine-R4.0.9-2210.jar</systemPath>
         </dependency>
     </dependencies>
 
