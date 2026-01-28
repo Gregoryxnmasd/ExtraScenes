@@ -43,7 +43,7 @@
             <artifactId>ProtocolLib</artifactId>
             <version>5.4.0</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/ProtocolLib (6).jar</systemPath>
+            <systemPath>${project.basedir}/libs/ProtocolLib-6.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>me.clip</groupId>
