@@ -20,9 +20,7 @@ public class SceneEditorListener implements Listener {
             return;
         }
         String title = event.getView().getTitle();
-        if (!title.startsWith(SceneEditorGUI.MAIN_TITLE_PREFIX)
-                && !title.startsWith(SceneEditorGUI.ADD_TITLE_PREFIX)
-                && !title.startsWith(SceneEditorGUI.EDIT_TITLE_PREFIX)) {
+        if (!title.startsWith(GuiUtils.TITLE_PREFIX)) {
             return;
         }
         event.setCancelled(true);

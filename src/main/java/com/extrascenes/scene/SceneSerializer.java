@@ -28,6 +28,10 @@ public class SceneSerializer {
         root.addProperty("formatVersion", scene.getFormatVersion());
         root.addProperty("name", scene.getName());
         root.addProperty("durationTicks", scene.getDurationTicks());
+        root.addProperty("defaultSmoothing", scene.getDefaultSmoothing().name());
+        root.addProperty("cameraMode", scene.getCameraMode());
+        root.addProperty("freezePlayer", scene.isFreezePlayer());
+        root.addProperty("allowGlobalCommands", scene.isAllowGlobalCommands());
 
         JsonObject tracks = new JsonObject();
         for (Map.Entry<SceneTrackType, Track<? extends Keyframe>> entry : scene.getTracks().entrySet()) {

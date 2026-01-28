@@ -47,6 +47,13 @@ public class Track<T extends Keyframe> {
         return removed;
     }
 
+    public void clear() {
+        if (!keyframes.isEmpty()) {
+            keyframes.clear();
+            revision++;
+        }
+    }
+
     public void moveKeyframe(UUID keyframeId, int newTimeTicks) {
         T target = null;
         for (T keyframe : keyframes) {

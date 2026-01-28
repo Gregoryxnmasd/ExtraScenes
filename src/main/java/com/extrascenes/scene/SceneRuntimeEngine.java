@@ -82,7 +82,7 @@ public class SceneRuntimeEngine {
             return;
         }
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
-        if ("PACKET".equalsIgnoreCase(plugin.getConfig().getString("camera.mode", "SPECTATOR"))) {
+        if ("PACKET".equalsIgnoreCase(session.getScene().getCameraMode())) {
             protocolAdapter.sendCameraPacket(player, cameraRig);
         }
 
@@ -182,7 +182,7 @@ public class SceneRuntimeEngine {
 
     private void executeCommands(Player player, SceneSession session, CommandKeyframe keyframe, int durationTicks) {
         List<String> commands = keyframe.getCommands();
-        boolean allowGlobalDefault = plugin.getConfig().getBoolean("commands.allowGlobalDefault", false);
+        boolean allowGlobalDefault = session.getScene().isAllowGlobalCommands();
         for (String command : commands) {
             String resolved = SceneTextFormatter.replacePlaceholders(plugin, player, session, command, durationTicks);
             if (keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.CONSOLE) {

@@ -32,7 +32,21 @@ public class SceneManager {
         tracks.put(SceneTrackType.PARTICLE, new Track<>(SceneTrackType.PARTICLE));
         tracks.put(SceneTrackType.SOUND, new Track<>(SceneTrackType.SOUND));
         tracks.put(SceneTrackType.BLOCK_ILLUSION, new Track<>(SceneTrackType.BLOCK_ILLUSION));
-        return new Scene(name, durationTicks, FORMAT_VERSION, tracks);
+        Scene scene = new Scene(name, durationTicks, FORMAT_VERSION, tracks);
+        scene.setDefaultSmoothing(readSmoothing());
+        scene.setCameraMode(plugin.getConfig().getString("camera.mode", "SPECTATOR"));
+        scene.setFreezePlayer(plugin.getConfig().getBoolean("player.freeze", true));
+        scene.setAllowGlobalCommands(plugin.getConfig().getBoolean("commands.allowGlobalDefault", false));
+        return scene;
+    }
+
+    private SmoothingMode readSmoothing() {
+        String smoothing = plugin.getConfig().getString("smoothing.default", "EASE_IN_OUT");
+        try {
+            return SmoothingMode.valueOf(smoothing);
+        } catch (IllegalArgumentException ex) {
+            return SmoothingMode.EASE_IN_OUT;
+        }
     }
 
     public void saveScene(Scene scene) throws IOException {
