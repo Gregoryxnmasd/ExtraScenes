@@ -46,7 +46,7 @@ public class SceneSessionManager {
         SceneSession session = new SceneSession(player, scene, preview);
         sessions.put(player.getUniqueId(), session);
 
-        if (plugin.getConfig().getBoolean("player.freeze", true)) {
+        if (scene.isFreezePlayer()) {
             player.setWalkSpeed(0.0f);
             player.setFlySpeed(0.0f);
         }
@@ -68,7 +68,7 @@ public class SceneSessionManager {
         ItemStack fakeHelmet = new ItemStack(Material.CARVED_PUMPKIN);
         protocolAdapter.sendFakeHelmet(player, fakeHelmet);
 
-        String cameraMode = plugin.getConfig().getString("camera.mode", "SPECTATOR");
+        String cameraMode = scene.getCameraMode();
         boolean usePacket = "PACKET".equalsIgnoreCase(cameraMode) && protocolAdapter.isProtocolLibAvailable();
         if (!usePacket) {
             protocolAdapter.applySpectatorCamera(player, rig);
@@ -93,7 +93,7 @@ public class SceneSessionManager {
             EditorSession editorSession = plugin.getEditorEngine().getEditorSessionManager().getSession(player.getUniqueId());
             if (editorSession != null) {
                 editorSession.setPreviewPlaying(false);
-                plugin.getEditorEngine().openMainMenu(player, session.getScene(), editorSession);
+                plugin.getEditorEngine().openDashboard(player, editorSession, false);
             }
         }
     }
@@ -172,14 +172,14 @@ public class SceneSessionManager {
     }
 
     private void restorePlayerState(Player player, SceneSession session) {
-        String cameraMode = plugin.getConfig().getString("camera.mode", "SPECTATOR");
+        String cameraMode = session.getScene().getCameraMode();
         boolean usePacket = "PACKET".equalsIgnoreCase(cameraMode) && protocolAdapter.isProtocolLibAvailable();
         if (!usePacket) {
             protocolAdapter.clearSpectatorCamera(player);
             player.setGameMode(session.getSnapshot().getGameMode());
         }
 
-        if (plugin.getConfig().getBoolean("player.freeze", true)) {
+        if (session.getScene().isFreezePlayer()) {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
             player.setFlySpeed(session.getSnapshot().getFlySpeed());
         }

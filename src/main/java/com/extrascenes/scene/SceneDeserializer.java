@@ -33,6 +33,12 @@ public class SceneDeserializer {
         int formatVersion = root.has("formatVersion") ? root.get("formatVersion").getAsInt() : 1;
         String name = root.has("name") ? root.get("name").getAsString() : "scene";
         int durationTicks = root.has("durationTicks") ? root.get("durationTicks").getAsInt() : 0;
+        SmoothingMode defaultSmoothing = parseSmoothing(root.has("defaultSmoothing")
+                ? root.get("defaultSmoothing").getAsString()
+                : "EASE_IN_OUT");
+        String cameraMode = root.has("cameraMode") ? root.get("cameraMode").getAsString() : "SPECTATOR";
+        boolean freezePlayer = !root.has("freezePlayer") || root.get("freezePlayer").getAsBoolean();
+        boolean allowGlobalCommands = root.has("allowGlobalCommands") && root.get("allowGlobalCommands").getAsBoolean();
 
         Map<SceneTrackType, Track<? extends Keyframe>> tracks = new EnumMap<>(SceneTrackType.class);
         JsonObject tracksObject = root.has("tracks") ? root.getAsJsonObject("tracks") : new JsonObject();
@@ -54,7 +60,20 @@ public class SceneDeserializer {
             tracks.put(type, track);
         }
 
-        return new Scene(name, durationTicks, formatVersion, tracks);
+        Scene scene = new Scene(name, durationTicks, formatVersion, tracks);
+        scene.setDefaultSmoothing(defaultSmoothing);
+        scene.setCameraMode(cameraMode);
+        scene.setFreezePlayer(freezePlayer);
+        scene.setAllowGlobalCommands(allowGlobalCommands);
+        return scene;
+    }
+
+    private SmoothingMode parseSmoothing(String value) {
+        try {
+            return SmoothingMode.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            return SmoothingMode.EASE_IN_OUT;
+        }
     }
 
     private Keyframe deserializeKeyframe(SceneTrackType type, JsonObject object) {

@@ -9,6 +9,10 @@ public class Scene {
     private final int formatVersion;
     private final Map<SceneTrackType, Track<? extends Keyframe>> tracks;
     private final SceneTimeline timeline;
+    private SmoothingMode defaultSmoothing;
+    private String cameraMode;
+    private boolean freezePlayer;
+    private boolean allowGlobalCommands;
 
     public Scene(String name, int durationTicks, int formatVersion, Map<SceneTrackType, Track<? extends Keyframe>> tracks) {
         this.name = name;
@@ -19,6 +23,10 @@ public class Scene {
             this.tracks.putAll(tracks);
         }
         this.timeline = new SceneTimeline(this);
+        this.defaultSmoothing = SmoothingMode.EASE_IN_OUT;
+        this.cameraMode = "SPECTATOR";
+        this.freezePlayer = true;
+        this.allowGlobalCommands = false;
     }
 
     public String getName() {
@@ -48,5 +56,37 @@ public class Scene {
 
     public SceneTimeline getTimeline() {
         return timeline;
+    }
+
+    public SmoothingMode getDefaultSmoothing() {
+        return defaultSmoothing;
+    }
+
+    public void setDefaultSmoothing(SmoothingMode defaultSmoothing) {
+        this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.EASE_IN_OUT : defaultSmoothing;
+    }
+
+    public String getCameraMode() {
+        return cameraMode;
+    }
+
+    public void setCameraMode(String cameraMode) {
+        this.cameraMode = cameraMode == null || cameraMode.isBlank() ? "SPECTATOR" : cameraMode;
+    }
+
+    public boolean isFreezePlayer() {
+        return freezePlayer;
+    }
+
+    public void setFreezePlayer(boolean freezePlayer) {
+        this.freezePlayer = freezePlayer;
+    }
+
+    public boolean isAllowGlobalCommands() {
+        return allowGlobalCommands;
+    }
+
+    public void setAllowGlobalCommands(boolean allowGlobalCommands) {
+        this.allowGlobalCommands = allowGlobalCommands;
     }
 }
