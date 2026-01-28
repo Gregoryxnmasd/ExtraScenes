@@ -10,6 +10,7 @@ public class Scene {
     private final Map<SceneTrackType, Track<? extends Keyframe>> tracks;
     private final SceneTimeline timeline;
     private SmoothingMode defaultSmoothing;
+    private SmoothingQuality smoothingQuality;
     private String cameraMode;
     private boolean freezePlayer;
     private boolean allowGlobalCommands;
@@ -23,7 +24,8 @@ public class Scene {
             this.tracks.putAll(tracks);
         }
         this.timeline = new SceneTimeline(this);
-        this.defaultSmoothing = SmoothingMode.EASE_IN_OUT;
+        this.defaultSmoothing = SmoothingMode.EASE_IN_OUT_QUINT;
+        this.smoothingQuality = SmoothingQuality.NORMAL;
         this.cameraMode = "SPECTATOR";
         this.freezePlayer = true;
         this.allowGlobalCommands = false;
@@ -63,7 +65,15 @@ public class Scene {
     }
 
     public void setDefaultSmoothing(SmoothingMode defaultSmoothing) {
-        this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.EASE_IN_OUT : defaultSmoothing;
+        this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.EASE_IN_OUT_QUINT : defaultSmoothing;
+    }
+
+    public SmoothingQuality getSmoothingQuality() {
+        return smoothingQuality;
+    }
+
+    public void setSmoothingQuality(SmoothingQuality smoothingQuality) {
+        this.smoothingQuality = smoothingQuality == null ? SmoothingQuality.NORMAL : smoothingQuality;
     }
 
     public String getCameraMode() {

@@ -16,7 +16,8 @@ public class SceneDashboardGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
-        Inventory inventory = GuiUtils.createInventory(27, "Scene Dashboard");
+        Inventory inventory = GuiUtils.createInventory(27,
+                "Scene: " + scene.getName() + " • Dashboard • Group: - • Tick: -");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.WRITABLE_BOOK,
@@ -27,8 +28,8 @@ public class SceneDashboardGui implements EditorGui {
                         "Last Saved: " + GuiUtils.formatLastSaved(session.getLastSavedAt())
                 )));
 
-        inventory.setItem(10, GuiUtils.makeItem(Material.COMPASS, "Tracks",
-                List.of("Choose a track to edit.")));
+        inventory.setItem(10, GuiUtils.makeItem(Material.CLOCK, "Tick Grid",
+                List.of("Edit ticks in grouped grids.")));
         inventory.setItem(12, GuiUtils.makeItem(session.isPreviewPlaying() ? Material.LIME_DYE : Material.YELLOW_DYE,
                 session.isPreviewPlaying() ? "Preview Pause" : "Preview Playback",
                 List.of("Preview scene playback.")));
@@ -54,7 +55,7 @@ public class SceneDashboardGui implements EditorGui {
             return;
         }
         if (slot == 10) {
-            editorEngine.openTrackSelect(player, session, true);
+            editorEngine.openGroupSelect(player, session, true);
             return;
         }
         if (slot == 12) {

@@ -13,14 +13,19 @@ public class SceneManager {
     private static final int FORMAT_VERSION = 1;
     private final ExtraScenesPlugin plugin;
     private final File scenesFolder;
+    private final File exportsFolder;
     private final SceneSerializer serializer = new SceneSerializer();
     private final SceneDeserializer deserializer = new SceneDeserializer();
 
     public SceneManager(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.scenesFolder = new File(plugin.getDataFolder(), "scenes");
+        this.exportsFolder = new File(plugin.getDataFolder(), "exports");
         if (!scenesFolder.exists()) {
             scenesFolder.mkdirs();
+        }
+        if (!exportsFolder.exists()) {
+            exportsFolder.mkdirs();
         }
     }
 
@@ -34,6 +39,7 @@ public class SceneManager {
         tracks.put(SceneTrackType.BLOCK_ILLUSION, new Track<>(SceneTrackType.BLOCK_ILLUSION));
         Scene scene = new Scene(name, durationTicks, FORMAT_VERSION, tracks);
         scene.setDefaultSmoothing(readSmoothing());
+        scene.setSmoothingQuality(readSmoothingQuality());
         scene.setCameraMode(plugin.getConfig().getString("camera.mode", "SPECTATOR"));
         scene.setFreezePlayer(plugin.getConfig().getBoolean("player.freeze", true));
         scene.setAllowGlobalCommands(plugin.getConfig().getBoolean("commands.allowGlobalDefault", false));
@@ -41,11 +47,20 @@ public class SceneManager {
     }
 
     private SmoothingMode readSmoothing() {
-        String smoothing = plugin.getConfig().getString("smoothing.default", "EASE_IN_OUT");
+        String smoothing = plugin.getConfig().getString("smoothing.default", "EASE_IN_OUT_QUINT");
         try {
             return SmoothingMode.valueOf(smoothing);
         } catch (IllegalArgumentException ex) {
-            return SmoothingMode.EASE_IN_OUT;
+            return SmoothingMode.EASE_IN_OUT_QUINT;
+        }
+    }
+
+    private SmoothingQuality readSmoothingQuality() {
+        String quality = plugin.getConfig().getString("smoothing.quality", "NORMAL");
+        try {
+            return SmoothingQuality.valueOf(quality);
+        } catch (IllegalArgumentException ex) {
+            return SmoothingQuality.NORMAL;
         }
     }
 
@@ -74,6 +89,26 @@ public class SceneManager {
     public boolean deleteScene(String name) {
         File file = new File(scenesFolder, name + ".json");
         return file.delete();
+    }
+
+    public boolean exportScene(String name) throws IOException {
+        File source = new File(scenesFolder, name + ".json");
+        if (!source.exists()) {
+            return false;
+        }
+        File destination = new File(exportsFolder, name + ".json");
+        java.nio.file.Files.copy(source.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return true;
+    }
+
+    public boolean importScene(String name) throws IOException {
+        File source = new File(exportsFolder, name + ".json");
+        if (!source.exists()) {
+            return false;
+        }
+        File destination = new File(scenesFolder, name + ".json");
+        java.nio.file.Files.copy(source.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return true;
     }
 
     public List<String> listScenes() {

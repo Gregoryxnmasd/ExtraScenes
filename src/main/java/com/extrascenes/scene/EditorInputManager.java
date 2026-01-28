@@ -12,8 +12,10 @@ public class EditorInputManager {
     public enum PromptType {
         COMMANDS,
         COMMAND_APPEND,
+        COMMANDS_APPEND,
         CURSOR_TIME,
         KEYFRAME_TIME,
+        GROUP_JUMP,
         MODEL_FIELD,
         MODEL_ACTION,
         MODEL_MODEL_ID,
@@ -150,6 +152,15 @@ public class EditorInputManager {
         player.sendMessage(ChatColor.AQUA + "Enter a command to add. Type 'cancel' to abort.");
     }
 
+    public void beginCommandAppendInputMulti(Player player, Scene scene, EditorSession session, CommandKeyframe target,
+                                             GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.COMMANDS_APPEND);
+        state.setCommandTarget(target);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter commands one per message. Type 'done' to finish.");
+    }
+
     public void beginCursorInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
         PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.CURSOR_TIME);
         state.setReturnGui(returnGui);
@@ -208,6 +219,13 @@ public class EditorInputManager {
         player.sendMessage(ChatColor.AQUA + "Enter new keyframe time in ticks. Type 'cancel' to abort.");
     }
 
+    public void beginGroupJumpInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.GROUP_JUMP);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter group number to open. Type 'cancel' to abort.");
+    }
+
     public boolean handleChat(Player player, String message) {
         PromptState state = prompts.get(player.getUniqueId());
         if (state == null) {
@@ -225,8 +243,10 @@ public class EditorInputManager {
         switch (state.getType()) {
             case COMMANDS -> handleCommandInput(player, state, message);
             case COMMAND_APPEND -> handleCommandAppend(player, state, message);
+            case COMMANDS_APPEND -> handleCommandAppendMulti(player, state, message);
             case CURSOR_TIME -> handleCursorInput(player, state, message);
             case KEYFRAME_TIME -> handleKeyframeTimeInput(player, state, message);
+            case GROUP_JUMP -> handleGroupJump(player, state, message);
             case MODEL_FIELD -> handleModelField(player, state, message);
             case MODEL_ACTION -> handleModelAction(player, state, message);
             case MODEL_MODEL_ID -> handleModelModelId(player, state, message);
@@ -271,6 +291,27 @@ public class EditorInputManager {
                 state.getReturnGui() == null ? GuiType.COMMAND_EDITOR : state.getReturnGui()));
         player.sendMessage(ChatColor.GREEN + "Command added to keyframe.");
     }
+
+    private void handleCommandAppendMulti(Player player, PromptState state, String message) {
+        if (state.getCommandTarget() == null) {
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.COMMAND_EDITOR : state.getReturnGui()));
+            return;
+        }
+        if (message.equalsIgnoreCase("done")) {
+            for (String cmd : state.getCommandBuffer()) {
+                state.getCommandTarget().addCommand(cmd);
+            }
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.COMMAND_EDITOR : state.getReturnGui()));
+            player.sendMessage(ChatColor.GREEN + "Commands added to keyframe.");
+            return;
+        }
+        state.getCommandBuffer().add(message);
+        player.sendMessage(ChatColor.GRAY + "Added command. Type 'done' to finish or more commands.");
+    }
     private void handleCursorInput(Player player, PromptState state, String message) {
         try {
             int ticks = Integer.parseInt(message);
@@ -295,6 +336,17 @@ public class EditorInputManager {
                     state.getReturnGui() == null ? GuiType.KEYFRAME_LIST : state.getReturnGui()));
         } catch (NumberFormatException ex) {
             player.sendMessage(ChatColor.RED + "Invalid number. Enter keyframe time in ticks.");
+        }
+    }
+
+    private void handleGroupJump(Player player, PromptState state, String message) {
+        try {
+            int group = Integer.parseInt(message);
+            state.getEditorSession().setCurrentGroup(group);
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGroupGrid(player, state.getEditorSession(), false));
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "Invalid number. Enter group number.");
         }
     }
 

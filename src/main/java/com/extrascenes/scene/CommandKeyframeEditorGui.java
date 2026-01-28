@@ -15,33 +15,41 @@ public class CommandKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
-        Inventory inventory = GuiUtils.createInventory(54, "Command Keyframe");
-        GuiUtils.fillInventory(inventory);
-
         CommandKeyframe keyframe = editorEngine.getSelectedCommandKeyframe(session);
         String timeLabel = keyframe == null ? "Unknown" : keyframe.getTimeTicks() + "t";
+        Inventory inventory = GuiUtils.createInventory(54,
+                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + timeLabel);
+        GuiUtils.fillInventory(inventory);
+
         inventory.setItem(4, GuiUtils.makeItem(Material.COMMAND_BLOCK, "Editing Keyframe @ " + timeLabel,
                 List.of("Command keyframe editor.")));
 
-        inventory.setItem(9, GuiUtils.makeItem(Material.CLOCK, "Change Time",
-                List.of("Set keyframe time via chat.")));
-        inventory.setItem(10, GuiUtils.makeItem(Material.LAVA_BUCKET, "Delete Keyframe",
+        inventory.setItem(9, GuiUtils.makeItem(Material.LAVA_BUCKET, "Delete Keyframe",
                 List.of("Requires confirmation.")));
-        inventory.setItem(11, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
+        inventory.setItem(10, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
                 List.of("Create a copy of this keyframe.")));
 
         if (keyframe != null) {
-            inventory.setItem(20, GuiUtils.makeItem(Material.COMMAND_BLOCK, "Add Command",
-                    List.of("Chat input.")));
-            inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "List/Remove Commands",
-                    List.of("Commands: " + keyframe.getCommands().size(), "Click to clear.")));
+            inventory.setItem(20, GuiUtils.makeItem(Material.COMMAND_BLOCK, "Add Commands",
+                    List.of("Chat input (multi-line).", "Type 'done' to finish.")));
             inventory.setItem(24, GuiUtils.makeItem(Material.LEVER, "Executor: " + keyframe.getExecutorMode(),
                     List.of("Toggle executor.")));
             inventory.setItem(31, GuiUtils.makeItem(Material.PAPER, "Allow Global: " + keyframe.isAllowGlobal(),
                     List.of("Toggle global commands.")));
+
+            int slot = 36;
+            int index = 0;
+            for (String command : keyframe.getCommands()) {
+                inventory.setItem(slot++, GuiUtils.makeItem(Material.PAPER, "Command " + (index + 1),
+                        List.of(command, "Right-click to remove.")));
+                index++;
+                if (slot >= 45) {
+                    break;
+                }
+            }
         }
 
-        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to keyframe list.")));
+        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         inventory.setItem(53, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Apply",
                 List.of("Save changes to keyframe.")));
@@ -57,7 +65,7 @@ public class CommandKeyframeEditorGui implements EditorGui {
         }
         CommandKeyframe keyframe = editorEngine.getSelectedCommandKeyframe(session);
         if (keyframe == null) {
-            editorEngine.openKeyframeList(player, session, false);
+            editorEngine.openTickActionMenu(player, session, false);
             return;
         }
 
@@ -76,30 +84,20 @@ public class CommandKeyframeEditorGui implements EditorGui {
             return;
         }
         if (slot == 9) {
-            player.closeInventory();
-            editorEngine.getInputManager().beginKeyframeTimeInput(player, session.getScene(), session,
-                    session.getSelectedTrack(), keyframe.getId(), GuiType.COMMAND_EDITOR);
-            return;
-        }
-        if (slot == 10) {
             editorEngine.openConfirm(player, session, ConfirmAction.DELETE_KEYFRAME, session.getSelectedTrack(),
                     keyframe.getId());
             return;
         }
-        if (slot == 11) {
+        if (slot == 10) {
             editorEngine.duplicateKeyframe(session, keyframe);
             refresh(session);
             return;
         }
         if (slot == 20) {
             player.closeInventory();
-            editorEngine.getInputManager().beginCommandAppendInput(player, session.getScene(), session, keyframe,
+            session.setCursorTimeTicks(keyframe.getTimeTicks());
+            editorEngine.getInputManager().beginCommandAppendInputMulti(player, session.getScene(), session, keyframe,
                     GuiType.COMMAND_EDITOR);
-            return;
-        }
-        if (slot == 22) {
-            keyframe.setCommands(List.of());
-            refresh(session);
             return;
         }
         if (slot == 24) {
@@ -112,6 +110,16 @@ public class CommandKeyframeEditorGui implements EditorGui {
         if (slot == 31) {
             keyframe.setAllowGlobal(!keyframe.isAllowGlobal());
             refresh(session);
+            return;
+        }
+        if (slot >= 36 && slot < 45 && ctx.isRightClick()) {
+            int index = slot - 36;
+            if (index < keyframe.getCommands().size()) {
+                List<String> commands = new java.util.ArrayList<>(keyframe.getCommands());
+                commands.remove(index);
+                keyframe.setCommands(commands);
+                refresh(session);
+            }
         }
     }
 

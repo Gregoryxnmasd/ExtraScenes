@@ -29,6 +29,7 @@ public class SceneSerializer {
         root.addProperty("name", scene.getName());
         root.addProperty("durationTicks", scene.getDurationTicks());
         root.addProperty("defaultSmoothing", scene.getDefaultSmoothing().name());
+        root.addProperty("smoothingQuality", scene.getSmoothingQuality().name());
         root.addProperty("cameraMode", scene.getCameraMode());
         root.addProperty("freezePlayer", scene.isFreezePlayer());
         root.addProperty("allowGlobalCommands", scene.isAllowGlobalCommands());

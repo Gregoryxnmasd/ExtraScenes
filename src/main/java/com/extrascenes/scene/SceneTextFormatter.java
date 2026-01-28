@@ -23,6 +23,7 @@ public final class SceneTextFormatter {
                 .replace("{pitch}", String.valueOf(location.getPitch()))
                 .replace("{scene}", session.getScene().getName())
                 .replace("{time}", String.valueOf(session.getTimeTicks()))
+                .replace("{tick}", String.valueOf(session.getTimeTicks()))
                 .replace("{duration}", String.valueOf(durationTicks))
                 .replace("{progress}", String.valueOf(calculateProgress(session.getTimeTicks(), durationTicks)));
 

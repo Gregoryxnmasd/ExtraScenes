@@ -18,6 +18,8 @@ public class SceneSession {
     private final Map<String, UUID> modelRefs = new HashMap<>();
     private SceneState state;
     private int timeTicks;
+    private int startTick;
+    private int endTick;
     private boolean blockingInventory;
     private boolean restorePending;
     private Location lastCameraLocation;
@@ -25,11 +27,17 @@ public class SceneSession {
     private boolean preview;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
+        this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
+    }
+
+    public SceneSession(Player player, Scene scene, boolean preview, int startTick, int endTick) {
         this.playerId = player.getUniqueId();
         this.scene = scene;
         this.snapshot = new PlayerStateSnapshot(player);
         this.state = SceneState.PLAYING;
-        this.timeTicks = 0;
+        this.startTick = Math.max(0, startTick);
+        this.endTick = endTick <= 0 ? Integer.MAX_VALUE : endTick;
+        this.timeTicks = this.startTick;
         this.preview = preview;
     }
 
@@ -63,6 +71,22 @@ public class SceneSession {
 
     public void incrementTime() {
         this.timeTicks++;
+    }
+
+    public int getStartTick() {
+        return startTick;
+    }
+
+    public void setStartTick(int startTick) {
+        this.startTick = Math.max(0, startTick);
+    }
+
+    public int getEndTick() {
+        return endTick;
+    }
+
+    public void setEndTick(int endTick) {
+        this.endTick = endTick <= 0 ? Integer.MAX_VALUE : endTick;
     }
 
     public Set<Entity> getSceneEntities() {

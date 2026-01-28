@@ -15,7 +15,8 @@ public class ModelKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
-        Inventory inventory = GuiUtils.createInventory(54, "Model Keyframe");
+        Inventory inventory = GuiUtils.createInventory(54,
+                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + session.getCurrentTick());
         GuiUtils.fillInventory(inventory);
 
         ModelKeyframe keyframe = editorEngine.getSelectedModelKeyframe(session);
@@ -43,7 +44,7 @@ public class ModelKeyframeEditorGui implements EditorGui {
                     List.of("Only for SPAWN action.")));
         }
 
-        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to keyframe list.")));
+        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to previous menu.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         inventory.setItem(53, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Apply",
                 List.of("Save changes to keyframe.")));

@@ -3,6 +3,7 @@ package com.extrascenes.scene;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
+import org.bukkit.inventory.ItemStack;
 
 public class EditorSession {
     private final UUID playerUuid;
@@ -14,6 +15,12 @@ public class EditorSession {
     private boolean previewPlaying;
     private int previewTimeTicks;
     private int keyframePage;
+    private int currentGroup;
+    private int currentTick;
+    private Integer armedTick;
+    private int armedGroup;
+    private int wandSlot;
+    private ItemStack wandBackup;
     private GuiType currentGui;
     private final Deque<GuiType> history = new ArrayDeque<>();
     private long lastSavedAt;
@@ -28,6 +35,12 @@ public class EditorSession {
         this.selectedTrack = SceneTrackType.CAMERA;
         this.cursorTimeTicks = 0;
         this.keyframePage = 0;
+        this.currentGroup = 1;
+        this.currentTick = 1;
+        this.armedTick = null;
+        this.armedGroup = 1;
+        this.wandSlot = -1;
+        this.wandBackup = null;
         this.currentGui = GuiType.SCENE_DASHBOARD;
     }
 
@@ -89,6 +102,54 @@ public class EditorSession {
 
     public void setKeyframePage(int keyframePage) {
         this.keyframePage = Math.max(0, keyframePage);
+    }
+
+    public int getCurrentGroup() {
+        return currentGroup;
+    }
+
+    public void setCurrentGroup(int currentGroup) {
+        this.currentGroup = Math.max(1, currentGroup);
+    }
+
+    public int getCurrentTick() {
+        return currentTick;
+    }
+
+    public void setCurrentTick(int currentTick) {
+        this.currentTick = Math.max(1, currentTick);
+    }
+
+    public Integer getArmedTick() {
+        return armedTick;
+    }
+
+    public void setArmedTick(Integer armedTick) {
+        this.armedTick = armedTick;
+    }
+
+    public int getArmedGroup() {
+        return armedGroup;
+    }
+
+    public void setArmedGroup(int armedGroup) {
+        this.armedGroup = Math.max(1, armedGroup);
+    }
+
+    public int getWandSlot() {
+        return wandSlot;
+    }
+
+    public void setWandSlot(int wandSlot) {
+        this.wandSlot = wandSlot;
+    }
+
+    public ItemStack getWandBackup() {
+        return wandBackup;
+    }
+
+    public void setWandBackup(ItemStack wandBackup) {
+        this.wandBackup = wandBackup;
     }
 
     public GuiType getCurrentGui() {

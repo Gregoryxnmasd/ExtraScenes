@@ -15,7 +15,9 @@ public class TrackSelectGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
-        Inventory inventory = GuiUtils.createInventory(27, "Select Track");
+        Inventory inventory = GuiUtils.createInventory(27,
+                "Scene: " + session.getSceneName() + " • Track Select • Group: " + session.getCurrentGroup()
+                        + " • Tick: " + session.getCurrentTick());
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.NAME_TAG, "Select Track",
