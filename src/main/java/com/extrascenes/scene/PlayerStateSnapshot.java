@@ -30,12 +30,15 @@ public class PlayerStateSnapshot {
     }
 
     private static Attribute resolveMaxHealthAttribute() {
-        for (Attribute attribute : Attribute.values()) {
-            if ("GENERIC_MAX_HEALTH".equals(attribute.name()) || "MAX_HEALTH".equals(attribute.name())) {
-                return attribute;
+        try {
+            return Attribute.valueOf("GENERIC_MAX_HEALTH");
+        } catch (IllegalArgumentException ignored) {
+            try {
+                return Attribute.valueOf("MAX_HEALTH");
+            } catch (IllegalArgumentException fallbackIgnored) {
+                return null;
             }
         }
-        return null;
     }
 
     public GameMode getGameMode() {
