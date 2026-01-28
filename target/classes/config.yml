@@ -1,0 +1,15 @@
+camera:
+  mode: SPECTATOR
+visibility:
+  playerOnly: true
+rig:
+  moveMode: SMOOTH
+smoothing:
+  default: EASE_IN_OUT
+player:
+  freeze: true
+  blockInventoryDuringScene: true
+chunks:
+  preloadRadius: 3
+commands:
+  allowGlobalDefault: false
