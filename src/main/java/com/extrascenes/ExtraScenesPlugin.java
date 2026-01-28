@@ -1,6 +1,10 @@
 package com.extrascenes;
 
 import com.extrascenes.command.SceneCommandExecutor;
+import com.extrascenes.scene.EditorChatListener;
+import com.extrascenes.scene.EditorSessionManager;
+import com.extrascenes.scene.SceneEditorEngine;
+import com.extrascenes.scene.SceneEditorListener;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneRuntimeEngine;
 import com.extrascenes.scene.SceneSessionManager;
@@ -16,6 +20,8 @@ public class ExtraScenesPlugin extends JavaPlugin {
     private SceneVisibilityController visibilityController;
     private SceneProtocolAdapter protocolAdapter;
     private SceneModelTrackAdapter modelTrackAdapter;
+    private EditorSessionManager editorSessionManager;
+    private SceneEditorEngine editorEngine;
 
     @Override
     public void onEnable() {
@@ -24,16 +30,21 @@ public class ExtraScenesPlugin extends JavaPlugin {
         this.protocolAdapter = new SceneProtocolAdapter(this);
         this.visibilityController = new SceneVisibilityController(this);
         this.sceneManager = new SceneManager(this);
+        this.editorSessionManager = new EditorSessionManager();
+        this.editorEngine = new SceneEditorEngine(this, sceneManager, editorSessionManager);
         this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
         this.runtimeEngine = new SceneRuntimeEngine(this, sessionManager, visibilityController, protocolAdapter);
         this.modelTrackAdapter = new SceneModelTrackAdapter(this, visibilityController);
 
-        Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController), this);
+        Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
+                editorSessionManager, editorEngine.getInputManager()), this);
+        Bukkit.getPluginManager().registerEvents(new SceneEditorListener(editorEngine, editorSessionManager), this);
+        Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager()), this);
 
         PluginCommand command = getCommand("scene");
         if (command != null) {
-            command.setExecutor(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine));
-            command.setTabCompleter(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine));
+            command.setExecutor(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine, editorEngine));
+            command.setTabCompleter(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine, editorEngine));
         }
 
         runtimeEngine.start();
@@ -51,6 +62,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
         if (sessionManager != null) {
             sessionManager.stopAll("plugin_disable");
         }
+        if (editorSessionManager != null) {
+            editorSessionManager.clear();
+        }
     }
 
     public SceneManager getSceneManager() {
@@ -67,5 +81,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SceneModelTrackAdapter getModelTrackAdapter() {
         return modelTrackAdapter;
+    }
+
+    public SceneEditorEngine getEditorEngine() {
+        return editorEngine;
     }
 }

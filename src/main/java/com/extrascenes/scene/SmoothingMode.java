@@ -8,4 +8,11 @@ public enum SmoothingMode {
     EASE_OUT,
     EASE_IN_OUT,
     CATMULL_ROM
+
+    ;
+
+    public SmoothingMode next() {
+        SmoothingMode[] values = values();
+        return values[(ordinal() + 1) % values.length];
+    }
 }

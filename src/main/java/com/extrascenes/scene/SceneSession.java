@@ -22,13 +22,15 @@ public class SceneSession {
     private boolean restorePending;
     private Location lastCameraLocation;
     private UUID cameraRigId;
+    private boolean preview;
 
-    public SceneSession(Player player, Scene scene) {
+    public SceneSession(Player player, Scene scene, boolean preview) {
         this.playerId = player.getUniqueId();
         this.scene = scene;
         this.snapshot = new PlayerStateSnapshot(player);
         this.state = SceneState.PLAYING;
         this.timeTicks = 0;
+        this.preview = preview;
     }
 
     public UUID getPlayerId() {
@@ -84,7 +86,9 @@ public class SceneSession {
     }
 
     public void registerModelRef(String ref, UUID entityId) {
-        modelRefs.put(ref, entityId);
+        if (ref != null && entityId != null) {
+            modelRefs.put(ref, entityId);
+        }
     }
 
     public UUID getModelEntityId(String ref) {
@@ -121,5 +125,9 @@ public class SceneSession {
 
     public void setCameraRigId(UUID cameraRigId) {
         this.cameraRigId = cameraRigId;
+    }
+
+    public boolean isPreview() {
+        return preview;
     }
 }
