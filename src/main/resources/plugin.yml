@@ -1,0 +1,26 @@
+name: ExtraScenes
+main: com.extrascenes.ExtraScenesPlugin
+version: 1.0.0
+api-version: 1.21
+softdepend: [ProtocolLib, PlaceholderAPI, ModelEngine]
+commands:
+  scene:
+    description: Scene command root.
+    aliases: [scenes]
+    usage: /scene <subcommand>
+permissions:
+  scenes.admin:
+    description: Full admin access to scenes.
+    default: op
+  scenes.edit:
+    description: Create and edit scenes.
+    default: op
+  scenes.play:
+    description: Play scenes.
+    default: op
+  scenes.stop:
+    description: Stop scenes.
+    default: op
+  scenes.export:
+    description: Export/import scenes.
+    default: op
