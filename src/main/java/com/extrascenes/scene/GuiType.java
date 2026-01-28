@@ -2,12 +2,18 @@ package com.extrascenes.scene;
 
 public enum GuiType {
     SCENE_DASHBOARD,
+    GROUP_SELECT,
+    GROUP_GRID,
+    TICK_ACTION,
+    EFFECTS_MENU,
     TRACK_SELECT,
     KEYFRAME_LIST,
     ADD_KEYFRAME,
     CAMERA_EDITOR,
+    CAMERA_OPTIONS,
     COMMAND_EDITOR,
     MODEL_EDITOR,
+    MODEL_TICK_LIST,
     SCENE_SETTINGS,
     CONFIRM
 }

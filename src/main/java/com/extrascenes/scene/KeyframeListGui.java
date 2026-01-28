@@ -21,7 +21,9 @@ public class KeyframeListGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
-        Inventory inventory = GuiUtils.createInventory(54, "Keyframe List");
+        Inventory inventory = GuiUtils.createInventory(54,
+                "Scene: " + session.getSceneName() + " • Keyframes • Group: " + session.getCurrentGroup()
+                        + " • Tick: " + session.getCurrentTick());
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.NAME_TAG,

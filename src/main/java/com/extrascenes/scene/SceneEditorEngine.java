@@ -28,12 +28,18 @@ public class SceneEditorEngine {
 
     private void registerGuis() {
         guis.put(GuiType.SCENE_DASHBOARD, new SceneDashboardGui(this));
+        guis.put(GuiType.GROUP_SELECT, new GroupSelectGui(this));
+        guis.put(GuiType.GROUP_GRID, new GroupGridGui(this));
+        guis.put(GuiType.TICK_ACTION, new TickActionMenuGui(this));
         guis.put(GuiType.TRACK_SELECT, new TrackSelectGui(this));
         guis.put(GuiType.KEYFRAME_LIST, new KeyframeListGui(this));
         guis.put(GuiType.ADD_KEYFRAME, new AddKeyframeGui(this));
         guis.put(GuiType.CAMERA_EDITOR, new CameraKeyframeEditorGui(this));
+        guis.put(GuiType.CAMERA_OPTIONS, new CameraOptionsGui(this));
         guis.put(GuiType.COMMAND_EDITOR, new CommandKeyframeEditorGui(this));
         guis.put(GuiType.MODEL_EDITOR, new ModelKeyframeEditorGui(this));
+        guis.put(GuiType.MODEL_TICK_LIST, new ModelTickListGui(this));
+        guis.put(GuiType.EFFECTS_MENU, new EffectsTickMenuGui(this));
         guis.put(GuiType.SCENE_SETTINGS, new SceneSettingsGui(this));
         guis.put(GuiType.CONFIRM, new ConfirmGui(this));
     }
@@ -61,6 +67,30 @@ public class SceneEditorEngine {
 
     public void openTrackSelect(Player player, EditorSession session, boolean pushHistory) {
         openGui(player, session, GuiType.TRACK_SELECT, pushHistory);
+    }
+
+    public void openGroupSelect(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.GROUP_SELECT, pushHistory);
+    }
+
+    public void openGroupGrid(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.GROUP_GRID, pushHistory);
+    }
+
+    public void openTickActionMenu(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.TICK_ACTION, pushHistory);
+    }
+
+    public void openCameraOptions(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.CAMERA_OPTIONS, pushHistory);
+    }
+
+    public void openModelTickList(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.MODEL_TICK_LIST, pushHistory);
+    }
+
+    public void openEffectsMenu(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.EFFECTS_MENU, pushHistory);
     }
 
     public void openKeyframeList(Player player, EditorSession session, boolean pushHistory) {
@@ -92,6 +122,13 @@ public class SceneEditorEngine {
         session.setConfirmTrack(track);
         session.setConfirmKeyframeId(keyframeId);
         openGui(player, session, GuiType.CONFIRM, true);
+    }
+
+    public void openCommandEditorForTick(Player player, EditorSession session, int tick) {
+        CommandKeyframe keyframe = getOrCreateCommandKeyframe(session, tick);
+        session.setSelectedKeyframeId(keyframe.getId());
+        session.setSelectedTrack(SceneTrackType.COMMAND);
+        openCommandEditor(player, session, true);
     }
 
     public void navigateBack(Player player, EditorSession session) {
@@ -134,6 +171,60 @@ public class SceneEditorEngine {
 
     public void openGuiByType(Player player, EditorSession session, GuiType guiType) {
         openGui(player, session, guiType, false);
+    }
+
+    public void armCameraPlacement(Player player, EditorSession session, int tick) {
+        session.setArmedTick(tick);
+        session.setArmedGroup(session.getCurrentGroup());
+        session.setCursorTimeTicks(tick);
+        player.closeInventory();
+        if (session.getWandSlot() == -1) {
+            session.setWandSlot(player.getInventory().getHeldItemSlot());
+            session.setWandBackup(player.getInventory().getItem(session.getWandSlot()));
+            player.getInventory().setItem(session.getWandSlot(), SceneWand.create());
+        }
+        player.sendMessage(ChatColor.AQUA + "Placement mode armed for tick " + tick
+                + ". Move and confirm with /scene here or left-click with the wand. Use /scene cancel to abort.");
+    }
+
+    public void confirmCameraPlacement(Player player, EditorSession session) {
+        Integer tick = session.getArmedTick();
+        if (tick == null) {
+            player.sendMessage(ChatColor.RED + "No tick is armed for placement.");
+            return;
+        }
+        CameraKeyframe keyframe = getOrCreateCameraKeyframe(session, tick);
+        keyframe.setTransform(Transform.fromLocation(player.getLocation()));
+        session.setArmedTick(null);
+        restoreWand(player, session);
+        session.setCurrentTick(tick);
+        session.setCurrentGroup(session.getArmedGroup());
+        openGroupGrid(player, session, false);
+        player.sendMessage(ChatColor.GREEN + "Camera position set for tick " + tick + ".");
+    }
+
+    public void cancelCameraPlacement(Player player, EditorSession session) {
+        if (session.getArmedTick() == null) {
+            player.sendMessage(ChatColor.YELLOW + "No placement in progress.");
+            return;
+        }
+        session.setArmedTick(null);
+        restoreWand(player, session);
+        openGroupGrid(player, session, false);
+        player.sendMessage(ChatColor.YELLOW + "Placement cancelled.");
+    }
+
+    public void cancelCameraPlacementSilent(Player player, EditorSession session) {
+        session.setArmedTick(null);
+        restoreWand(player, session);
+    }
+
+    private void restoreWand(Player player, EditorSession session) {
+        if (session.getWandSlot() >= 0) {
+            player.getInventory().setItem(session.getWandSlot(), session.getWandBackup());
+            session.setWandSlot(-1);
+            session.setWandBackup(null);
+        }
     }
 
     public void saveScene(Player player, EditorSession session) {
@@ -185,6 +276,39 @@ public class SceneEditorEngine {
             return clazz.cast(keyframe);
         }
         return null;
+    }
+
+    public CameraKeyframe getOrCreateCameraKeyframe(EditorSession session, int tick) {
+        Track<CameraKeyframe> track = session.getScene().getTrack(SceneTrackType.CAMERA);
+        CameraKeyframe existing = TickUtils.getFirstKeyframeAtTick(track, tick);
+        if (existing != null) {
+            return existing;
+        }
+        Transform fallback = null;
+        if (track != null) {
+            for (CameraKeyframe keyframe : track.getKeyframes()) {
+                if (keyframe.getTimeTicks() <= tick && keyframe.getTransform() != null) {
+                    Transform transform = keyframe.getTransform();
+                    fallback = new Transform(transform.getX(), transform.getY(), transform.getZ(),
+                            transform.getYaw(), transform.getPitch());
+                }
+            }
+        }
+        CameraKeyframe created = new CameraKeyframe(null, tick, fallback,
+                session.getScene().getDefaultSmoothing(), false, LookAtTarget.none());
+        track.addKeyframe(created);
+        return created;
+    }
+
+    public CommandKeyframe getOrCreateCommandKeyframe(EditorSession session, int tick) {
+        Track<CommandKeyframe> track = session.getScene().getTrack(SceneTrackType.COMMAND);
+        CommandKeyframe existing = TickUtils.getFirstKeyframeAtTick(track, tick);
+        if (existing != null) {
+            return existing;
+        }
+        CommandKeyframe created = new CommandKeyframe(null, tick, List.of(), CommandKeyframe.ExecutorMode.PLAYER, false);
+        track.addKeyframe(created);
+        return created;
     }
 
     public void duplicateKeyframe(EditorSession session, Keyframe keyframe) {
@@ -257,6 +381,14 @@ public class SceneEditorEngine {
         openKeyframeList(player, session, false);
     }
 
+    public void addSoundKeyframeAtTick(Player player, EditorSession session, int tick) {
+        session.setCursorTimeTicks(tick);
+        SoundKeyframe keyframe = new SoundKeyframe(null, tick, "entity.player.levelup",
+                1.0f, 1.0f, Transform.fromLocation(player.getLocation()));
+        Track<SoundKeyframe> track = session.getScene().getTrack(SceneTrackType.SOUND);
+        track.addKeyframe(keyframe);
+    }
+
     public void addParticleKeyframe(Player player, EditorSession session) {
         ParticleKeyframe keyframe = new ParticleKeyframe(null, session.getCursorTimeTicks(), "happy_villager",
                 Transform.fromLocation(player.getLocation()));
@@ -266,6 +398,14 @@ public class SceneEditorEngine {
         openKeyframeList(player, session, false);
     }
 
+    public void addParticleKeyframeAtTick(Player player, EditorSession session, int tick) {
+        session.setCursorTimeTicks(tick);
+        ParticleKeyframe keyframe = new ParticleKeyframe(null, tick, "happy_villager",
+                Transform.fromLocation(player.getLocation()));
+        Track<ParticleKeyframe> track = session.getScene().getTrack(SceneTrackType.PARTICLE);
+        track.addKeyframe(keyframe);
+    }
+
     public void addBlockKeyframe(Player player, EditorSession session) {
         BlockIllusionKeyframe keyframe = new BlockIllusionKeyframe(null, session.getCursorTimeTicks(),
                 Material.GLASS, Transform.fromLocation(player.getLocation()));
@@ -273,6 +413,14 @@ public class SceneEditorEngine {
         track.addKeyframe(keyframe);
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
+    }
+
+    public void addBlockKeyframeAtTick(Player player, EditorSession session, int tick) {
+        session.setCursorTimeTicks(tick);
+        BlockIllusionKeyframe keyframe = new BlockIllusionKeyframe(null, tick,
+                Material.GLASS, Transform.fromLocation(player.getLocation()));
+        Track<BlockIllusionKeyframe> track = session.getScene().getTrack(SceneTrackType.BLOCK_ILLUSION);
+        track.addKeyframe(keyframe);
     }
 
     public void handleConfirmAction(Player player, EditorSession session) {
@@ -305,6 +453,36 @@ public class SceneEditorEngine {
             openKeyframeList(player, session, false);
             return;
         }
+        if (action == ConfirmAction.CLEAR_TICK) {
+            clearTick(session.getScene(), session.getCurrentTick());
+            clearConfirm(session);
+            openTickActionMenu(player, session, false);
+            return;
+        }
+        if (action == ConfirmAction.CLEAR_GROUP) {
+            clearGroup(session.getScene(), session.getCurrentGroup());
+            clearConfirm(session);
+            openGroupGrid(player, session, false);
+            return;
+        }
+        if (action == ConfirmAction.CLEAR_ALL) {
+            clearAll(session.getScene());
+            clearConfirm(session);
+            openGroupSelect(player, session, false);
+            return;
+        }
+        if (action == ConfirmAction.CLEAR_EFFECTS) {
+            clearEffects(session.getScene(), session.getCurrentTick());
+            clearConfirm(session);
+            openEffectsMenu(player, session, false);
+            return;
+        }
+        if (action == ConfirmAction.TRIM_DURATION) {
+            session.getScene().setDurationTicks(Math.max(0, session.getScene().getDurationTicks() - 9));
+            clearConfirm(session);
+            openGroupSelect(player, session, false);
+            return;
+        }
         if (action == ConfirmAction.DELETE_SCENE) {
             sceneManager.deleteScene(session.getScene().getName());
             clearConfirm(session);
@@ -331,5 +509,55 @@ public class SceneEditorEngine {
         }
         Transform position = cloneTransform(lookAt.getPosition());
         return new LookAtTarget(lookAt.getMode(), position, lookAt.getEntityId());
+    }
+
+    private void clearTick(Scene scene, int tick) {
+        for (SceneTrackType type : SceneTrackType.values()) {
+            Track<? extends Keyframe> track = scene.getTrack(type);
+            if (track == null) {
+                continue;
+            }
+            List<? extends Keyframe> keyframes = List.copyOf(track.getKeyframes());
+            for (Keyframe keyframe : keyframes) {
+                if (keyframe.getTimeTicks() == tick) {
+                    track.removeKeyframe(keyframe.getId());
+                }
+            }
+        }
+    }
+
+    private void clearGroup(Scene scene, int group) {
+        int startTick = (group - 1) * 9 + 1;
+        int endTick = startTick + 8;
+        for (int tick = startTick; tick <= endTick; tick++) {
+            clearTick(scene, tick);
+        }
+    }
+
+    private void clearAll(Scene scene) {
+        for (SceneTrackType type : SceneTrackType.values()) {
+            Track<? extends Keyframe> track = scene.getTrack(type);
+            if (track != null) {
+                track.clear();
+            }
+        }
+    }
+
+    private void clearEffects(Scene scene, int tick) {
+        clearTrackAtTick(scene.getTrack(SceneTrackType.PARTICLE), tick);
+        clearTrackAtTick(scene.getTrack(SceneTrackType.SOUND), tick);
+        clearTrackAtTick(scene.getTrack(SceneTrackType.BLOCK_ILLUSION), tick);
+    }
+
+    private void clearTrackAtTick(Track<? extends Keyframe> track, int tick) {
+        if (track == null) {
+            return;
+        }
+        List<? extends Keyframe> keyframes = List.copyOf(track.getKeyframes());
+        for (Keyframe keyframe : keyframes) {
+            if (keyframe.getTimeTicks() == tick) {
+                track.removeKeyframe(keyframe.getId());
+            }
+        }
     }
 }

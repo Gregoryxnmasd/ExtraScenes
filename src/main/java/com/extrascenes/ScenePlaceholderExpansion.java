@@ -41,6 +41,7 @@ public class ScenePlaceholderExpansion extends PlaceholderExpansion {
                 case "active" -> "false";
                 case "scene" -> "";
                 case "time_ticks" -> "0";
+                case "tick" -> "0";
                 case "duration_ticks" -> "0";
                 case "progress" -> "0";
                 case "state" -> "";
@@ -53,6 +54,7 @@ public class ScenePlaceholderExpansion extends PlaceholderExpansion {
             case "active" -> "true";
             case "scene" -> session.getScene().getName();
             case "time_ticks" -> String.valueOf(time);
+            case "tick" -> String.valueOf(time);
             case "duration_ticks" -> String.valueOf(duration);
             case "progress" -> String.valueOf(duration <= 0 ? 0 : Math.min(100, Math.round((time / (float) duration) * 100f)));
             case "state" -> session.getState() == null ? SceneState.PLAYING.name() : session.getState().name();

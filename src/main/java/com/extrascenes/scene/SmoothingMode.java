@@ -7,6 +7,8 @@ public enum SmoothingMode {
     EASE_IN,
     EASE_OUT,
     EASE_IN_OUT,
+    EASE_IN_OUT_CUBIC,
+    EASE_IN_OUT_QUINT,
     CATMULL_ROM
 
     ;

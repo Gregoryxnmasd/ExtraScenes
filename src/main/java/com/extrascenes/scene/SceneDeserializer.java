@@ -36,6 +36,9 @@ public class SceneDeserializer {
         SmoothingMode defaultSmoothing = parseSmoothing(root.has("defaultSmoothing")
                 ? root.get("defaultSmoothing").getAsString()
                 : "EASE_IN_OUT");
+        SmoothingQuality smoothingQuality = parseQuality(root.has("smoothingQuality")
+                ? root.get("smoothingQuality").getAsString()
+                : "NORMAL");
         String cameraMode = root.has("cameraMode") ? root.get("cameraMode").getAsString() : "SPECTATOR";
         boolean freezePlayer = !root.has("freezePlayer") || root.get("freezePlayer").getAsBoolean();
         boolean allowGlobalCommands = root.has("allowGlobalCommands") && root.get("allowGlobalCommands").getAsBoolean();
@@ -62,6 +65,7 @@ public class SceneDeserializer {
 
         Scene scene = new Scene(name, durationTicks, formatVersion, tracks);
         scene.setDefaultSmoothing(defaultSmoothing);
+        scene.setSmoothingQuality(smoothingQuality);
         scene.setCameraMode(cameraMode);
         scene.setFreezePlayer(freezePlayer);
         scene.setAllowGlobalCommands(allowGlobalCommands);
@@ -72,7 +76,15 @@ public class SceneDeserializer {
         try {
             return SmoothingMode.valueOf(value);
         } catch (IllegalArgumentException ex) {
-            return SmoothingMode.EASE_IN_OUT;
+            return SmoothingMode.EASE_IN_OUT_QUINT;
+        }
+    }
+
+    private SmoothingQuality parseQuality(String value) {
+        try {
+            return SmoothingQuality.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            return SmoothingQuality.NORMAL;
         }
     }
 

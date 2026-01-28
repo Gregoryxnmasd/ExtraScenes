@@ -38,12 +38,16 @@ public class SceneSessionManager {
     }
 
     public SceneSession startScene(Player player, Scene scene, boolean preview) {
+        return startScene(player, scene, preview, 0, scene.getDurationTicks());
+    }
+
+    public SceneSession startScene(Player player, Scene scene, boolean preview, int startTick, int endTick) {
         SceneSession existing = sessions.get(player.getUniqueId());
         if (existing != null) {
             stopScene(player, "restart");
         }
 
-        SceneSession session = new SceneSession(player, scene, preview);
+        SceneSession session = new SceneSession(player, scene, preview, startTick, endTick);
         sessions.put(player.getUniqueId(), session);
 
         if (scene.isFreezePlayer()) {

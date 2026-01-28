@@ -37,7 +37,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
         this.modelTrackAdapter = new SceneModelTrackAdapter(this, visibilityController);
 
         Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
-                editorSessionManager, editorEngine.getInputManager()), this);
+                editorSessionManager, editorEngine.getInputManager(), editorEngine), this);
         Bukkit.getPluginManager().registerEvents(new SceneEditorListener(editorEngine, editorSessionManager), this);
         Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager()), this);
 

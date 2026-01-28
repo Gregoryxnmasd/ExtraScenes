@@ -15,7 +15,9 @@ public class CameraKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
-        Inventory inventory = GuiUtils.createInventory(54, "Camera Keyframe");
+        Inventory inventory = GuiUtils.createInventory(54,
+                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup()
+                        + " • Tick: " + session.getCurrentTick());
         GuiUtils.fillInventory(inventory);
 
         CameraKeyframe keyframe = editorEngine.getSelectedCameraKeyframe(session);

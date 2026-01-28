@@ -16,25 +16,29 @@ public class SceneSettingsGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
-        Inventory inventory = GuiUtils.createInventory(27, "Scene Settings");
+        Inventory inventory = GuiUtils.createInventory(27,
+                "Scene: " + scene.getName() + " • Settings • Group: " + session.getCurrentGroup()
+                        + " • Tick: " + session.getCurrentTick());
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.REPEATER, "Scene Settings",
                 List.of("Configure scene defaults.")));
 
         inventory.setItem(10, GuiUtils.makeItem(Material.REPEATER, "Default Smoothing: " + scene.getDefaultSmoothing(),
-                List.of("Cycle smoothing mode.")));
-        inventory.setItem(12, GuiUtils.makeItem(Material.COMPASS, "Camera Mode: " + scene.getCameraMode(),
+                List.of("Cycle easing mode.")));
+        inventory.setItem(12, GuiUtils.makeItem(Material.SLIME_BALL, "Smoothing Quality: " + scene.getSmoothingQuality(),
+                List.of("Cycle quality preset.")));
+        inventory.setItem(14, GuiUtils.makeItem(Material.COMPASS, "Camera Mode: " + scene.getCameraMode(),
                 List.of("Toggle spectator/packet.")));
-        inventory.setItem(14, GuiUtils.makeItem(Material.ICE, "Freeze Player: " + scene.isFreezePlayer(),
+        inventory.setItem(16, GuiUtils.makeItem(Material.ICE, "Freeze Player: " + scene.isFreezePlayer(),
                 List.of("Toggle player freeze.")));
-        inventory.setItem(16, GuiUtils.makeItem(Material.COMMAND_BLOCK,
+        inventory.setItem(18, GuiUtils.makeItem(Material.COMMAND_BLOCK,
                 "Allow Global Commands: " + scene.isAllowGlobalCommands(),
                 List.of("Toggle global command execution.")));
 
-        inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));
+        inventory.setItem(20, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(26, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Save Scene", List.of("Write JSON to disk.")));
+        inventory.setItem(24, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Save Scene", List.of("Write JSON to disk.")));
 
         return inventory;
     }
@@ -47,7 +51,7 @@ public class SceneSettingsGui implements EditorGui {
             return;
         }
         Scene scene = session.getScene();
-        if (slot == 18) {
+        if (slot == 20) {
             editorEngine.navigateBack(player, session);
             return;
         }
@@ -55,7 +59,7 @@ public class SceneSettingsGui implements EditorGui {
             editorEngine.closeEditor(player, session);
             return;
         }
-        if (slot == 26) {
+        if (slot == 24) {
             editorEngine.saveScene(player, session);
             refresh(session);
             return;
@@ -66,16 +70,21 @@ public class SceneSettingsGui implements EditorGui {
             return;
         }
         if (slot == 12) {
-            scene.setCameraMode(scene.getCameraMode().equalsIgnoreCase("SPECTATOR") ? "PACKET" : "SPECTATOR");
+            scene.setSmoothingQuality(scene.getSmoothingQuality().next());
             refresh(session);
             return;
         }
         if (slot == 14) {
-            scene.setFreezePlayer(!scene.isFreezePlayer());
+            scene.setCameraMode(scene.getCameraMode().equalsIgnoreCase("SPECTATOR") ? "PACKET" : "SPECTATOR");
             refresh(session);
             return;
         }
         if (slot == 16) {
+            scene.setFreezePlayer(!scene.isFreezePlayer());
+            refresh(session);
+            return;
+        }
+        if (slot == 18) {
             scene.setAllowGlobalCommands(!scene.isAllowGlobalCommands());
             refresh(session);
         }
