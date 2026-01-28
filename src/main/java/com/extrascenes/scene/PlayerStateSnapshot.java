@@ -2,12 +2,16 @@ package com.extrascenes.scene;
 
 import java.util.Collection;
 import org.bukkit.GameMode;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
 public class PlayerStateSnapshot {
+    private static final NamespacedKey GENERIC_MAX_HEALTH_KEY = NamespacedKey.minecraft("generic.max_health");
+    private static final NamespacedKey LEGACY_MAX_HEALTH_KEY = NamespacedKey.minecraft("max_health");
     private final GameMode gameMode;
     private final boolean flying;
     private final float flySpeed;
@@ -30,15 +34,11 @@ public class PlayerStateSnapshot {
     }
 
     private static Attribute resolveMaxHealthAttribute() {
-        try {
-            return Attribute.valueOf("GENERIC_MAX_HEALTH");
-        } catch (IllegalArgumentException ignored) {
-            try {
-                return Attribute.valueOf("MAX_HEALTH");
-            } catch (IllegalArgumentException fallbackIgnored) {
-                return null;
-            }
+        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MAX_HEALTH_KEY);
+        if (attribute != null) {
+            return attribute;
         }
+        return Registry.ATTRIBUTE.get(LEGACY_MAX_HEALTH_KEY);
     }
 
     public GameMode getGameMode() {
