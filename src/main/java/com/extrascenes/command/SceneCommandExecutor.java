@@ -2,6 +2,7 @@ package com.extrascenes.command;
 
 import com.extrascenes.ExtraScenesPlugin;
 import com.extrascenes.scene.Scene;
+import com.extrascenes.scene.SceneEditorEngine;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneRuntimeEngine;
 import com.extrascenes.scene.SceneSessionManager;
@@ -20,13 +21,16 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private final SceneManager sceneManager;
     private final SceneSessionManager sessionManager;
     private final SceneRuntimeEngine runtimeEngine;
+    private final SceneEditorEngine editorEngine;
 
     public SceneCommandExecutor(ExtraScenesPlugin plugin, SceneManager sceneManager,
-                                SceneSessionManager sessionManager, SceneRuntimeEngine runtimeEngine) {
+                                SceneSessionManager sessionManager, SceneRuntimeEngine runtimeEngine,
+                                SceneEditorEngine editorEngine) {
         this.plugin = plugin;
         this.sceneManager = sceneManager;
         this.sessionManager = sessionManager;
         this.runtimeEngine = runtimeEngine;
+        this.editorEngine = editorEngine;
     }
 
     @Override
@@ -86,12 +90,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Usage: /scene edit <name>");
             return;
         }
-        Scene scene = sceneManager.loadScene(args[1].toLowerCase());
+        String name = args[1].toLowerCase();
+        Scene scene = sceneManager.loadScene(name);
         if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
-            return;
+            scene = sceneManager.createScene(name, 200);
         }
-        new com.extrascenes.scene.SceneEditorEngine(plugin).openEditor(player, scene);
+        editorEngine.openEditor(player, scene);
     }
 
     private void handlePlay(CommandSender sender, String[] args) {
@@ -116,7 +120,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Target player not found.");
             return;
         }
-        sessionManager.startScene(target, scene);
+        sessionManager.startScene(target, scene, false);
         sender.sendMessage(ChatColor.GREEN + "Scene playing for " + target.getName());
     }
 

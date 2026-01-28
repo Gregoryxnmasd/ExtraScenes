@@ -40,22 +40,21 @@ public class ScenePlaceholderExpansion extends PlaceholderExpansion {
             return switch (params) {
                 case "active" -> "false";
                 case "scene" -> "";
+                case "time_ticks" -> "0";
+                case "duration_ticks" -> "0";
+                case "progress" -> "0";
                 case "state" -> "";
                 default -> "";
             };
         }
-        int duration = session.getScene().getTimeline().getDurationTicks();
+        int duration = session.getScene().getDurationTicks();
         int time = session.getTimeTicks();
         return switch (params) {
             case "active" -> "true";
             case "scene" -> session.getScene().getName();
             case "time_ticks" -> String.valueOf(time);
-            case "time_seconds" -> String.valueOf(time / 20);
             case "duration_ticks" -> String.valueOf(duration);
-            case "duration_seconds" -> String.valueOf(duration / 20);
             case "progress" -> String.valueOf(duration <= 0 ? 0 : Math.min(100, Math.round((time / (float) duration) * 100f)));
-            case "remaining_ticks" -> String.valueOf(Math.max(0, duration - time));
-            case "keyframe_index" -> "0";
             case "state" -> session.getState() == null ? SceneState.PLAYING.name() : session.getState().name();
             default -> "";
         };

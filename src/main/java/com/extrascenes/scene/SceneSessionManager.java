@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -35,12 +34,16 @@ public class SceneSessionManager {
     }
 
     public SceneSession startScene(Player player, Scene scene) {
+        return startScene(player, scene, false);
+    }
+
+    public SceneSession startScene(Player player, Scene scene, boolean preview) {
         SceneSession existing = sessions.get(player.getUniqueId());
         if (existing != null) {
             stopScene(player, "restart");
         }
 
-        SceneSession session = new SceneSession(player, scene);
+        SceneSession session = new SceneSession(player, scene, preview);
         sessions.put(player.getUniqueId(), session);
 
         if (plugin.getConfig().getBoolean("player.freeze", true)) {
@@ -85,6 +88,14 @@ public class SceneSessionManager {
         restorePlayerState(player, session);
         cleanupSessionEntities(session);
         Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
+
+        if (session.isPreview() && plugin.getEditorEngine() != null) {
+            EditorSession editorSession = plugin.getEditorEngine().getEditorSessionManager().getSession(player.getUniqueId());
+            if (editorSession != null) {
+                editorSession.setPreviewPlaying(false);
+                plugin.getEditorEngine().openMainMenu(player, session.getScene(), editorSession);
+            }
+        }
     }
 
     public void handleDisconnect(Player player, String reason) {

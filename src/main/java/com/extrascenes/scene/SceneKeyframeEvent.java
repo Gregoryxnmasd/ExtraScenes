@@ -8,9 +8,9 @@ public class SceneKeyframeEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
     private final Player player;
     private final Scene scene;
-    private final SceneKeyframe keyframe;
+    private final Keyframe keyframe;
 
-    public SceneKeyframeEvent(Player player, Scene scene, SceneKeyframe keyframe) {
+    public SceneKeyframeEvent(Player player, Scene scene, Keyframe keyframe) {
         this.player = player;
         this.scene = scene;
         this.keyframe = keyframe;
@@ -24,7 +24,7 @@ public class SceneKeyframeEvent extends Event {
         return scene;
     }
 
-    public SceneKeyframe getKeyframe() {
+    public Keyframe getKeyframe() {
         return keyframe;
     }
 

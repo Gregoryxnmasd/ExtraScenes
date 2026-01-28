@@ -3,16 +3,18 @@ package com.extrascenes.scene;
 import com.extrascenes.ExtraScenesPlugin;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.UUID;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SceneManager {
     private static final int FORMAT_VERSION = 1;
     private final ExtraScenesPlugin plugin;
     private final File scenesFolder;
+    private final SceneSerializer serializer = new SceneSerializer();
+    private final SceneDeserializer deserializer = new SceneDeserializer();
 
     public SceneManager(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
@@ -23,101 +25,58 @@ public class SceneManager {
     }
 
     public Scene createScene(String name, int durationTicks) {
-        SceneTimeline timeline = new SceneTimeline(durationTicks, List.of(new SceneCameraTrack(), new SceneCommandTrack()));
-        return new Scene(name, timeline, FORMAT_VERSION);
+        Map<SceneTrackType, Track<? extends Keyframe>> tracks = new EnumMap<>(SceneTrackType.class);
+        tracks.put(SceneTrackType.CAMERA, new Track<>(SceneTrackType.CAMERA));
+        tracks.put(SceneTrackType.COMMAND, new Track<>(SceneTrackType.COMMAND));
+        tracks.put(SceneTrackType.MODEL, new Track<>(SceneTrackType.MODEL));
+        tracks.put(SceneTrackType.PARTICLE, new Track<>(SceneTrackType.PARTICLE));
+        tracks.put(SceneTrackType.SOUND, new Track<>(SceneTrackType.SOUND));
+        tracks.put(SceneTrackType.BLOCK_ILLUSION, new Track<>(SceneTrackType.BLOCK_ILLUSION));
+        return new Scene(name, durationTicks, FORMAT_VERSION, tracks);
     }
 
     public void saveScene(Scene scene) throws IOException {
-        File file = new File(scenesFolder, scene.getName() + ".yml");
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("formatVersion", scene.getFormatVersion());
-        config.set("durationTicks", scene.getTimeline().getDurationTicks());
-
-        ConfigurationSection tracksSection = config.createSection("tracks");
-        for (SceneTrack track : scene.getTimeline().getTracks()) {
-            ConfigurationSection trackSection = tracksSection.createSection(track.getName());
-            int index = 0;
-            for (SceneKeyframe keyframe : track.getKeyframes()) {
-                ConfigurationSection keySection = trackSection.createSection(String.valueOf(index));
-                keySection.set("timeTicks", keyframe.getTimeTicks());
-                keySection.set("type", keyframe.getType());
-                keySection.set("smoothing", keyframe.getSmoothingMode().name());
-                keySection.set("instant", keyframe.isInstant());
-                keySection.set("lookAt", keyframe.getLookAt());
-                keySection.set("commands", keyframe.getCommands());
-                keySection.set("refId", keyframe.getRefId() == null ? null : keyframe.getRefId().toString());
-                index++;
-            }
-        }
-
-        config.save(file);
+        Path file = new File(scenesFolder, scene.getName() + ".json").toPath();
+        serializer.write(scene, file);
     }
 
     public Scene loadScene(String name) {
-        File file = new File(scenesFolder, name + ".yml");
+        File file = new File(scenesFolder, name + ".json");
         if (!file.exists()) {
             return null;
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-        int formatVersion = config.getInt("formatVersion", FORMAT_VERSION);
-        int durationTicks = config.getInt("durationTicks", 0);
-        List<SceneTrack> tracks = new ArrayList<>();
-
-        ConfigurationSection tracksSection = config.getConfigurationSection("tracks");
-        if (tracksSection != null) {
-            for (String trackName : tracksSection.getKeys(false)) {
-                SceneTrack track = createTrackByName(trackName);
-                ConfigurationSection trackSection = tracksSection.getConfigurationSection(trackName);
-                if (trackSection != null && track instanceof AbstractSceneTrack abstractTrack) {
-                    for (String key : trackSection.getKeys(false)) {
-                        ConfigurationSection keySection = trackSection.getConfigurationSection(key);
-                        if (keySection == null) {
-                            continue;
-                        }
-                        int timeTicks = keySection.getInt("timeTicks", 0);
-                        String type = keySection.getString("type", trackName);
-                        SmoothingMode smoothing = SmoothingMode.valueOf(keySection.getString("smoothing", "LINEAR"));
-                        boolean instant = keySection.getBoolean("instant", false);
-                        String lookAt = keySection.getString("lookAt");
-                        List<String> commands = keySection.getStringList("commands");
-                        String refIdString = keySection.getString("refId");
-                        UUID refId = refIdString == null ? null : UUID.fromString(refIdString);
-                        abstractTrack.addKeyframe(new SceneKeyframe(timeTicks, type, smoothing, instant, lookAt, commands, refId));
-                    }
-                }
-                tracks.add(track);
+        try {
+            Scene scene = deserializer.read(file.toPath());
+            if (scene == null) {
+                return null;
             }
+            ensureTracks(scene);
+            return scene;
+        } catch (IOException ex) {
+            return null;
         }
-
-        SceneTimeline timeline = new SceneTimeline(durationTicks, tracks);
-        return new Scene(name, timeline, formatVersion);
     }
 
     public boolean deleteScene(String name) {
-        File file = new File(scenesFolder, name + ".yml");
+        File file = new File(scenesFolder, name + ".json");
         return file.delete();
     }
 
     public List<String> listScenes() {
-        List<String> scenes = new ArrayList<>();
-        File[] files = scenesFolder.listFiles((dir, fileName) -> fileName.endsWith(".yml"));
-        if (files != null) {
-            for (File file : files) {
-                scenes.add(file.getName().replace(".yml", ""));
-            }
+        File[] files = scenesFolder.listFiles((dir, fileName) -> fileName.endsWith(".json"));
+        if (files == null) {
+            return List.of();
         }
-        return scenes;
+        return java.util.Arrays.stream(files)
+                .map(file -> file.getName().replace(".json", ""))
+                .collect(Collectors.toList());
     }
 
-    private SceneTrack createTrackByName(String name) {
-        return switch (name) {
-            case "camera" -> new SceneCameraTrack();
-            case "commands" -> new SceneCommandTrack();
-            case "models" -> new SceneModelTrack();
-            case "particles" -> new SceneParticleTrack();
-            case "sounds" -> new SceneSoundTrack();
-            case "block_illusions" -> new SceneBlockIllusionTrack();
-            default -> new SceneCommandTrack();
-        };
+    private void ensureTracks(Scene scene) {
+        for (SceneTrackType type : SceneTrackType.values()) {
+            if (!scene.getTracks().containsKey(type)) {
+                scene.getTracks().put(type, new Track<>(type));
+            }
+        }
     }
 }

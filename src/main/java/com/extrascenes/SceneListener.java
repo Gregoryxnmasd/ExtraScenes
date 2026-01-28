@@ -1,5 +1,7 @@
 package com.extrascenes;
 
+import com.extrascenes.scene.EditorInputManager;
+import com.extrascenes.scene.EditorSessionManager;
 import com.extrascenes.scene.SceneSession;
 import com.extrascenes.scene.SceneState;
 import com.extrascenes.scene.SceneSessionManager;
@@ -20,10 +22,15 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 public class SceneListener implements Listener {
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
+    private final EditorSessionManager editorSessionManager;
+    private final EditorInputManager inputManager;
 
-    public SceneListener(SceneSessionManager sessionManager, SceneVisibilityController visibilityController) {
+    public SceneListener(SceneSessionManager sessionManager, SceneVisibilityController visibilityController,
+                         EditorSessionManager editorSessionManager, EditorInputManager inputManager) {
         this.sessionManager = sessionManager;
         this.visibilityController = visibilityController;
+        this.editorSessionManager = editorSessionManager;
+        this.inputManager = inputManager;
     }
 
     @EventHandler
@@ -35,6 +42,12 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         sessionManager.handleDisconnect(event.getPlayer(), "player_quit");
+        if (editorSessionManager != null) {
+            editorSessionManager.removeSession(event.getPlayer().getUniqueId());
+        }
+        if (inputManager != null) {
+            inputManager.clearPrompt(event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler
