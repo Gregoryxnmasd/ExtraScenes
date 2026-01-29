@@ -21,21 +21,20 @@ public class CameraOptionsGui implements EditorGui {
 
         CameraKeyframe keyframe = editorEngine.getOrCreateCameraKeyframe(session, tick);
         if (keyframe.getTransform() == null) {
-            keyframe.setTransform(Transform.fromLocation(Bukkit.getPlayer(session.getPlayerUuid()).getLocation()));
+            keyframe.setTransform(Transform.fromLocation(Bukkit.getPlayer(session.getPlayerUuid()).getEyeLocation()));
             editorEngine.markDirty(session.getScene());
         }
         inventory.setItem(4, GuiUtils.makeItem(Material.COMPASS, "Camera Options",
-                List.of("Tick " + tick, "Mode: " + (keyframe.isInstant() ? "INSTANT_CUT" : "FOLLOW_PATH"),
-                        "LookAt: " + (keyframe.getLookAt().getMode() == LookAtTarget.Mode.NONE ? "OFF" : keyframe.getLookAt().getMode()))));
+                List.of("Tick " + tick, "Smoothing: " + keyframe.getSmoothingMode(),
+                        "LookAt: " + (keyframe.getLookAt().getMode() == LookAtTarget.Mode.NONE ? "OFF"
+                                : keyframe.getLookAt().getMode()))));
 
-        inventory.setItem(10, GuiUtils.makeItem(Material.ENDER_EYE, "Toggle Instant Cut",
-                List.of("Instant: " + keyframe.isInstant())));
+        inventory.setItem(10, GuiUtils.makeItem(Material.REPEATER, "Smoothing: " + keyframe.getSmoothingMode(),
+                List.of("Cycle easing mode.")));
         inventory.setItem(12, GuiUtils.makeItem(Material.TARGET, "Set LookAt Here",
                 List.of("Aim at your current location.")));
         inventory.setItem(14, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Clear LookAt",
                 List.of("Disable look-at.")));
-        inventory.setItem(16, GuiUtils.makeItem(Material.REPEATER, "Smoothing: " + keyframe.getSmoothingMode(),
-                List.of("Cycle easing mode.")));
 
         inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
@@ -59,13 +58,13 @@ public class CameraOptionsGui implements EditorGui {
         }
         CameraKeyframe keyframe = editorEngine.getOrCreateCameraKeyframe(session, session.getCurrentTick());
         if (slot == 10) {
-            keyframe.setInstant(!keyframe.isInstant());
+            keyframe.setSmoothingMode(keyframe.getSmoothingMode().next());
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 12) {
-            keyframe.setLookAt(new LookAtTarget(LookAtTarget.Mode.POSITION, Transform.fromLocation(player.getLocation()), null));
+            keyframe.setLookAt(new LookAtTarget(LookAtTarget.Mode.POSITION, Transform.fromLocation(player.getEyeLocation()), null));
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
@@ -75,11 +74,6 @@ public class CameraOptionsGui implements EditorGui {
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
-        }
-        if (slot == 16) {
-            keyframe.setSmoothingMode(keyframe.getSmoothingMode().next());
-            editorEngine.markDirty(session.getScene());
-            refresh(session);
         }
     }
 

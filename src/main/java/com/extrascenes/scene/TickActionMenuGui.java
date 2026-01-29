@@ -36,8 +36,8 @@ public class TickActionMenuGui implements EditorGui {
                 List.of("Edit actionbar text + duration.")));
         inventory.setItem(31, GuiUtils.makeItem(Material.NOTE_BLOCK, "Effects",
                 List.of("Particles, sounds, blocks.")));
-        inventory.setItem(33, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Clear Tick",
-                List.of("Remove all actions at this tick.")));
+        inventory.setItem(33, GuiUtils.makeItem(Material.ANVIL, "Tick Tools",
+                List.of("Move, copy, clear, shift.")));
 
         inventory.setItem(36, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to group grid.")));
         inventory.setItem(40, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
@@ -103,7 +103,7 @@ public class TickActionMenuGui implements EditorGui {
             return;
         }
         if (slot == 33) {
-            editorEngine.openConfirm(player, session, ConfirmAction.CLEAR_TICK, null, null);
+            editorEngine.openTickTools(player, session, true);
         }
     }
 

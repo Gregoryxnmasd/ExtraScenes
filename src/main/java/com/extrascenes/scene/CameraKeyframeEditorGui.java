@@ -36,8 +36,6 @@ public class CameraKeyframeEditorGui implements EditorGui {
                     List.of("Capture player transform.")));
             inventory.setItem(22, GuiUtils.makeItem(Material.REPEATER, "Smoothing: " + keyframe.getSmoothingMode(),
                     List.of("Click to cycle.")));
-            inventory.setItem(24, GuiUtils.makeItem(Material.LEVER, "Instant: " + keyframe.isInstant(),
-                    List.of("Toggle instant teleport.")));
 
             inventory.setItem(29, GuiUtils.makeItem(Material.ARROW, "Adjust X ±0.5",
                     List.of("Left: -0.5", "Right: +0.5")));
@@ -53,9 +51,6 @@ public class CameraKeyframeEditorGui implements EditorGui {
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to keyframe list.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(53, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Apply",
-                List.of("Save changes to keyframe.")));
-
         return inventory;
     }
 
@@ -80,11 +75,6 @@ public class CameraKeyframeEditorGui implements EditorGui {
             editorEngine.closeEditor(player, session);
             return;
         }
-        if (slot == 53) {
-            player.sendMessage(GuiUtils.TITLE_PREFIX + "Keyframe saved.");
-            refresh(session);
-            return;
-        }
         if (slot == 9) {
             player.closeInventory();
             editorEngine.getInputManager().beginKeyframeTimeInput(player, session.getScene(), session,
@@ -102,19 +92,13 @@ public class CameraKeyframeEditorGui implements EditorGui {
             return;
         }
         if (slot == 20) {
-            keyframe.setTransform(Transform.fromLocation(player.getLocation()));
+            keyframe.setTransform(Transform.fromLocation(player.getEyeLocation()));
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 22) {
             keyframe.setSmoothingMode(keyframe.getSmoothingMode().next());
-            editorEngine.markDirty(session.getScene());
-            refresh(session);
-            return;
-        }
-        if (slot == 24) {
-            keyframe.setInstant(!keyframe.isInstant());
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;

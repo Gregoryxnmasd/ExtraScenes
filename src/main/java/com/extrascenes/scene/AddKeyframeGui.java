@@ -41,6 +41,8 @@ public class AddKeyframeGui implements EditorGui {
                         List.of("Create an animation action.")));
                 inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Despawn Model Keyframe",
                         List.of("Create a despawn action.")));
+                inventory.setItem(17, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Stop Animation Keyframe",
+                        List.of("Create a stop action.")));
             }
             case PARTICLE -> inventory.setItem(13, GuiUtils.makeItem(Material.BLAZE_POWDER, "Add Particle Keyframe",
                     List.of("Uses current location.")));
@@ -76,9 +78,9 @@ public class AddKeyframeGui implements EditorGui {
         SceneTrackType trackType = session.getSelectedTrack();
         if (trackType == SceneTrackType.CAMERA) {
             if (slot == 11) {
-                editorEngine.addCameraKeyframe(player, session, false);
+                editorEngine.addCameraKeyframe(player, session, null);
             } else if (slot == 13) {
-                editorEngine.addCameraKeyframe(player, session, true);
+                editorEngine.addCameraKeyframe(player, session, SmoothingMode.INSTANT);
             } else if (slot == 15) {
                 editorEngine.addLookAtKeyframe(player, session);
             }
@@ -102,6 +104,10 @@ public class AddKeyframeGui implements EditorGui {
                 player.closeInventory();
                 editorEngine.getInputManager().beginModelInput(player, session.getScene(), session,
                         ModelKeyframe.Action.DESPAWN, GuiType.KEYFRAME_LIST);
+            } else if (slot == 17) {
+                player.closeInventory();
+                editorEngine.getInputManager().beginModelInput(player, session.getScene(), session,
+                        ModelKeyframe.Action.STOP, GuiType.KEYFRAME_LIST);
             }
             return;
         }

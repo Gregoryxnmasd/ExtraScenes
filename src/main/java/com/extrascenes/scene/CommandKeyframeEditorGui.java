@@ -52,9 +52,6 @@ public class CommandKeyframeEditorGui implements EditorGui {
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(53, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Apply",
-                List.of("Save changes to keyframe.")));
-
         return inventory;
     }
 
@@ -77,11 +74,6 @@ public class CommandKeyframeEditorGui implements EditorGui {
         }
         if (slot == 49) {
             editorEngine.closeEditor(player, session);
-            return;
-        }
-        if (slot == 53) {
-            player.sendMessage(GuiUtils.TITLE_PREFIX + "Keyframe saved.");
-            refresh(session);
             return;
         }
         if (slot == 9) {

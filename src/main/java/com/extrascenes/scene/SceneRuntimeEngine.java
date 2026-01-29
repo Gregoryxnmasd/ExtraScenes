@@ -157,7 +157,7 @@ public class SceneRuntimeEngine {
             next = keyframes.get(keyframes.size() - 1);
             nextIndex = keyframes.size() - 1;
         }
-        if (previous == next || previous.isInstant()) {
+        if (previous == next || previous.getSmoothingMode() == SmoothingMode.INSTANT) {
             return previous.getTransform();
         }
 
@@ -198,17 +198,11 @@ public class SceneRuntimeEngine {
 
     private float applySmoothing(SmoothingMode mode, float t) {
         return switch (mode) {
-            case NONE -> 0.0f;
+            case INSTANT -> 0.0f;
             case LINEAR -> t;
-            case SMOOTHSTEP -> t * t * (3.0f - 2.0f * t);
-            case EASE_IN -> t * t;
-            case EASE_OUT -> t * (2.0f - t);
-            case EASE_IN_OUT -> t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t;
-            case EASE_IN_OUT_CUBIC -> t < 0.5f ? 4.0f * t * t * t : 1.0f - (float) Math.pow(-2.0f * t + 2.0f, 3) / 2.0f;
-            case EASE_IN_OUT_QUINT -> t < 0.5f
+            case SMOOTH -> t < 0.5f
                     ? 16.0f * t * t * t * t * t
                     : 1.0f - (float) Math.pow(-2.0f * t + 2.0f, 5) / 2.0f;
-            case CATMULL_ROM -> t * t * (2.0f - t);
         };
     }
 
@@ -350,46 +344,64 @@ public class SceneRuntimeEngine {
             player.sendMessage(ChatColor.RED + "ModelEngine not installed; model keyframe skipped.");
             return;
         }
+        SceneModelEntry entry = session.getScene().getModelEntry(keyframe.getModelEntry());
+        String modelId = keyframe.getModelId();
+        if (entry != null && entry.getModelId() != null && !entry.getModelId().isBlank()) {
+            modelId = entry.getModelId();
+        }
         switch (keyframe.getAction()) {
             case SPAWN -> {
                 Transform transform = keyframe.getSpawnTransform();
+                if (transform == null && entry != null) {
+                    transform = entry.getSpawnTransform();
+                }
                 Location location = player.getLocation().clone();
                 if (transform != null) {
                     transform.applyTo(location);
                 }
+                if (modelId == null || modelId.isBlank()) {
+                    player.sendMessage(ChatColor.RED + "Model entry missing modelId; spawn skipped.");
+                    return;
+                }
                 Entity base = adapter.spawnModelBase(player, location);
-                adapter.bindModel(base, keyframe.getModelId());
+                adapter.bindModel(base, modelId);
                 session.registerEntity(base);
                 sessionManager.registerSceneEntity(session, base);
                 visibilityController.hideEntityFromAllExcept(base, player);
                 String handle = keyframe.getEntityRef();
                 if (handle == null || handle.isBlank()) {
-                    handle = "model_" + UUID.randomUUID();
+                    handle = UUID.randomUUID().toString();
                     keyframe.setEntityRef(handle);
                 }
                 session.registerModelRef(handle, base.getUniqueId());
                 session.setLastModelHandle(handle);
+                if (entry != null) {
+                    session.setLastModelHandleForEntry(entry.getName(), handle);
+                    if (entry.getDefaultAnimation() != null && !entry.getDefaultAnimation().isBlank()) {
+                        adapter.playAnimation(base, modelId, entry.getDefaultAnimation(), true, 1.0);
+                    }
+                }
             }
             case ANIM -> {
-                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
-                        adapter.playAnimation(entity, keyframe.getAnimationId(), keyframe.isLoop(), keyframe.getSpeed());
+                        adapter.playAnimation(entity, modelId, keyframe.getAnimationId(), keyframe.isLoop(), keyframe.getSpeed());
                     }
                 }
             }
             case STOP -> {
-                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
-                        adapter.stopAnimation(entity, keyframe.getAnimationId());
+                        adapter.stopAnimation(entity, modelId, keyframe.getAnimationId());
                     }
                 }
             }
             case DESPAWN -> {
-                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
@@ -456,9 +468,12 @@ public class SceneRuntimeEngine {
         return player.getWorld().getEntity(session.getCameraRigId());
     }
 
-    private String resolveHandle(SceneSession session, String handle) {
+    private String resolveHandle(SceneSession session, ModelKeyframe keyframe) {
+        String handle = keyframe.getEntityRef();
         if (handle == null || handle.isBlank() || "last".equalsIgnoreCase(handle)) {
-            return session.getLastModelHandle();
+            String entry = keyframe.getModelEntry();
+            String entryHandle = session.getLastModelHandleForEntry(entry);
+            return entryHandle != null ? entryHandle : session.getLastModelHandle();
         }
         return handle;
     }

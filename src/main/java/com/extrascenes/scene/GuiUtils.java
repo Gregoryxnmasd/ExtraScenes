@@ -83,7 +83,6 @@ public final class GuiUtils {
             Transform transform = camera.getTransform();
             lore.add("Pos: " + formatTransform(transform));
             lore.add("Smooth: " + camera.getSmoothingMode());
-            lore.add("Instant: " + camera.isInstant());
         } else if (keyframe instanceof ActionBarKeyframe actionBar) {
             lore.add("Text: " + nullToPlaceholder(actionBar.getText()));
             lore.add("Duration: " + actionBar.getDurationTicks() + "t");
@@ -92,8 +91,8 @@ public final class GuiUtils {
             lore.add("Executor: " + command.getExecutorMode());
         } else if (keyframe instanceof ModelKeyframe model) {
             lore.add("Action: " + model.getAction());
-            lore.add("Ref: " + nullToPlaceholder(model.getEntityRef()));
-            lore.add("Model: " + nullToPlaceholder(model.getModelId()));
+            lore.add("Entry: " + nullToPlaceholder(model.getModelEntry()));
+            lore.add("ModelId: " + nullToPlaceholder(model.getModelId()));
         } else if (keyframe instanceof ParticleKeyframe particle) {
             lore.add("Particle: " + nullToPlaceholder(particle.getParticleId()));
         } else if (keyframe instanceof SoundKeyframe sound) {
