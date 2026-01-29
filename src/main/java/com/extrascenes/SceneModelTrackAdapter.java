@@ -5,9 +5,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 import org.bukkit.Location;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 public class SceneModelTrackAdapter {
@@ -40,7 +40,7 @@ public class SceneModelTrackAdapter {
     }
 
     public Entity spawnModelBase(Player owner, Location location) {
-        LivingEntity base = (LivingEntity) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        ArmorStand base = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
         base.setAI(false);
         base.setSilent(true);
         base.setInvulnerable(true);
