@@ -8,7 +8,7 @@ import org.bukkit.inventory.ItemStack;
 public class EditorSession {
     private final UUID playerUuid;
     private final String sceneName;
-    private final Scene scene;
+    private Scene scene;
     private SceneTrackType selectedTrack;
     private UUID selectedKeyframeId;
     private int cursorTimeTicks;
@@ -59,6 +59,12 @@ public class EditorSession {
 
     public Scene getScene() {
         return scene;
+    }
+
+    public void setScene(Scene scene) {
+        if (scene != null && scene.getName().equalsIgnoreCase(sceneName)) {
+            this.scene = scene;
+        }
     }
 
     public SceneTrackType getSelectedTrack() {

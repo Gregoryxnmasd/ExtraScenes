@@ -57,10 +57,16 @@ public class SceneEditorEngine {
     }
 
     public void openEditor(Player player, Scene scene) {
-        sceneManager.cacheScene(scene);
+        Scene cached = sceneManager.loadScene(scene.getName());
+        if (cached == null) {
+            cached = scene;
+        }
+        sceneManager.cacheScene(cached);
         EditorSession session = editorSessionManager.getSession(player.getUniqueId());
         if (session == null) {
-            session = editorSessionManager.createSession(player.getUniqueId(), scene);
+            session = editorSessionManager.createSession(player.getUniqueId(), cached);
+        } else {
+            session.setScene(cached);
         }
         session.clearHistory();
         openDashboard(player, session, false);

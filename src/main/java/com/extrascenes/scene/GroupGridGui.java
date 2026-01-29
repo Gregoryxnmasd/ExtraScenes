@@ -31,7 +31,6 @@ public class GroupGridGui implements EditorGui {
             int tick = startTick + i;
             if (tick <= scene.getDurationTicks()) {
                 inventory.setItem(i, buildTickItem(scene, tick));
-                inventory.setItem(i + 9, buildTickSummaryItem(scene, tick));
             }
         }
 
@@ -65,11 +64,10 @@ public class GroupGridGui implements EditorGui {
         ActionBarKeyframe actionbar = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick);
         List<String> tags = buildTags(camera, models, command, actionbar);
         lore.add("Tags: " + (tags.isEmpty() ? "-" : String.join(" ", tags)));
-        lore.add("Camera: " + (camera == null ? "No" : "Yes"));
-        lore.add("Models: " + models.size());
-        lore.add("Commands: " + (command == null ? 0 : command.getCommands().size()));
-        lore.add("Actionbar: " + (actionbar == null ? "No" : "Yes (" + actionbar.getDurationTicks() + "t)"));
-        lore.add("Effects: " + (particles.size() + sounds.size() + blocks.size()));
+        lore.add("Cam: " + (camera == null ? "No" : "Yes"));
+        lore.add("Model: " + models.size());
+        lore.add("Cmd: " + (command == null ? 0 : command.getCommands().size()));
+        lore.add("Bar: " + (actionbar == null ? "No" : "Yes"));
         lore.add("Click: edit");
         lore.add("Shift-click: move tick");
 
@@ -77,20 +75,6 @@ public class GroupGridGui implements EditorGui {
                 || !particles.isEmpty() || !sounds.isEmpty() || !blocks.isEmpty();
         Material material = edited ? Material.LIME_WOOL : Material.RED_WOOL;
         return GuiUtils.makeItem(material, "Tick " + tick, lore);
-    }
-
-    private org.bukkit.inventory.ItemStack buildTickSummaryItem(Scene scene, int tick) {
-        Track<CameraKeyframe> cameraTrack = scene.getTrack(SceneTrackType.CAMERA);
-        Track<CommandKeyframe> commandTrack = scene.getTrack(SceneTrackType.COMMAND);
-        Track<ModelKeyframe> modelTrack = scene.getTrack(SceneTrackType.MODEL);
-        Track<ActionBarKeyframe> actionTrack = scene.getTrack(SceneTrackType.ACTIONBAR);
-        CameraKeyframe camera = TickUtils.getFirstKeyframeAtTick(cameraTrack, tick);
-        CommandKeyframe command = TickUtils.getFirstKeyframeAtTick(commandTrack, tick);
-        List<ModelKeyframe> models = TickUtils.getKeyframesAtTick(modelTrack, tick);
-        ActionBarKeyframe actionbar = TickUtils.getFirstKeyframeAtTick(actionTrack, tick);
-        List<String> tags = buildTags(camera, models, command, actionbar);
-        return GuiUtils.makeItem(Material.PAPER, tags.isEmpty() ? "-" : String.join(" ", tags),
-                List.of("Cam / Model / Cmd / Bar"));
     }
 
     private List<String> buildTags(CameraKeyframe camera, List<ModelKeyframe> models,

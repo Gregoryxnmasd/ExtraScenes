@@ -11,6 +11,7 @@ import com.extrascenes.scene.SceneSessionManager;
 import com.extrascenes.visibility.SceneVisibilityController;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ExtraScenesPlugin extends JavaPlugin {
@@ -35,6 +36,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
         this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
         this.runtimeEngine = new SceneRuntimeEngine(this, sessionManager, visibilityController, protocolAdapter);
         this.modelTrackAdapter = new SceneModelTrackAdapter(this, visibilityController);
+        Plugin modelEngine = Bukkit.getPluginManager().getPlugin("ModelEngine");
+        boolean modelEngineDetected = modelEngine != null && modelEngine.isEnabled();
+        getLogger().info("ModelEngine detected " + (modelEngineDetected ? "YES" : "NO"));
 
         Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
                 editorSessionManager, editorEngine.getInputManager(), editorEngine), this);

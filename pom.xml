@@ -29,6 +29,10 @@
             <id>dmulloy2</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
         </repository>
+        <repository>
+            <id>lumine</id>
+            <url>https://mvn.lumine.io/repository/maven-public/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -60,9 +64,8 @@
         <dependency>
             <groupId>com.ticxo.modelengine</groupId>
             <artifactId>ModelEngine</artifactId>
-            <version>4.0.9</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/ModelEngine-R4.0.9-2210.jar</systemPath>
+            <version>R4.0.9</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
