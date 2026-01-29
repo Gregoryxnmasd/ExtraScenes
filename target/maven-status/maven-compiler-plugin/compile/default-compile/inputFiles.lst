@@ -1,9 +1,12 @@
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\command\SceneCommandExecutor.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ExtraScenesPlugin.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActionBarKeyframe.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActionBarKeyframeEditorGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\AddKeyframeGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\BlockIllusionKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CameraKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CameraKeyframeEditorGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CameraOptionsGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ClickContext.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CommandKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CommandKeyframeEditorGui.java
@@ -14,6 +17,10 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorInputManager.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorSession.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorSessionManager.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EffectsTickMenuGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EndTeleportMode.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\GroupGridGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\GroupSelectGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\GuiType.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\GuiUtils.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\Keyframe.java
@@ -21,6 +28,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\LookAtTarget.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ModelKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ModelKeyframeEditorGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ModelTickListGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ParticleKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\PlayerStateSnapshot.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\Scene.java
@@ -30,6 +38,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneEditorListener.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneEndEvent.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneKeyframeEvent.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneLocation.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneManager.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneRuntimeEngine.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneSerializer.java
@@ -41,8 +50,12 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTextFormatter.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTimeline.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTrackType.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneWand.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingMode.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingQuality.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SoundKeyframe.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\TickActionMenuGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\TickUtils.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\Track.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\TrackSelectGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\Transform.java
