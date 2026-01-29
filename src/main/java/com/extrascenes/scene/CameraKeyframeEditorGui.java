@@ -15,12 +15,11 @@ public class CameraKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
+        CameraKeyframe keyframe = editorEngine.getSelectedCameraKeyframe(session);
         int tick = keyframe == null ? session.getCurrentTick() : keyframe.getTimeTicks();
         Inventory inventory = GuiUtils.createInventory(54,
                 session.getSceneName() + " • Tick " + tick + " • Camera");
         GuiUtils.fillInventory(inventory);
-
-        CameraKeyframe keyframe = editorEngine.getSelectedCameraKeyframe(session);
         String timeLabel = keyframe == null ? "Unknown" : keyframe.getTimeTicks() + "t";
         inventory.setItem(4, GuiUtils.makeItem(Material.SPYGLASS, "Editing Keyframe @ " + timeLabel,
                 List.of("Camera keyframe editor.")));
