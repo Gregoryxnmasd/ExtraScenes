@@ -4,11 +4,13 @@ import com.extrascenes.visibility.SceneVisibilityController;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 public class SceneModelTrackAdapter {
     private final ExtraScenesPlugin plugin;
@@ -29,7 +31,8 @@ public class SceneModelTrackAdapter {
     public SceneModelTrackAdapter(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController) {
         this.plugin = plugin;
         this.visibilityController = visibilityController;
-        this.modelEngineAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ModelEngine");
+        Plugin modelEngine = Bukkit.getPluginManager().getPlugin("ModelEngine");
+        this.modelEngineAvailable = modelEngine != null && modelEngine.isEnabled();
         if (this.modelEngineAvailable) {
             initializeReflection();
         }

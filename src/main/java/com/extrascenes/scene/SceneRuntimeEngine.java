@@ -87,10 +87,22 @@ public class SceneRuntimeEngine {
             return;
         }
 
+        ensureSpectatorTarget(player, session);
         updateCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
         tickActionBar(player, session, time);
         session.incrementTime();
+    }
+
+    private void ensureSpectatorTarget(Player player, SceneSession session) {
+        Entity cameraRig = getCameraRig(session, player);
+        if (cameraRig == null) {
+            return;
+        }
+        Entity current = player.getSpectatorTarget();
+        if (current == null || !current.getUniqueId().equals(cameraRig.getUniqueId())) {
+            protocolAdapter.applySpectatorCamera(player, cameraRig);
+        }
     }
 
     private void updateCamera(Player player, SceneSession session, int timeTicks) {
@@ -164,6 +176,7 @@ public class SceneRuntimeEngine {
         int startTime = previous.getTimeTicks();
         int endTime = Math.max(startTime + 1, next.getTimeTicks());
         float t = (timeTicks - startTime) / (float) (endTime - startTime);
+        t = Math.max(0.0f, Math.min(1.0f, t));
         t = applySmoothing(previous.getSmoothingMode(), t);
 
         Transform position = quality.isSplinePosition()

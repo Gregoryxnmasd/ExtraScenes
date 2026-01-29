@@ -61,7 +61,7 @@ public class SceneSessionManager {
 
         ArmorStand rig = (ArmorStand) player.getWorld().spawnEntity(player.getLocation(), EntityType.ARMOR_STAND);
         rig.setInvisible(true);
-        rig.setMarker(true);
+        rig.setMarker(false);
         rig.setGravity(false);
         rig.setSilent(true);
         rig.setInvulnerable(true);

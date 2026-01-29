@@ -29,7 +29,9 @@ public class SceneProtocolAdapter {
 
     public void applySpectatorCamera(Player player, Entity cameraEntity) {
         player.setGameMode(GameMode.SPECTATOR);
-        player.setSpectatorTarget(cameraEntity);
+        if (cameraEntity != null) {
+            player.setSpectatorTarget(cameraEntity);
+        }
     }
 
     public void clearSpectatorCamera(Player player) {
