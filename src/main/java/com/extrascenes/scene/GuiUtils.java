@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class GuiUtils {
-    public static final String TITLE_PREFIX = ChatColor.DARK_AQUA + "ExtraScenes • ";
+    public static final String TITLE_PREFIX = ChatColor.DARK_GRAY.toString();
     public static final Material FRAME_GLASS = Material.GRAY_STAINED_GLASS_PANE;
     public static final DecimalFormat SECONDS_FORMAT = new DecimalFormat("0.00");
     public static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -84,6 +84,9 @@ public final class GuiUtils {
             lore.add("Pos: " + formatTransform(transform));
             lore.add("Smooth: " + camera.getSmoothingMode());
             lore.add("Instant: " + camera.isInstant());
+        } else if (keyframe instanceof ActionBarKeyframe actionBar) {
+            lore.add("Text: " + nullToPlaceholder(actionBar.getText()));
+            lore.add("Duration: " + actionBar.getDurationTicks() + "t");
         } else if (keyframe instanceof CommandKeyframe command) {
             lore.add("Commands: " + command.getCommands().size());
             lore.add("Executor: " + command.getExecutorMode());

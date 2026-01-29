@@ -43,8 +43,8 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
         PluginCommand command = getCommand("scene");
         if (command != null) {
-            command.setExecutor(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine, editorEngine));
-            command.setTabCompleter(new SceneCommandExecutor(this, sceneManager, sessionManager, runtimeEngine, editorEngine));
+            command.setExecutor(new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine));
+            command.setTabCompleter(new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine));
         }
 
         runtimeEngine.start();
@@ -61,6 +61,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
         }
         if (sessionManager != null) {
             sessionManager.stopAll("plugin_disable");
+        }
+        if (sceneManager != null) {
+            sceneManager.saveAllDirty();
         }
         if (editorSessionManager != null) {
             editorSessionManager.clear();
@@ -85,5 +88,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SceneEditorEngine getEditorEngine() {
         return editorEngine;
+    }
+
+    public SceneRuntimeEngine getRuntimeEngine() {
+        return runtimeEngine;
     }
 }

@@ -15,9 +15,7 @@ public class ConfirmGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
-        Inventory inventory = GuiUtils.createInventory(27,
-                "Scene: " + session.getSceneName() + " • Confirm • Group: " + session.getCurrentGroup()
-                        + " • Tick: " + session.getCurrentTick());
+        Inventory inventory = GuiUtils.createInventory(27, session.getSceneName() + " • Confirm");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Confirm Action",
@@ -57,6 +55,7 @@ public class ConfirmGui implements EditorGui {
         }
         return switch (action) {
             case DELETE_KEYFRAME -> "Delete selected keyframe?";
+            case REMOVE_COMMAND -> "Remove selected command?";
             case DELETE_SCENE -> "Delete entire scene?";
             case CLEAR_TRACK -> "Clear all keyframes in track?";
             case CLEAR_TICK -> "Clear all actions at this tick?";

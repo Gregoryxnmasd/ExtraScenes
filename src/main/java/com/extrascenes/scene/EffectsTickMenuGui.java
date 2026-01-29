@@ -16,7 +16,7 @@ public class EffectsTickMenuGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         int tick = session.getCurrentTick();
-        Inventory inventory = GuiUtils.createInventory(27, title(session, tick));
+        Inventory inventory = GuiUtils.createInventory(27, session.getSceneName() + " • Tick " + tick + " • Effects");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.NOTE_BLOCK, "Effects @ Tick " + tick,
@@ -28,7 +28,7 @@ public class EffectsTickMenuGui implements EditorGui {
                 List.of("Play sound at your location.")));
         inventory.setItem(14, GuiUtils.makeItem(Material.GLASS, "Add Block Illusion",
                 List.of("Show block at your location.")));
-        inventory.setItem(16, GuiUtils.makeItem(Material.BARRIER, "Clear Effects",
+        inventory.setItem(16, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Clear Effects",
                 List.of("Remove all effect keyframes.")));
 
         inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
@@ -69,10 +69,6 @@ public class EffectsTickMenuGui implements EditorGui {
         if (slot == 16) {
             editorEngine.openConfirm(player, session, ConfirmAction.CLEAR_EFFECTS, null, null);
         }
-    }
-
-    private String title(EditorSession session, int tick) {
-        return "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + tick;
     }
 
     @Override

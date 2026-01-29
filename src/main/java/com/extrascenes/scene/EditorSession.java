@@ -27,6 +27,7 @@ public class EditorSession {
     private ConfirmAction confirmAction;
     private SceneTrackType confirmTrack;
     private UUID confirmKeyframeId;
+    private Integer confirmCommandIndex;
 
     public EditorSession(UUID playerUuid, Scene scene) {
         this.playerUuid = playerUuid;
@@ -162,7 +163,10 @@ public class EditorSession {
 
     public void pushHistory(GuiType guiType) {
         if (guiType != null) {
-            history.push(guiType);
+            GuiType current = history.peek();
+            if (current != guiType) {
+                history.push(guiType);
+            }
         }
     }
 
@@ -208,5 +212,13 @@ public class EditorSession {
 
     public void setConfirmKeyframeId(UUID confirmKeyframeId) {
         this.confirmKeyframeId = confirmKeyframeId;
+    }
+
+    public Integer getConfirmCommandIndex() {
+        return confirmCommandIndex;
+    }
+
+    public void setConfirmCommandIndex(Integer confirmCommandIndex) {
+        this.confirmCommandIndex = confirmCommandIndex;
     }
 }

@@ -14,6 +14,7 @@ public enum GuiType {
     COMMAND_EDITOR,
     MODEL_EDITOR,
     MODEL_TICK_LIST,
+    ACTIONBAR_EDITOR,
     SCENE_SETTINGS,
     CONFIRM
 }

@@ -20,7 +20,7 @@ public class GroupSelectGui implements EditorGui {
         Scene scene = session.getScene();
         int duration = Math.max(scene.getDurationTicks(), GROUP_SIZE);
         int totalGroups = (int) Math.ceil(duration / (double) GROUP_SIZE);
-        Inventory inventory = GuiUtils.createInventory(54, title(session, "Group Select"));
+        Inventory inventory = GuiUtils.createInventory(54, session.getSceneName() + " • Groups");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.BOOK, "Groups",
@@ -32,8 +32,14 @@ public class GroupSelectGui implements EditorGui {
             int endTick = Math.min(group * GROUP_SIZE, scene.getDurationTicks());
             List<String> lore = new ArrayList<>();
             lore.add("Ticks " + startTick + " - " + endTick);
+            GroupSummary summary = summarizeGroup(scene, startTick, endTick);
+            lore.add("Edited ticks: " + summary.editedTicks);
+            if (!summary.hasLabels.isEmpty()) {
+                lore.add("Has: " + String.join("/", summary.hasLabels));
+            }
             lore.add("Click to open grid.");
-            inventory.setItem(slot++, GuiUtils.makeItem(Material.PAPER, "Group " + group, lore));
+            Material material = summary.editedTicks > 0 ? Material.BOOK : Material.PAPER;
+            inventory.setItem(slot++, GuiUtils.makeItem(material, "Group " + group, lore));
             if (slot >= 45) {
                 break;
             }
@@ -43,7 +49,7 @@ public class GroupSelectGui implements EditorGui {
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         inventory.setItem(47, GuiUtils.makeItem(Material.LIME_WOOL, "Extend +9", List.of("Add 9 ticks.")));
         inventory.setItem(48, GuiUtils.makeItem(Material.GREEN_WOOL, "Extend +90", List.of("Add 90 ticks.")));
-        inventory.setItem(51, GuiUtils.makeItem(Material.RED_WOOL, "Trim Duration", List.of("Remove ticks with confirm.")));
+        inventory.setItem(51, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Trim Duration", List.of("Remove ticks with confirm.")));
         inventory.setItem(53, GuiUtils.makeItem(Material.COMPASS, "Jump to Group", List.of("Enter group number via chat.")));
 
         return inventory;
@@ -67,11 +73,13 @@ public class GroupSelectGui implements EditorGui {
         }
         if (slot == 47) {
             scene.setDurationTicks(scene.getDurationTicks() + GROUP_SIZE);
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
         if (slot == 48) {
             scene.setDurationTicks(scene.getDurationTicks() + GROUP_SIZE * 10);
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
@@ -93,8 +101,45 @@ public class GroupSelectGui implements EditorGui {
         }
     }
 
-    private String title(EditorSession session, String label) {
-        return "Scene: " + session.getSceneName() + " • " + label + " • Group: - • Tick: -";
+    private GroupSummary summarizeGroup(Scene scene, int startTick, int endTick) {
+        int editedTicks = 0;
+        boolean hasCamera = false;
+        boolean hasModels = false;
+        boolean hasCommands = false;
+        boolean hasActionbar = false;
+        for (int tick = startTick; tick <= endTick; tick++) {
+            boolean edited = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.CAMERA), tick) != null
+                    || TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.COMMAND), tick) != null
+                    || TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick) != null
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.MODEL), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.PARTICLE), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.SOUND), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.BLOCK_ILLUSION), tick).isEmpty();
+            if (edited) {
+                editedTicks++;
+            }
+            hasCamera |= TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.CAMERA), tick) != null;
+            hasCommands |= TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.COMMAND), tick) != null;
+            hasActionbar |= TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick) != null;
+            hasModels |= !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.MODEL), tick).isEmpty();
+        }
+        List<String> labels = new ArrayList<>();
+        if (hasCamera) {
+            labels.add("Camera");
+        }
+        if (hasModels) {
+            labels.add("Models");
+        }
+        if (hasCommands) {
+            labels.add("Commands");
+        }
+        if (hasActionbar) {
+            labels.add("Actionbar");
+        }
+        return new GroupSummary(editedTicks, labels);
+    }
+
+    private record GroupSummary(int editedTicks, List<String> hasLabels) {
     }
 
     @Override

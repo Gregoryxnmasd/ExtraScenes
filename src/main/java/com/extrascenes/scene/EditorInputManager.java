@@ -16,10 +16,13 @@ public class EditorInputManager {
         CURSOR_TIME,
         KEYFRAME_TIME,
         GROUP_JUMP,
+        MOVE_TICK,
+        SHIFT_RANGE,
+        ACTIONBAR_TEXT,
+        ACTIONBAR_DURATION,
         MODEL_FIELD,
         MODEL_ACTION,
         MODEL_MODEL_ID,
-        MODEL_ENTITY_REF,
         MODEL_ANIMATION_ID,
         MODEL_LOOP,
         MODEL_SPEED,
@@ -27,7 +30,6 @@ public class EditorInputManager {
     }
 
     public enum ModelField {
-        ENTITY_REF,
         MODEL_ID,
         ANIMATION_ID
     }
@@ -180,12 +182,13 @@ public class EditorInputManager {
         PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MODEL_ACTION);
         state.setReturnGui(returnGui);
         state.setModelKeyframe(new ModelKeyframe(null, session.getCursorTimeTicks(), action));
-        if (action == ModelKeyframe.Action.ANIM || action == ModelKeyframe.Action.STOP || action == ModelKeyframe.Action.DESPAWN) {
-            state.setType(PromptType.MODEL_ENTITY_REF);
-            player.sendMessage(ChatColor.AQUA + "Enter entityRef:");
-        } else {
+        state.getModelKeyframe().setEntityRef("last");
+        if (action == ModelKeyframe.Action.SPAWN) {
             state.setType(PromptType.MODEL_MODEL_ID);
             player.sendMessage(ChatColor.AQUA + "Enter modelId:");
+        } else {
+            state.setType(PromptType.MODEL_ANIMATION_ID);
+            player.sendMessage(ChatColor.AQUA + "Enter animationId (or leave empty for none):");
         }
         prompts.put(player.getUniqueId(), state);
     }
@@ -226,6 +229,36 @@ public class EditorInputManager {
         player.sendMessage(ChatColor.AQUA + "Enter group number to open. Type 'cancel' to abort.");
     }
 
+    public void beginMoveTickInput(Player player, Scene scene, EditorSession session, int fromTick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MOVE_TICK);
+        state.setReturnGui(returnGui);
+        state.setKeyframeId(null);
+        state.getCommandBuffer().add(String.valueOf(fromTick));
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter destination tick. Type 'cancel' to abort.");
+    }
+
+    public void beginShiftRangeInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.SHIFT_RANGE);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter shift range: <fromTick> <toTick> <delta>. Type 'cancel' to abort.");
+    }
+
+    public void beginActionBarTextInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTIONBAR_TEXT);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter actionbar text. Type 'cancel' to abort.");
+    }
+
+    public void beginActionBarDurationInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTIONBAR_DURATION);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter actionbar duration in ticks. Type 'cancel' to abort.");
+    }
+
     public boolean handleChat(Player player, String message) {
         PromptState state = prompts.get(player.getUniqueId());
         if (state == null) {
@@ -247,10 +280,13 @@ public class EditorInputManager {
             case CURSOR_TIME -> handleCursorInput(player, state, message);
             case KEYFRAME_TIME -> handleKeyframeTimeInput(player, state, message);
             case GROUP_JUMP -> handleGroupJump(player, state, message);
+            case MOVE_TICK -> handleMoveTick(player, state, message);
+            case SHIFT_RANGE -> handleShiftRange(player, state, message);
+            case ACTIONBAR_TEXT -> handleActionBarText(player, state, message);
+            case ACTIONBAR_DURATION -> handleActionBarDuration(player, state, message);
             case MODEL_FIELD -> handleModelField(player, state, message);
             case MODEL_ACTION -> handleModelAction(player, state, message);
             case MODEL_MODEL_ID -> handleModelModelId(player, state, message);
-            case MODEL_ENTITY_REF -> handleModelEntityRef(player, state, message);
             case MODEL_ANIMATION_ID -> handleModelAnimationId(player, state, message);
             case MODEL_LOOP -> handleModelLoop(player, state, message);
             case MODEL_SPEED -> handleModelSpeed(player, state, message);
@@ -267,6 +303,7 @@ public class EditorInputManager {
                     state.getCommandBuffer(), CommandKeyframe.ExecutorMode.PLAYER, false);
             Track<CommandKeyframe> track = state.getScene().getTrack(SceneTrackType.COMMAND);
             track.addKeyframe(keyframe);
+            editorEngine.markDirty(state.getScene());
             prompts.remove(player.getUniqueId());
             state.getEditorSession().setSelectedKeyframeId(keyframe.getId());
             Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
@@ -286,6 +323,7 @@ public class EditorInputManager {
             return;
         }
         state.getCommandTarget().addCommand(message);
+        editorEngine.markDirty(state.getScene());
         prompts.remove(player.getUniqueId());
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                 state.getReturnGui() == null ? GuiType.COMMAND_EDITOR : state.getReturnGui()));
@@ -303,6 +341,7 @@ public class EditorInputManager {
             for (String cmd : state.getCommandBuffer()) {
                 state.getCommandTarget().addCommand(cmd);
             }
+            editorEngine.markDirty(state.getScene());
             prompts.remove(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                     state.getReturnGui() == null ? GuiType.COMMAND_EDITOR : state.getReturnGui()));
@@ -330,6 +369,7 @@ public class EditorInputManager {
             Track<? extends Keyframe> track = state.getScene().getTrack(state.getTrackType());
             if (track != null && state.getKeyframeId() != null) {
                 track.moveKeyframe(state.getKeyframeId(), ticks);
+                editorEngine.markDirty(state.getScene());
             }
             prompts.remove(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
@@ -354,13 +394,14 @@ public class EditorInputManager {
         try {
             ModelKeyframe.Action action = ModelKeyframe.Action.valueOf(message.toUpperCase());
             ModelKeyframe keyframe = new ModelKeyframe(null, state.getEditorSession().getCursorTimeTicks(), action);
+            keyframe.setEntityRef("last");
             state.setModelKeyframe(keyframe);
-            state.setType(action == ModelKeyframe.Action.ANIM ? PromptType.MODEL_ENTITY_REF : PromptType.MODEL_MODEL_ID);
-            if (action == ModelKeyframe.Action.ANIM || action == ModelKeyframe.Action.STOP || action == ModelKeyframe.Action.DESPAWN) {
-                state.setType(PromptType.MODEL_ENTITY_REF);
-                player.sendMessage(ChatColor.AQUA + "Enter entityRef:");
-            } else {
+            if (action == ModelKeyframe.Action.SPAWN) {
+                state.setType(PromptType.MODEL_MODEL_ID);
                 player.sendMessage(ChatColor.AQUA + "Enter modelId:");
+            } else {
+                state.setType(PromptType.MODEL_ANIMATION_ID);
+                player.sendMessage(ChatColor.AQUA + "Enter animationId (or leave empty):");
             }
         } catch (IllegalArgumentException ex) {
             player.sendMessage(ChatColor.RED + "Invalid action. Use SPAWN/ANIM/STOP/DESPAWN.");
@@ -376,13 +417,13 @@ public class EditorInputManager {
             return;
         }
         switch (state.getModelField()) {
-            case ENTITY_REF -> target.setEntityRef(message);
             case MODEL_ID -> target.setModelId(message);
             case ANIMATION_ID -> target.setAnimationId(message);
             default -> {
             }
         }
         prompts.remove(player.getUniqueId());
+        editorEngine.markDirty(state.getScene());
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                 state.getReturnGui() == null ? GuiType.MODEL_EDITOR : state.getReturnGui()));
         player.sendMessage(ChatColor.GREEN + "Model keyframe updated.");
@@ -390,23 +431,11 @@ public class EditorInputManager {
 
     private void handleModelModelId(Player player, PromptState state, String message) {
         state.getModelKeyframe().setModelId(message);
-        player.sendMessage(ChatColor.AQUA + "Enter entityRef:");
-        state.setType(PromptType.MODEL_ENTITY_REF);
-    }
-
-    private void handleModelEntityRef(Player player, PromptState state, String message) {
-        state.getModelKeyframe().setEntityRef(message);
-        if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.ANIM
-                || state.getModelKeyframe().getAction() == ModelKeyframe.Action.STOP) {
-            player.sendMessage(ChatColor.AQUA + "Enter animationId:");
-            state.setType(PromptType.MODEL_ANIMATION_ID);
-        } else {
-            finalizeModelKeyframe(player, state);
-        }
+        finalizeModelKeyframe(player, state);
     }
 
     private void handleModelAnimationId(Player player, PromptState state, String message) {
-        state.getModelKeyframe().setAnimationId(message);
+        state.getModelKeyframe().setAnimationId(message == null || message.isBlank() ? null : message);
         if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.ANIM) {
             player.sendMessage(ChatColor.AQUA + "Loop animation? (true/false)");
             state.setType(PromptType.MODEL_LOOP);
@@ -436,6 +465,7 @@ public class EditorInputManager {
         }
         Track<ModelKeyframe> track = state.getScene().getTrack(SceneTrackType.MODEL);
         track.addKeyframe(state.getModelKeyframe());
+        editorEngine.markDirty(state.getScene());
         prompts.remove(player.getUniqueId());
         state.getEditorSession().setSelectedKeyframeId(state.getModelKeyframe().getId());
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
@@ -456,9 +486,75 @@ public class EditorInputManager {
             state.getModelKeyframe().setSpeed(1.0);
         }
         prompts.remove(player.getUniqueId());
+        editorEngine.markDirty(state.getScene());
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                 state.getReturnGui() == null ? GuiType.MODEL_EDITOR : state.getReturnGui()));
         player.sendMessage(ChatColor.GREEN + "Model speed updated.");
+    }
+
+    private void handleMoveTick(Player player, PromptState state, String message) {
+        try {
+            int toTick = Integer.parseInt(message);
+            int fromTick = Integer.parseInt(state.getCommandBuffer().get(0));
+            editorEngine.moveTick(state.getScene(), fromTick, toTick, state.getEditorSession());
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.GROUP_GRID : state.getReturnGui()));
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "Invalid number. Enter destination tick.");
+        }
+    }
+
+    private void handleShiftRange(Player player, PromptState state, String message) {
+        String[] parts = message.split("\\\\s+");
+        if (parts.length < 3) {
+            player.sendMessage(ChatColor.RED + "Enter: <fromTick> <toTick> <delta>.");
+            return;
+        }
+        try {
+            int from = Integer.parseInt(parts[0]);
+            int to = Integer.parseInt(parts[1]);
+            int delta = Integer.parseInt(parts[2]);
+            editorEngine.shiftRange(state.getScene(), from, to, delta, state.getEditorSession());
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.GROUP_GRID : state.getReturnGui()));
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "Invalid numbers. Enter: <fromTick> <toTick> <delta>.");
+        }
+    }
+
+    private void handleActionBarText(Player player, PromptState state, String message) {
+        ActionBarKeyframe keyframe = editorEngine.getSelectedActionBarKeyframe(state.getEditorSession());
+        if (keyframe == null) {
+            prompts.remove(player.getUniqueId());
+            return;
+        }
+        keyframe.setText(message);
+        editorEngine.markDirty(state.getScene());
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                state.getReturnGui() == null ? GuiType.ACTIONBAR_EDITOR : state.getReturnGui()));
+        player.sendMessage(ChatColor.GREEN + "Actionbar text updated.");
+    }
+
+    private void handleActionBarDuration(Player player, PromptState state, String message) {
+        ActionBarKeyframe keyframe = editorEngine.getSelectedActionBarKeyframe(state.getEditorSession());
+        if (keyframe == null) {
+            prompts.remove(player.getUniqueId());
+            return;
+        }
+        try {
+            keyframe.setDurationTicks(Integer.parseInt(message));
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "Invalid duration. Enter ticks.");
+            return;
+        }
+        editorEngine.markDirty(state.getScene());
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                state.getReturnGui() == null ? GuiType.ACTIONBAR_EDITOR : state.getReturnGui()));
+        player.sendMessage(ChatColor.GREEN + "Actionbar duration updated.");
     }
 
     public void clearPrompt(UUID playerId) {
