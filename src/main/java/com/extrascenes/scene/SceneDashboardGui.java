@@ -16,12 +16,11 @@ public class SceneDashboardGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
-        Inventory inventory = GuiUtils.createInventory(27,
-                "Scene: " + scene.getName() + " • Dashboard • Group: - • Tick: -");
+        Inventory inventory = GuiUtils.createInventory(27, "Editing: " + scene.getName());
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.WRITABLE_BOOK,
-                "ExtraScenes • Scene: " + scene.getName(),
+                "Scene: " + scene.getName(),
                 List.of(
                         "Duration: " + scene.getDurationTicks() + "t",
                         "Mode: " + (session.isPreviewPlaying() ? "Preview" : "Edit"),

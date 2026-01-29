@@ -14,6 +14,9 @@ public class Scene {
     private String cameraMode;
     private boolean freezePlayer;
     private boolean allowGlobalCommands;
+    private EndTeleportMode endTeleportMode;
+    private SceneLocation endLocation;
+    private boolean dirty;
 
     public Scene(String name, int durationTicks, int formatVersion, Map<SceneTrackType, Track<? extends Keyframe>> tracks) {
         this.name = name;
@@ -29,6 +32,9 @@ public class Scene {
         this.cameraMode = "SPECTATOR";
         this.freezePlayer = true;
         this.allowGlobalCommands = false;
+        this.endTeleportMode = EndTeleportMode.RETURN_TO_START;
+        this.endLocation = null;
+        this.dirty = false;
     }
 
     public String getName() {
@@ -98,5 +104,29 @@ public class Scene {
 
     public void setAllowGlobalCommands(boolean allowGlobalCommands) {
         this.allowGlobalCommands = allowGlobalCommands;
+    }
+
+    public EndTeleportMode getEndTeleportMode() {
+        return endTeleportMode;
+    }
+
+    public void setEndTeleportMode(EndTeleportMode endTeleportMode) {
+        this.endTeleportMode = endTeleportMode == null ? EndTeleportMode.RETURN_TO_START : endTeleportMode;
+    }
+
+    public SceneLocation getEndLocation() {
+        return endLocation;
+    }
+
+    public void setEndLocation(SceneLocation endLocation) {
+        this.endLocation = endLocation;
+    }
+
+    public boolean isDirty() {
+        return dirty;
+    }
+
+    public void setDirty(boolean dirty) {
+        this.dirty = dirty;
     }
 }

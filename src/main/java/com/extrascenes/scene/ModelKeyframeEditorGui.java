@@ -15,8 +15,9 @@ public class ModelKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
+        int tick = keyframe == null ? session.getCurrentTick() : keyframe.getTimeTicks();
         Inventory inventory = GuiUtils.createInventory(54,
-                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + session.getCurrentTick());
+                session.getSceneName() + " • Tick " + tick + " • Models");
         GuiUtils.fillInventory(inventory);
 
         ModelKeyframe keyframe = editorEngine.getSelectedModelKeyframe(session);
@@ -26,17 +27,22 @@ public class ModelKeyframeEditorGui implements EditorGui {
 
         inventory.setItem(9, GuiUtils.makeItem(Material.CLOCK, "Change Time",
                 List.of("Set keyframe time via chat.")));
-        inventory.setItem(10, GuiUtils.makeItem(Material.LAVA_BUCKET, "Delete Keyframe",
+        inventory.setItem(10, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Delete Keyframe",
                 List.of("Requires confirmation.")));
         inventory.setItem(11, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
                 List.of("Create a copy of this keyframe.")));
 
         if (keyframe != null) {
+            if (keyframe.getAction() == ModelKeyframe.Action.SPAWN && (keyframe.getEntityRef() == null || keyframe.getEntityRef().isBlank())) {
+                keyframe.setEntityRef("model_" + java.util.UUID.randomUUID());
+                editorEngine.markDirty(session.getScene());
+            }
             inventory.setItem(20, GuiUtils.makeItem(Material.ARMOR_STAND, "Action: " + keyframe.getAction(),
                     List.of("Cycle action.")));
             inventory.setItem(22, GuiUtils.makeItem(Material.NAME_TAG,
-                    "ModelId / EntityRef",
-                    List.of("Left: edit modelId", "Right: edit entityRef")));
+                    "ModelId / Handle",
+                    List.of("Left: edit modelId", "Right: cycle handle",
+                            "Handle: " + GuiUtils.nullToPlaceholder(keyframe.getEntityRef()))));
             inventory.setItem(24, GuiUtils.makeItem(Material.WRITABLE_BOOK,
                     "Animation / Loop / Speed",
                     List.of("Left: animationId", "Right: toggle loop", "Shift: speed input")));
@@ -96,14 +102,17 @@ public class ModelKeyframeEditorGui implements EditorGui {
         }
         if (slot == 20) {
             keyframe.setAction(nextAction(keyframe.getAction()));
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 22) {
             if (ctx.isRightClick()) {
-                player.closeInventory();
-                editorEngine.getInputManager().beginModelFieldInput(player, session.getScene(), session, keyframe,
-                        EditorInputManager.ModelField.ENTITY_REF, GuiType.MODEL_EDITOR);
+                List<String> handles = editorEngine.getModelHandles(session.getScene());
+                String next = editorEngine.nextHandle(handles, keyframe.getEntityRef());
+                keyframe.setEntityRef(next);
+                editorEngine.markDirty(session.getScene());
+                refresh(session);
             } else {
                 player.closeInventory();
                 editorEngine.getInputManager().beginModelFieldInput(player, session.getScene(), session, keyframe,
@@ -118,6 +127,7 @@ public class ModelKeyframeEditorGui implements EditorGui {
                         GuiType.MODEL_EDITOR);
             } else if (ctx.isRightClick()) {
                 keyframe.setLoop(!keyframe.isLoop());
+                editorEngine.markDirty(session.getScene());
                 refresh(session);
             } else {
                 player.closeInventory();
@@ -129,6 +139,7 @@ public class ModelKeyframeEditorGui implements EditorGui {
         if (slot == 31) {
             if (keyframe.getAction() == ModelKeyframe.Action.SPAWN) {
                 keyframe.setSpawnTransform(Transform.fromLocation(player.getLocation()));
+                editorEngine.markDirty(session.getScene());
                 refresh(session);
             }
         }

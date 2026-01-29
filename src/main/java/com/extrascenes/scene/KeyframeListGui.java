@@ -22,12 +22,11 @@ public class KeyframeListGui implements EditorGui {
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
         Inventory inventory = GuiUtils.createInventory(54,
-                "Scene: " + session.getSceneName() + " • Keyframes • Group: " + session.getCurrentGroup()
-                        + " • Tick: " + session.getCurrentTick());
+                session.getSceneName() + " • Keyframes");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.NAME_TAG,
-                "Track: " + formatTrack(session.getSelectedTrack()) + " | Scene: " + scene.getName(),
+                "Track: " + formatTrack(session.getSelectedTrack()),
                 List.of("Keyframe list view.")));
         inventory.setItem(8, GuiUtils.makeItem(Material.CLOCK,
                 "Cursor Time: " + session.getCursorTimeTicks() + "t (" + GuiUtils.SECONDS_FORMAT.format(session.getCursorTimeTicks() / 20.0) + "s)",
@@ -115,6 +114,7 @@ public class KeyframeListGui implements EditorGui {
         if (ctx.isShiftClick()) {
             int delta = ctx.isRightClick() ? 5 : -5;
             track.moveKeyframe(keyframe.getId(), keyframe.getTimeTicks() + delta);
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
@@ -138,6 +138,8 @@ public class KeyframeListGui implements EditorGui {
             editorEngine.openCommandEditor(player, session, true);
         } else if (keyframe instanceof ModelKeyframe) {
             editorEngine.openModelEditor(player, session, true);
+        } else if (keyframe instanceof ActionBarKeyframe) {
+            editorEngine.openActionBarEditor(player, session, true);
         }
     }
 

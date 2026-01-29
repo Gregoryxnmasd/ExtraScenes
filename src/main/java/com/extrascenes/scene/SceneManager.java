@@ -5,9 +5,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitTask;
 
 public class SceneManager {
     private static final int FORMAT_VERSION = 1;
@@ -16,6 +19,8 @@ public class SceneManager {
     private final File exportsFolder;
     private final SceneSerializer serializer = new SceneSerializer();
     private final SceneDeserializer deserializer = new SceneDeserializer();
+    private final Map<String, Scene> cache = new HashMap<>();
+    private final Map<String, BukkitTask> pendingSaves = new HashMap<>();
 
     public SceneManager(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
@@ -34,6 +39,7 @@ public class SceneManager {
         tracks.put(SceneTrackType.CAMERA, new Track<>(SceneTrackType.CAMERA));
         tracks.put(SceneTrackType.COMMAND, new Track<>(SceneTrackType.COMMAND));
         tracks.put(SceneTrackType.MODEL, new Track<>(SceneTrackType.MODEL));
+        tracks.put(SceneTrackType.ACTIONBAR, new Track<>(SceneTrackType.ACTIONBAR));
         tracks.put(SceneTrackType.PARTICLE, new Track<>(SceneTrackType.PARTICLE));
         tracks.put(SceneTrackType.SOUND, new Track<>(SceneTrackType.SOUND));
         tracks.put(SceneTrackType.BLOCK_ILLUSION, new Track<>(SceneTrackType.BLOCK_ILLUSION));
@@ -43,6 +49,7 @@ public class SceneManager {
         scene.setCameraMode(plugin.getConfig().getString("camera.mode", "SPECTATOR"));
         scene.setFreezePlayer(plugin.getConfig().getBoolean("player.freeze", true));
         scene.setAllowGlobalCommands(plugin.getConfig().getBoolean("commands.allowGlobalDefault", false));
+        cache.put(name.toLowerCase(), scene);
         return scene;
     }
 
@@ -67,9 +74,17 @@ public class SceneManager {
     public void saveScene(Scene scene) throws IOException {
         Path file = new File(scenesFolder, scene.getName() + ".json").toPath();
         serializer.write(scene, file);
+        scene.setDirty(false);
     }
 
     public Scene loadScene(String name) {
+        if (name == null) {
+            return null;
+        }
+        String key = name.toLowerCase();
+        if (cache.containsKey(key)) {
+            return cache.get(key);
+        }
         File file = new File(scenesFolder, name + ".json");
         if (!file.exists()) {
             return null;
@@ -80,14 +95,60 @@ public class SceneManager {
                 return null;
             }
             ensureTracks(scene);
+            cache.put(key, scene);
             return scene;
         } catch (IOException ex) {
             return null;
         }
     }
 
+    public void cacheScene(Scene scene) {
+        if (scene != null) {
+            cache.put(scene.getName().toLowerCase(), scene);
+        }
+    }
+
+    public void markDirty(Scene scene) {
+        if (scene == null) {
+            return;
+        }
+        scene.setDirty(true);
+        scheduleSave(scene, 20L);
+    }
+
+    public void saveSceneImmediate(Scene scene) {
+        if (scene == null) {
+            return;
+        }
+        BukkitTask pending = pendingSaves.remove(scene.getName().toLowerCase());
+        if (pending != null) {
+            pending.cancel();
+        }
+        try {
+            saveScene(scene);
+        } catch (IOException ex) {
+            // ignore save failure
+        }
+    }
+
+    public void saveAllDirty() {
+        for (Scene scene : cache.values()) {
+            if (scene.isDirty()) {
+                saveSceneImmediate(scene);
+            }
+        }
+    }
+
+    public void reloadAll() {
+        saveAllDirty();
+        cache.clear();
+        pendingSaves.values().forEach(BukkitTask::cancel);
+        pendingSaves.clear();
+    }
+
     public boolean deleteScene(String name) {
         File file = new File(scenesFolder, name + ".json");
+        cache.remove(name.toLowerCase());
         return file.delete();
     }
 
@@ -127,5 +188,15 @@ public class SceneManager {
                 scene.getTracks().put(type, new Track<>(type));
             }
         }
+    }
+
+    private void scheduleSave(Scene scene, long delayTicks) {
+        String key = scene.getName().toLowerCase();
+        BukkitTask pending = pendingSaves.get(key);
+        if (pending != null) {
+            pending.cancel();
+        }
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> saveSceneImmediate(scene), delayTicks);
+        pendingSaves.put(key, task);
     }
 }

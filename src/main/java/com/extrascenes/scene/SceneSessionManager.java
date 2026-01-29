@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -49,6 +50,7 @@ public class SceneSessionManager {
 
         SceneSession session = new SceneSession(player, scene, preview, startTick, endTick);
         sessions.put(player.getUniqueId(), session);
+        session.setStartLocation(player.getLocation().clone());
 
         if (scene.isFreezePlayer()) {
             player.setWalkSpeed(0.0f);
@@ -74,11 +76,12 @@ public class SceneSessionManager {
 
         String cameraMode = scene.getCameraMode();
         boolean usePacket = "PACKET".equalsIgnoreCase(cameraMode) && protocolAdapter.isProtocolLibAvailable();
-        if (!usePacket) {
-            protocolAdapter.applySpectatorCamera(player, rig);
-        } else {
+        protocolAdapter.applySpectatorCamera(player, rig);
+        if (usePacket) {
             protocolAdapter.sendCameraPacket(player, rig);
         }
+
+        plugin.getRuntimeEngine().startSession(session);
 
         Bukkit.getPluginManager().callEvent(new SceneStartEvent(player, scene));
         return session;
@@ -89,7 +92,10 @@ public class SceneSessionManager {
         if (session == null) {
             return;
         }
+        plugin.getRuntimeEngine().stopSession(session);
         restorePlayerState(player, session);
+        teleportOnEnd(player, session);
+        clearActionBar(player, session);
         cleanupSessionEntities(session);
         Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
 
@@ -107,6 +113,7 @@ public class SceneSessionManager {
         if (session == null) {
             return;
         }
+        plugin.getRuntimeEngine().stopSession(session);
         session.setRestorePending(true);
         pendingRestores.put(player.getUniqueId(), session);
         cleanupSessionEntities(session);
@@ -176,12 +183,8 @@ public class SceneSessionManager {
     }
 
     private void restorePlayerState(Player player, SceneSession session) {
-        String cameraMode = session.getScene().getCameraMode();
-        boolean usePacket = "PACKET".equalsIgnoreCase(cameraMode) && protocolAdapter.isProtocolLibAvailable();
-        if (!usePacket) {
-            protocolAdapter.clearSpectatorCamera(player);
-            player.setGameMode(session.getSnapshot().getGameMode());
-        }
+        protocolAdapter.clearSpectatorCamera(player);
+        player.setGameMode(session.getSnapshot().getGameMode());
 
         if (session.getScene().isFreezePlayer()) {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
@@ -192,6 +195,30 @@ public class SceneSessionManager {
         protocolAdapter.sendFakeEquipmentRestore(player, session.getSnapshot().getHelmet() == null
                 ? new ItemStack(Material.AIR)
                 : session.getSnapshot().getHelmet());
+    }
+
+    private void teleportOnEnd(Player player, SceneSession session) {
+        EndTeleportMode mode = session.getScene().getEndTeleportMode();
+        if (mode == EndTeleportMode.NONE) {
+            return;
+        }
+        if (mode == EndTeleportMode.TELEPORT_TO_END && session.getScene().getEndLocation() != null) {
+            Location target = session.getScene().getEndLocation().toBukkitLocation();
+            if (target != null) {
+                player.teleport(target);
+            }
+            return;
+        }
+        Location start = session.getStartLocation();
+        if (start != null) {
+            player.teleport(start);
+        }
+    }
+
+    private void clearActionBar(Player player, SceneSession session) {
+        session.setActiveActionBarText(null);
+        session.setActionBarUntilTick(0);
+        player.sendActionBar("");
     }
 
     private void cleanupSessionEntities(SceneSession session) {

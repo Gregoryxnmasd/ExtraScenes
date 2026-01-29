@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 public class SceneSession {
     private final UUID playerId;
@@ -25,6 +26,11 @@ public class SceneSession {
     private Location lastCameraLocation;
     private UUID cameraRigId;
     private boolean preview;
+    private Location startLocation;
+    private int actionBarUntilTick;
+    private String activeActionBarText;
+    private String lastModelHandle;
+    private BukkitTask runtimeTask;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -153,5 +159,45 @@ public class SceneSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public Location getStartLocation() {
+        return startLocation;
+    }
+
+    public void setStartLocation(Location startLocation) {
+        this.startLocation = startLocation;
+    }
+
+    public int getActionBarUntilTick() {
+        return actionBarUntilTick;
+    }
+
+    public void setActionBarUntilTick(int actionBarUntilTick) {
+        this.actionBarUntilTick = actionBarUntilTick;
+    }
+
+    public String getActiveActionBarText() {
+        return activeActionBarText;
+    }
+
+    public void setActiveActionBarText(String activeActionBarText) {
+        this.activeActionBarText = activeActionBarText;
+    }
+
+    public String getLastModelHandle() {
+        return lastModelHandle;
+    }
+
+    public void setLastModelHandle(String lastModelHandle) {
+        this.lastModelHandle = lastModelHandle;
+    }
+
+    public BukkitTask getRuntimeTask() {
+        return runtimeTask;
+    }
+
+    public void setRuntimeTask(BukkitTask runtimeTask) {
+        this.runtimeTask = runtimeTask;
     }
 }

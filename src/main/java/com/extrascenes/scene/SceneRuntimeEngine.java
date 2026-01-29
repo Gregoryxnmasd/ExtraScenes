@@ -15,13 +15,13 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 public class SceneRuntimeEngine {
     private final ExtraScenesPlugin plugin;
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
-    private BukkitRunnable task;
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
                               SceneVisibilityController visibilityController,
@@ -33,51 +33,64 @@ public class SceneRuntimeEngine {
     }
 
     public void start() {
-        if (task != null) {
-            return;
-        }
-        task = new BukkitRunnable() {
-            @Override
-            public void run() {
-                tick();
-            }
-        };
-        task.runTaskTimer(plugin, 1L, 1L);
+        // per-session tasks handle playback
     }
 
     public void stop() {
-        if (task != null) {
-            task.cancel();
-            task = null;
+        for (SceneSession session : sessionManager.getActiveSessions()) {
+            stopSession(session);
         }
     }
 
-    private void tick() {
-        for (SceneSession session : sessionManager.getActiveSessions()) {
-            if (session.getState() != SceneState.PLAYING) {
-                continue;
-            }
-            Player player = Bukkit.getPlayer(session.getPlayerId());
-            if (player == null) {
-                continue;
-            }
-
-            int time = session.getTimeTicks();
-            int duration = session.getScene().getDurationTicks();
-            int endTick = session.getEndTick();
-            if (duration > 0) {
-                endTick = Math.min(endTick, duration);
-            }
-
-            if (time >= endTick) {
-                sessionManager.stopScene(player, "finished");
-                continue;
-            }
-
-            updateCamera(player, session, time);
-            handleKeyframes(player, session, time, duration);
-            session.incrementTime();
+    public void startSession(SceneSession session) {
+        if (session.getRuntimeTask() != null) {
+            return;
         }
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                tickSession(session);
+            }
+        }.runTaskTimer(plugin, 1L, 1L);
+        session.setRuntimeTask(task);
+    }
+
+    public void stopSession(SceneSession session) {
+        if (session == null) {
+            return;
+        }
+        BukkitTask task = session.getRuntimeTask();
+        if (task != null) {
+            task.cancel();
+            session.setRuntimeTask(null);
+        }
+    }
+
+    private void tickSession(SceneSession session) {
+        if (session.getState() != SceneState.PLAYING) {
+            return;
+        }
+        Player player = Bukkit.getPlayer(session.getPlayerId());
+        if (player == null) {
+            return;
+        }
+
+        int time = session.getTimeTicks();
+        int duration = session.getScene().getDurationTicks();
+        int endTick = session.getEndTick();
+        if (duration > 0) {
+            endTick = Math.min(endTick, duration);
+        }
+
+        if (time >= endTick) {
+            sessionManager.stopScene(player, "finished");
+            return;
+        }
+
+        updateCamera(player, session, time);
+        handleKeyframes(player, session, time, duration);
+        tickActionBar(player, session, time);
+        session.incrementTime();
     }
 
     private void updateCamera(Player player, SceneSession session, int timeTicks) {
@@ -297,6 +310,8 @@ public class SceneRuntimeEngine {
     private void handleKeyframe(Player player, SceneSession session, Keyframe keyframe, int durationTicks) {
         if (keyframe instanceof CommandKeyframe command) {
             executeCommands(player, session, command, durationTicks);
+        } else if (keyframe instanceof ActionBarKeyframe actionBar) {
+            activateActionBar(session, actionBar);
         } else if (keyframe instanceof ModelKeyframe model) {
             handleModelKeyframe(player, session, model);
         } else if (keyframe instanceof ParticleKeyframe particle) {
@@ -347,12 +362,16 @@ public class SceneRuntimeEngine {
                 session.registerEntity(base);
                 sessionManager.registerSceneEntity(session, base);
                 visibilityController.hideEntityFromAllExcept(base, player);
-                if (keyframe.getEntityRef() != null) {
-                    session.registerModelRef(keyframe.getEntityRef(), base.getUniqueId());
+                String handle = keyframe.getEntityRef();
+                if (handle == null || handle.isBlank()) {
+                    handle = "model_" + UUID.randomUUID();
+                    keyframe.setEntityRef(handle);
                 }
+                session.registerModelRef(handle, base.getUniqueId());
+                session.setLastModelHandle(handle);
             }
             case ANIM -> {
-                UUID entityId = session.getModelEntityId(keyframe.getEntityRef());
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
@@ -361,7 +380,7 @@ public class SceneRuntimeEngine {
                 }
             }
             case STOP -> {
-                UUID entityId = session.getModelEntityId(keyframe.getEntityRef());
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
@@ -370,7 +389,7 @@ public class SceneRuntimeEngine {
                 }
             }
             case DESPAWN -> {
-                UUID entityId = session.getModelEntityId(keyframe.getEntityRef());
+                UUID entityId = session.getModelEntityId(resolveHandle(session, keyframe.getEntityRef()));
                 if (entityId != null) {
                     Entity entity = player.getWorld().getEntity(entityId);
                     if (entity != null) {
@@ -435,5 +454,29 @@ public class SceneRuntimeEngine {
             return null;
         }
         return player.getWorld().getEntity(session.getCameraRigId());
+    }
+
+    private String resolveHandle(SceneSession session, String handle) {
+        if (handle == null || handle.isBlank() || "last".equalsIgnoreCase(handle)) {
+            return session.getLastModelHandle();
+        }
+        return handle;
+    }
+
+    private void activateActionBar(SceneSession session, ActionBarKeyframe keyframe) {
+        session.setActiveActionBarText(keyframe.getText());
+        session.setActionBarUntilTick(keyframe.getTimeTicks() + Math.max(1, keyframe.getDurationTicks()));
+    }
+
+    private void tickActionBar(Player player, SceneSession session, int time) {
+        if (session.getActiveActionBarText() == null) {
+            return;
+        }
+        if (time > session.getActionBarUntilTick()) {
+            session.setActiveActionBarText(null);
+            return;
+        }
+        String text = SceneTextFormatter.colorizeActionBar(session.getActiveActionBarText());
+        player.sendActionBar(text);
     }
 }

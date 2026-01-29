@@ -39,6 +39,7 @@ public class SceneEditorEngine {
         guis.put(GuiType.COMMAND_EDITOR, new CommandKeyframeEditorGui(this));
         guis.put(GuiType.MODEL_EDITOR, new ModelKeyframeEditorGui(this));
         guis.put(GuiType.MODEL_TICK_LIST, new ModelTickListGui(this));
+        guis.put(GuiType.ACTIONBAR_EDITOR, new ActionBarKeyframeEditorGui(this));
         guis.put(GuiType.EFFECTS_MENU, new EffectsTickMenuGui(this));
         guis.put(GuiType.SCENE_SETTINGS, new SceneSettingsGui(this));
         guis.put(GuiType.CONFIRM, new ConfirmGui(this));
@@ -113,6 +114,10 @@ public class SceneEditorEngine {
         openGui(player, session, GuiType.MODEL_EDITOR, pushHistory);
     }
 
+    public void openActionBarEditor(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.ACTIONBAR_EDITOR, pushHistory);
+    }
+
     public void openSceneSettings(Player player, EditorSession session, boolean pushHistory) {
         openGui(player, session, GuiType.SCENE_SETTINGS, pushHistory);
     }
@@ -131,6 +136,13 @@ public class SceneEditorEngine {
         openCommandEditor(player, session, true);
     }
 
+    public void openActionBarEditorForTick(Player player, EditorSession session, int tick) {
+        ActionBarKeyframe keyframe = getOrCreateActionBarKeyframe(session, tick);
+        session.setSelectedKeyframeId(keyframe.getId());
+        session.setSelectedTrack(SceneTrackType.ACTIONBAR);
+        openActionBarEditor(player, session, true);
+    }
+
     public void navigateBack(Player player, EditorSession session) {
         GuiType previous = session.popHistory();
         if (previous == null) {
@@ -142,6 +154,7 @@ public class SceneEditorEngine {
 
     public void closeEditor(Player player, EditorSession session) {
         player.closeInventory();
+        sceneManager.saveSceneImmediate(session.getScene());
         editorSessionManager.removeSession(player.getUniqueId());
         session.clearHistory();
         inputManager.clearPrompt(player.getUniqueId());
@@ -195,6 +208,7 @@ public class SceneEditorEngine {
         }
         CameraKeyframe keyframe = getOrCreateCameraKeyframe(session, tick);
         keyframe.setTransform(Transform.fromLocation(player.getLocation()));
+        sceneManager.markDirty(session.getScene());
         session.setArmedTick(null);
         restoreWand(player, session);
         session.setCurrentTick(tick);
@@ -263,6 +277,10 @@ public class SceneEditorEngine {
         return getSelectedKeyframe(session, SceneTrackType.MODEL, ModelKeyframe.class);
     }
 
+    public ActionBarKeyframe getSelectedActionBarKeyframe(EditorSession session) {
+        return getSelectedKeyframe(session, SceneTrackType.ACTIONBAR, ActionBarKeyframe.class);
+    }
+
     private <T extends Keyframe> T getSelectedKeyframe(EditorSession session, SceneTrackType type, Class<T> clazz) {
         if (session.getSelectedKeyframeId() == null) {
             return null;
@@ -297,6 +315,7 @@ public class SceneEditorEngine {
         CameraKeyframe created = new CameraKeyframe(null, tick, fallback,
                 session.getScene().getDefaultSmoothing(), false, LookAtTarget.none());
         track.addKeyframe(created);
+        sceneManager.markDirty(session.getScene());
         return created;
     }
 
@@ -308,6 +327,19 @@ public class SceneEditorEngine {
         }
         CommandKeyframe created = new CommandKeyframe(null, tick, List.of(), CommandKeyframe.ExecutorMode.PLAYER, false);
         track.addKeyframe(created);
+        sceneManager.markDirty(session.getScene());
+        return created;
+    }
+
+    public ActionBarKeyframe getOrCreateActionBarKeyframe(EditorSession session, int tick) {
+        Track<ActionBarKeyframe> track = session.getScene().getTrack(SceneTrackType.ACTIONBAR);
+        ActionBarKeyframe existing = TickUtils.getFirstKeyframeAtTick(track, tick);
+        if (existing != null) {
+            return existing;
+        }
+        ActionBarKeyframe created = new ActionBarKeyframe(null, tick, "", 20);
+        track.addKeyframe(created);
+        sceneManager.markDirty(session.getScene());
         return created;
     }
 
@@ -325,6 +357,7 @@ public class SceneEditorEngine {
                     camera.getSmoothingMode(), camera.isInstant(),
                     cloneLookAt(camera.getLookAt()));
             track.addKeyframe(copy);
+            sceneManager.markDirty(session.getScene());
         } else if (keyframe instanceof CommandKeyframe command) {
             Track<CommandKeyframe> track = session.getScene().getTrack(SceneTrackType.COMMAND);
             if (track == null) {
@@ -333,6 +366,7 @@ public class SceneEditorEngine {
             CommandKeyframe copy = new CommandKeyframe(null, command.getTimeTicks(),
                     List.copyOf(command.getCommands()), command.getExecutorMode(), command.isAllowGlobal());
             track.addKeyframe(copy);
+            sceneManager.markDirty(session.getScene());
         } else if (keyframe instanceof ModelKeyframe model) {
             Track<ModelKeyframe> track = session.getScene().getTrack(SceneTrackType.MODEL);
             if (track == null) {
@@ -346,6 +380,16 @@ public class SceneEditorEngine {
             copy.setSpeed(model.getSpeed());
             copy.setSpawnTransform(cloneTransform(model.getSpawnTransform()));
             track.addKeyframe(copy);
+            sceneManager.markDirty(session.getScene());
+        } else if (keyframe instanceof ActionBarKeyframe actionBar) {
+            Track<ActionBarKeyframe> track = session.getScene().getTrack(SceneTrackType.ACTIONBAR);
+            if (track == null) {
+                return;
+            }
+            ActionBarKeyframe copy = new ActionBarKeyframe(null, actionBar.getTimeTicks(), actionBar.getText(),
+                    actionBar.getDurationTicks());
+            track.addKeyframe(copy);
+            sceneManager.markDirty(session.getScene());
         }
     }
 
@@ -356,6 +400,7 @@ public class SceneEditorEngine {
                 smoothing, instant, LookAtTarget.none());
         Track<CameraKeyframe> track = session.getScene().getTrack(SceneTrackType.CAMERA);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
     }
@@ -368,6 +413,7 @@ public class SceneEditorEngine {
                 new LookAtTarget(LookAtTarget.Mode.POSITION, Transform.fromLocation(player.getLocation()), null));
         Track<CameraKeyframe> track = session.getScene().getTrack(SceneTrackType.CAMERA);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
     }
@@ -377,6 +423,7 @@ public class SceneEditorEngine {
                 1.0f, 1.0f, Transform.fromLocation(player.getLocation()));
         Track<SoundKeyframe> track = session.getScene().getTrack(SceneTrackType.SOUND);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
     }
@@ -387,6 +434,7 @@ public class SceneEditorEngine {
                 1.0f, 1.0f, Transform.fromLocation(player.getLocation()));
         Track<SoundKeyframe> track = session.getScene().getTrack(SceneTrackType.SOUND);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
     }
 
     public void addParticleKeyframe(Player player, EditorSession session) {
@@ -394,6 +442,7 @@ public class SceneEditorEngine {
                 Transform.fromLocation(player.getLocation()));
         Track<ParticleKeyframe> track = session.getScene().getTrack(SceneTrackType.PARTICLE);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
     }
@@ -404,6 +453,7 @@ public class SceneEditorEngine {
                 Transform.fromLocation(player.getLocation()));
         Track<ParticleKeyframe> track = session.getScene().getTrack(SceneTrackType.PARTICLE);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
     }
 
     public void addBlockKeyframe(Player player, EditorSession session) {
@@ -411,6 +461,7 @@ public class SceneEditorEngine {
                 Material.GLASS, Transform.fromLocation(player.getLocation()));
         Track<BlockIllusionKeyframe> track = session.getScene().getTrack(SceneTrackType.BLOCK_ILLUSION);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
         session.setSelectedKeyframeId(keyframe.getId());
         openKeyframeList(player, session, false);
     }
@@ -421,6 +472,7 @@ public class SceneEditorEngine {
                 Material.GLASS, Transform.fromLocation(player.getLocation()));
         Track<BlockIllusionKeyframe> track = session.getScene().getTrack(SceneTrackType.BLOCK_ILLUSION);
         track.addKeyframe(keyframe);
+        sceneManager.markDirty(session.getScene());
     }
 
     public void handleConfirmAction(Player player, EditorSession session) {
@@ -436,16 +488,31 @@ public class SceneEditorEngine {
                 if (session.getConfirmKeyframeId().equals(session.getSelectedKeyframeId())) {
                     session.setSelectedKeyframeId(null);
                 }
+                sceneManager.markDirty(session.getScene());
             }
             clearConfirm(session);
             session.setKeyframePage(0);
             openKeyframeList(player, session, false);
             return;
         }
+        if (action == ConfirmAction.REMOVE_COMMAND) {
+            CommandKeyframe keyframe = getSelectedCommandKeyframe(session);
+            Integer index = session.getConfirmCommandIndex();
+            if (keyframe != null && index != null && index >= 0 && index < keyframe.getCommands().size()) {
+                List<String> commands = new java.util.ArrayList<>(keyframe.getCommands());
+                commands.remove(index.intValue());
+                keyframe.setCommands(commands);
+                sceneManager.markDirty(session.getScene());
+            }
+            clearConfirm(session);
+            openCommandEditor(player, session, false);
+            return;
+        }
         if (action == ConfirmAction.CLEAR_TRACK) {
             Track<? extends Keyframe> track = session.getScene().getTrack(session.getConfirmTrack());
             if (track != null) {
                 track.clear();
+                sceneManager.markDirty(session.getScene());
             }
             clearConfirm(session);
             session.setSelectedKeyframeId(null);
@@ -455,30 +522,35 @@ public class SceneEditorEngine {
         }
         if (action == ConfirmAction.CLEAR_TICK) {
             clearTick(session.getScene(), session.getCurrentTick());
+            sceneManager.markDirty(session.getScene());
             clearConfirm(session);
             openTickActionMenu(player, session, false);
             return;
         }
         if (action == ConfirmAction.CLEAR_GROUP) {
             clearGroup(session.getScene(), session.getCurrentGroup());
+            sceneManager.markDirty(session.getScene());
             clearConfirm(session);
             openGroupGrid(player, session, false);
             return;
         }
         if (action == ConfirmAction.CLEAR_ALL) {
             clearAll(session.getScene());
+            sceneManager.markDirty(session.getScene());
             clearConfirm(session);
             openGroupSelect(player, session, false);
             return;
         }
         if (action == ConfirmAction.CLEAR_EFFECTS) {
             clearEffects(session.getScene(), session.getCurrentTick());
+            sceneManager.markDirty(session.getScene());
             clearConfirm(session);
             openEffectsMenu(player, session, false);
             return;
         }
         if (action == ConfirmAction.TRIM_DURATION) {
             session.getScene().setDurationTicks(Math.max(0, session.getScene().getDurationTicks() - 9));
+            sceneManager.markDirty(session.getScene());
             clearConfirm(session);
             openGroupSelect(player, session, false);
             return;
@@ -490,10 +562,96 @@ public class SceneEditorEngine {
         }
     }
 
+    public void markDirty(Scene scene) {
+        sceneManager.markDirty(scene);
+    }
+
+    public List<String> getModelHandles(Scene scene) {
+        List<String> handles = new java.util.ArrayList<>();
+        Track<ModelKeyframe> track = scene.getTrack(SceneTrackType.MODEL);
+        if (track != null) {
+            for (ModelKeyframe keyframe : track.getKeyframes()) {
+                if (keyframe.getAction() == ModelKeyframe.Action.SPAWN && keyframe.getEntityRef() != null
+                        && !keyframe.getEntityRef().isBlank()) {
+                    if (!handles.contains(keyframe.getEntityRef())) {
+                        handles.add(keyframe.getEntityRef());
+                    }
+                }
+            }
+        }
+        if (!handles.contains("last")) {
+            handles.add("last");
+        }
+        return handles;
+    }
+
+    public String nextHandle(List<String> handles, String current) {
+        if (handles == null || handles.isEmpty()) {
+            return "last";
+        }
+        int index = handles.indexOf(current);
+        if (index == -1) {
+            return handles.get(0);
+        }
+        return handles.get((index + 1) % handles.size());
+    }
+
+    public void moveTick(Scene scene, int fromTick, int toTick, EditorSession session) {
+        if (scene == null || fromTick == toTick) {
+            return;
+        }
+        for (SceneTrackType type : SceneTrackType.values()) {
+            Track<? extends Keyframe> track = scene.getTrack(type);
+            if (track == null) {
+                continue;
+            }
+            List<? extends Keyframe> keyframes = List.copyOf(track.getKeyframes());
+            for (Keyframe keyframe : keyframes) {
+                if (keyframe.getTimeTicks() == fromTick) {
+                    track.moveKeyframe(keyframe.getId(), toTick);
+                } else if (keyframe.getTimeTicks() == toTick) {
+                    track.moveKeyframe(keyframe.getId(), fromTick);
+                }
+            }
+        }
+        if (session != null) {
+            session.setCurrentTick(toTick);
+            session.setCurrentGroup((toTick - 1) / 9 + 1);
+        }
+        sceneManager.markDirty(scene);
+    }
+
+    public void shiftRange(Scene scene, int fromTick, int toTick, int delta, EditorSession session) {
+        if (scene == null || delta == 0) {
+            return;
+        }
+        int start = Math.min(fromTick, toTick);
+        int end = Math.max(fromTick, toTick);
+        for (SceneTrackType type : SceneTrackType.values()) {
+            Track<? extends Keyframe> track = scene.getTrack(type);
+            if (track == null) {
+                continue;
+            }
+            List<? extends Keyframe> keyframes = List.copyOf(track.getKeyframes());
+            for (Keyframe keyframe : keyframes) {
+                if (keyframe.getTimeTicks() >= start && keyframe.getTimeTicks() <= end) {
+                    track.moveKeyframe(keyframe.getId(), keyframe.getTimeTicks() + delta);
+                }
+            }
+        }
+        if (session != null) {
+            int updated = Math.max(1, session.getCurrentTick() + delta);
+            session.setCurrentTick(updated);
+            session.setCurrentGroup((updated - 1) / 9 + 1);
+        }
+        sceneManager.markDirty(scene);
+    }
+
     private void clearConfirm(EditorSession session) {
         session.setConfirmAction(null);
         session.setConfirmTrack(null);
         session.setConfirmKeyframeId(null);
+        session.setConfirmCommandIndex(null);
     }
 
     private Transform cloneTransform(Transform transform) {

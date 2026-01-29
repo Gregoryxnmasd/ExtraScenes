@@ -16,9 +16,7 @@ public class SceneSettingsGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Scene scene = session.getScene();
-        Inventory inventory = GuiUtils.createInventory(27,
-                "Scene: " + scene.getName() + " • Settings • Group: " + session.getCurrentGroup()
-                        + " • Tick: " + session.getCurrentTick());
+        Inventory inventory = GuiUtils.createInventory(27, scene.getName() + " • Settings");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.REPEATER, "Scene Settings",
@@ -66,26 +64,31 @@ public class SceneSettingsGui implements EditorGui {
         }
         if (slot == 10) {
             scene.setDefaultSmoothing(scene.getDefaultSmoothing().next());
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
         if (slot == 12) {
             scene.setSmoothingQuality(scene.getSmoothingQuality().next());
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
         if (slot == 14) {
             scene.setCameraMode(scene.getCameraMode().equalsIgnoreCase("SPECTATOR") ? "PACKET" : "SPECTATOR");
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
         if (slot == 16) {
             scene.setFreezePlayer(!scene.isFreezePlayer());
+            editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
         if (slot == 18) {
             scene.setAllowGlobalCommands(!scene.isAllowGlobalCommands());
+            editorEngine.markDirty(scene);
             refresh(session);
         }
     }

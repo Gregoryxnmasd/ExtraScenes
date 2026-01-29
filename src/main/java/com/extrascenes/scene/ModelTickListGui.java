@@ -16,7 +16,7 @@ public class ModelTickListGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         int tick = session.getCurrentTick();
-        Inventory inventory = GuiUtils.createInventory(54, title(session, tick));
+        Inventory inventory = GuiUtils.createInventory(54, session.getSceneName() + " • Tick " + tick + " • Models");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.ARMOR_STAND, "Models @ Tick " + tick,
@@ -25,7 +25,7 @@ public class ModelTickListGui implements EditorGui {
         List<ModelKeyframe> keyframes = TickUtils.getKeyframesAtTick(session.getScene().getTrack(SceneTrackType.MODEL), tick);
         int slot = 9;
         for (ModelKeyframe keyframe : keyframes) {
-            inventory.setItem(slot++, GuiUtils.makeItem(Material.ARMOR_STAND,
+            inventory.setItem(slot++, GuiUtils.makeItem(Material.REDSTONE_BLOCK,
                     keyframe.getAction() + " • " + GuiUtils.nullToPlaceholder(keyframe.getEntityRef()),
                     List.of("Model: " + GuiUtils.nullToPlaceholder(keyframe.getModelId()),
                             "Anim: " + GuiUtils.nullToPlaceholder(keyframe.getAnimationId()),
@@ -81,10 +81,6 @@ public class ModelTickListGui implements EditorGui {
             }
             editorEngine.openModelEditor(player, session, true);
         }
-    }
-
-    private String title(EditorSession session, int tick) {
-        return "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + tick;
     }
 
     @Override

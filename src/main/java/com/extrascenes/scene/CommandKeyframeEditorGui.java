@@ -17,14 +17,15 @@ public class CommandKeyframeEditorGui implements EditorGui {
     public Inventory build(EditorSession session) {
         CommandKeyframe keyframe = editorEngine.getSelectedCommandKeyframe(session);
         String timeLabel = keyframe == null ? "Unknown" : keyframe.getTimeTicks() + "t";
+        int tick = keyframe == null ? session.getCurrentTick() : keyframe.getTimeTicks();
         Inventory inventory = GuiUtils.createInventory(54,
-                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup() + " • Tick: " + timeLabel);
+                session.getSceneName() + " • Tick " + tick + " • Commands");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.COMMAND_BLOCK, "Editing Keyframe @ " + timeLabel,
                 List.of("Command keyframe editor.")));
 
-        inventory.setItem(9, GuiUtils.makeItem(Material.LAVA_BUCKET, "Delete Keyframe",
+        inventory.setItem(9, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Delete Keyframe",
                 List.of("Requires confirmation.")));
         inventory.setItem(10, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
                 List.of("Create a copy of this keyframe.")));
@@ -40,7 +41,7 @@ public class CommandKeyframeEditorGui implements EditorGui {
             int slot = 36;
             int index = 0;
             for (String command : keyframe.getCommands()) {
-                inventory.setItem(slot++, GuiUtils.makeItem(Material.PAPER, "Command " + (index + 1),
+                inventory.setItem(slot++, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Command " + (index + 1),
                         List.of(command, "Right-click to remove.")));
                 index++;
                 if (slot >= 45) {
@@ -104,21 +105,21 @@ public class CommandKeyframeEditorGui implements EditorGui {
             keyframe.setExecutorMode(keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.PLAYER
                     ? CommandKeyframe.ExecutorMode.CONSOLE
                     : CommandKeyframe.ExecutorMode.PLAYER);
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 31) {
             keyframe.setAllowGlobal(!keyframe.isAllowGlobal());
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot >= 36 && slot < 45 && ctx.isRightClick()) {
             int index = slot - 36;
             if (index < keyframe.getCommands().size()) {
-                List<String> commands = new java.util.ArrayList<>(keyframe.getCommands());
-                commands.remove(index);
-                keyframe.setCommands(commands);
-                refresh(session);
+                session.setConfirmCommandIndex(index);
+                editorEngine.openConfirm(player, session, ConfirmAction.REMOVE_COMMAND, null, null);
             }
         }
     }

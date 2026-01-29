@@ -4,6 +4,7 @@ public enum SceneTrackType {
     CAMERA,
     COMMAND,
     MODEL,
+    ACTIONBAR,
     PARTICLE,
     SOUND,
     BLOCK_ILLUSION

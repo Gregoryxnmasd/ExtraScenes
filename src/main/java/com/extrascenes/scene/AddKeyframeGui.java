@@ -16,8 +16,7 @@ public class AddKeyframeGui implements EditorGui {
     @Override
     public Inventory build(EditorSession session) {
         Inventory inventory = GuiUtils.createInventory(27,
-                "Scene: " + session.getSceneName() + " • Add Keyframe • Group: " + session.getCurrentGroup()
-                        + " • Tick: " + session.getCurrentTick());
+                session.getSceneName() + " • Add " + formatTrack(session.getSelectedTrack()));
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.WRITABLE_BOOK,

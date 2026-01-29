@@ -2,6 +2,7 @@ package com.extrascenes.scene;
 
 public enum ConfirmAction {
     DELETE_KEYFRAME,
+    REMOVE_COMMAND,
     DELETE_SCENE,
     CLEAR_TRACK,
     CLEAR_TICK,

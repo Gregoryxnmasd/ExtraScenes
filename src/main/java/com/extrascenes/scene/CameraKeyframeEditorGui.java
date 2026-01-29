@@ -15,9 +15,9 @@ public class CameraKeyframeEditorGui implements EditorGui {
 
     @Override
     public Inventory build(EditorSession session) {
+        int tick = keyframe == null ? session.getCurrentTick() : keyframe.getTimeTicks();
         Inventory inventory = GuiUtils.createInventory(54,
-                "Scene: " + session.getSceneName() + " • Group: " + session.getCurrentGroup()
-                        + " • Tick: " + session.getCurrentTick());
+                session.getSceneName() + " • Tick " + tick + " • Camera");
         GuiUtils.fillInventory(inventory);
 
         CameraKeyframe keyframe = editorEngine.getSelectedCameraKeyframe(session);
@@ -27,7 +27,7 @@ public class CameraKeyframeEditorGui implements EditorGui {
 
         inventory.setItem(9, GuiUtils.makeItem(Material.CLOCK, "Change Time",
                 List.of("Set keyframe time via chat.")));
-        inventory.setItem(10, GuiUtils.makeItem(Material.LAVA_BUCKET, "Delete Keyframe",
+        inventory.setItem(10, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Delete Keyframe",
                 List.of("Requires confirmation.")));
         inventory.setItem(11, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
                 List.of("Create a copy of this keyframe.")));
@@ -104,16 +104,19 @@ public class CameraKeyframeEditorGui implements EditorGui {
         }
         if (slot == 20) {
             keyframe.setTransform(Transform.fromLocation(player.getLocation()));
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 22) {
             keyframe.setSmoothingMode(keyframe.getSmoothingMode().next());
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
         if (slot == 24) {
             keyframe.setInstant(!keyframe.isInstant());
+            editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
         }
@@ -130,6 +133,7 @@ public class CameraKeyframeEditorGui implements EditorGui {
         } else {
             return;
         }
+        editorEngine.markDirty(session.getScene());
         refresh(session);
     }
 

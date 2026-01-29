@@ -9,6 +9,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.Map;
 
 public class SceneSerializer {
@@ -33,6 +34,10 @@ public class SceneSerializer {
         root.addProperty("cameraMode", scene.getCameraMode());
         root.addProperty("freezePlayer", scene.isFreezePlayer());
         root.addProperty("allowGlobalCommands", scene.isAllowGlobalCommands());
+        root.addProperty("endTeleportMode", scene.getEndTeleportMode().name());
+        if (scene.getEndLocation() != null) {
+            root.add("endLocation", serializeLocation(scene.getEndLocation()));
+        }
 
         JsonObject tracks = new JsonObject();
         for (Map.Entry<SceneTrackType, Track<? extends Keyframe>> entry : scene.getTracks().entrySet()) {
@@ -43,6 +48,7 @@ public class SceneSerializer {
             tracks.add(entry.getKey().name(), keyframes);
         }
         root.add("tracks", tracks);
+        root.add("ticks", serializeTicks(scene));
         return root;
     }
 
@@ -58,6 +64,9 @@ public class SceneSerializer {
             payload.addProperty("smoothing", camera.getSmoothingMode().name());
             payload.addProperty("instant", camera.isInstant());
             payload.add("lookAt", serializeLookAt(camera.getLookAt()));
+        } else if (keyframe instanceof ActionBarKeyframe actionBar) {
+            payload.addProperty("text", actionBar.getText());
+            payload.addProperty("durationTicks", actionBar.getDurationTicks());
         } else if (keyframe instanceof CommandKeyframe command) {
             JsonArray commands = new JsonArray();
             for (String cmd : command.getCommands()) {
@@ -115,6 +124,106 @@ public class SceneSerializer {
         if (target.getEntityId() != null) {
             obj.addProperty("entityId", target.getEntityId().toString());
         }
+        return obj;
+    }
+
+    private JsonObject serializeTicks(Scene scene) {
+        Map<Integer, JsonObject> ticks = new HashMap<>();
+        for (Track<? extends Keyframe> track : scene.getTracks().values()) {
+            for (Keyframe keyframe : track.getKeyframes()) {
+                JsonObject tickObject = ticks.computeIfAbsent(keyframe.getTimeTicks(), time -> new JsonObject());
+                if (keyframe instanceof CameraKeyframe camera) {
+                    JsonObject cameraPayload = new JsonObject();
+                    cameraPayload.add("transform", serializeTransform(camera.getTransform()));
+                    cameraPayload.addProperty("smoothing", camera.getSmoothingMode().name());
+                    cameraPayload.addProperty("instant", camera.isInstant());
+                    cameraPayload.add("lookAt", serializeLookAt(camera.getLookAt()));
+                    tickObject.add("camera", cameraPayload);
+                } else if (keyframe instanceof CommandKeyframe command) {
+                    JsonObject commandPayload = new JsonObject();
+                    JsonArray commands = new JsonArray();
+                    for (String cmd : command.getCommands()) {
+                        commands.add(cmd);
+                    }
+                    commandPayload.add("commands", commands);
+                    commandPayload.addProperty("executor", command.getExecutorMode().name());
+                    commandPayload.addProperty("allowGlobal", command.isAllowGlobal());
+                    tickObject.add("commands", commandPayload);
+                } else if (keyframe instanceof ActionBarKeyframe actionBar) {
+                    JsonObject actionPayload = new JsonObject();
+                    actionPayload.addProperty("text", actionBar.getText());
+                    actionPayload.addProperty("durationTicks", actionBar.getDurationTicks());
+                    tickObject.add("actionbar", actionPayload);
+                } else if (keyframe instanceof ModelKeyframe model) {
+                    JsonArray models = tickObject.has("models")
+                            ? tickObject.getAsJsonArray("models")
+                            : new JsonArray();
+                    JsonObject modelPayload = new JsonObject();
+                    modelPayload.addProperty("action", model.getAction().name());
+                    modelPayload.addProperty("modelId", model.getModelId());
+                    modelPayload.addProperty("entityRef", model.getEntityRef());
+                    modelPayload.addProperty("animationId", model.getAnimationId());
+                    modelPayload.addProperty("loop", model.isLoop());
+                    modelPayload.addProperty("speed", model.getSpeed());
+                    modelPayload.add("spawnTransform", serializeTransform(model.getSpawnTransform()));
+                    models.add(modelPayload);
+                    tickObject.add("models", models);
+                } else if (keyframe instanceof ParticleKeyframe particle) {
+                    JsonObject effects = getEffectsObject(tickObject);
+                    JsonArray particles = effects.has("particles") ? effects.getAsJsonArray("particles") : new JsonArray();
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("particleId", particle.getParticleId());
+                    payload.add("transform", serializeTransform(particle.getTransform()));
+                    particles.add(payload);
+                    effects.add("particles", particles);
+                } else if (keyframe instanceof SoundKeyframe sound) {
+                    JsonObject effects = getEffectsObject(tickObject);
+                    JsonArray sounds = effects.has("sounds") ? effects.getAsJsonArray("sounds") : new JsonArray();
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("soundId", sound.getSoundId());
+                    payload.addProperty("volume", sound.getVolume());
+                    payload.addProperty("pitch", sound.getPitch());
+                    payload.add("transform", serializeTransform(sound.getTransform()));
+                    sounds.add(payload);
+                    effects.add("sounds", sounds);
+                } else if (keyframe instanceof BlockIllusionKeyframe block) {
+                    JsonObject effects = getEffectsObject(tickObject);
+                    JsonArray blocks = effects.has("blocks") ? effects.getAsJsonArray("blocks") : new JsonArray();
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("material", block.getMaterial().name());
+                    payload.add("transform", serializeTransform(block.getTransform()));
+                    blocks.add(payload);
+                    effects.add("blocks", blocks);
+                }
+            }
+        }
+        JsonObject ticksObject = new JsonObject();
+        for (Map.Entry<Integer, JsonObject> entry : ticks.entrySet()) {
+            ticksObject.add(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        return ticksObject;
+    }
+
+    private JsonObject getEffectsObject(JsonObject tickObject) {
+        if (tickObject.has("effects") && tickObject.get("effects").isJsonObject()) {
+            return tickObject.getAsJsonObject("effects");
+        }
+        JsonObject effects = new JsonObject();
+        tickObject.add("effects", effects);
+        return effects;
+    }
+
+    private JsonObject serializeLocation(SceneLocation location) {
+        if (location == null) {
+            return null;
+        }
+        JsonObject obj = new JsonObject();
+        obj.addProperty("world", location.getWorldName());
+        obj.addProperty("x", location.getX());
+        obj.addProperty("y", location.getY());
+        obj.addProperty("z", location.getZ());
+        obj.addProperty("yaw", location.getYaw());
+        obj.addProperty("pitch", location.getPitch());
         return obj;
     }
 }
