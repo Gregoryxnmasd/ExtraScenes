@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/ExtraScenesPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/ExtraScenesPlugin.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneModelTrackAdapter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneModelTrackAdapter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorSession.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorSession.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GroupGridGui.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GroupGridGui.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEditorEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEditorEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSessionManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSessionManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "Gregoryxnmasd"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Gregoryxnmasd/ExtraScenes.git",
+    "accountId": "ef5535aa-7b0d-4d5f-ac64-dab1452ce841"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="38wuE7SNSweW0g48HKNd1fK5524" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.extrascenes [package].executor": "Run",
+    "Maven.extrascenes [test].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/savge/Documents/GitHub/ExtraScenes"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="" />
+      <created>1769722840123</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1769722840123</updated>
+    </task>
+    <servers />
+  </component>
+</project>
