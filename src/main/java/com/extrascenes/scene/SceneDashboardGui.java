@@ -41,8 +41,6 @@ public class SceneDashboardGui implements EditorGui {
             inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to previous menu.")));
         }
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(26, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Save Scene", List.of("Write JSON to disk.")));
-
         return inventory;
     }
 
@@ -78,10 +76,6 @@ public class SceneDashboardGui implements EditorGui {
         if (slot == 22) {
             editorEngine.closeEditor(player, session);
             return;
-        }
-        if (slot == 26) {
-            editorEngine.saveScene(player, session);
-            refresh(session);
         }
     }
 

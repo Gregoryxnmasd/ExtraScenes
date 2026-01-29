@@ -21,6 +21,10 @@ public class EditorSession {
     private int armedGroup;
     private int wandSlot;
     private ItemStack wandBackup;
+    private String selectedModelEntryName;
+    private String armedModelEntryName;
+    private UUID armedModelKeyframeId;
+    private GuiType armedReturnGui;
     private GuiType currentGui;
     private final Deque<GuiType> history = new ArrayDeque<>();
     private long lastSavedAt;
@@ -151,6 +155,38 @@ public class EditorSession {
 
     public void setWandBackup(ItemStack wandBackup) {
         this.wandBackup = wandBackup;
+    }
+
+    public String getSelectedModelEntryName() {
+        return selectedModelEntryName;
+    }
+
+    public void setSelectedModelEntryName(String selectedModelEntryName) {
+        this.selectedModelEntryName = selectedModelEntryName;
+    }
+
+    public String getArmedModelEntryName() {
+        return armedModelEntryName;
+    }
+
+    public void setArmedModelEntryName(String armedModelEntryName) {
+        this.armedModelEntryName = armedModelEntryName;
+    }
+
+    public UUID getArmedModelKeyframeId() {
+        return armedModelKeyframeId;
+    }
+
+    public void setArmedModelKeyframeId(UUID armedModelKeyframeId) {
+        this.armedModelKeyframeId = armedModelKeyframeId;
+    }
+
+    public GuiType getArmedReturnGui() {
+        return armedReturnGui;
+    }
+
+    public void setArmedReturnGui(GuiType armedReturnGui) {
+        this.armedReturnGui = armedReturnGui;
     }
 
     public GuiType getCurrentGui() {

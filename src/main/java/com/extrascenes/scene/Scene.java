@@ -1,6 +1,7 @@
 package com.extrascenes.scene;
 
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Scene {
@@ -9,6 +10,7 @@ public class Scene {
     private final int formatVersion;
     private final Map<SceneTrackType, Track<? extends Keyframe>> tracks;
     private final SceneTimeline timeline;
+    private final Map<String, SceneModelEntry> modelLibrary;
     private SmoothingMode defaultSmoothing;
     private SmoothingQuality smoothingQuality;
     private String cameraMode;
@@ -27,8 +29,9 @@ public class Scene {
             this.tracks.putAll(tracks);
         }
         this.timeline = new SceneTimeline(this);
-        this.defaultSmoothing = SmoothingMode.EASE_IN_OUT_QUINT;
-        this.smoothingQuality = SmoothingQuality.NORMAL;
+        this.modelLibrary = new LinkedHashMap<>();
+        this.defaultSmoothing = SmoothingMode.SMOOTH;
+        this.smoothingQuality = SmoothingQuality.SMOOTH;
         this.cameraMode = "SPECTATOR";
         this.freezePlayer = true;
         this.allowGlobalCommands = false;
@@ -66,12 +69,36 @@ public class Scene {
         return timeline;
     }
 
+    public Map<String, SceneModelEntry> getModelLibrary() {
+        return modelLibrary;
+    }
+
+    public SceneModelEntry getModelEntry(String name) {
+        if (name == null) {
+            return null;
+        }
+        return modelLibrary.get(name.toLowerCase());
+    }
+
+    public void putModelEntry(SceneModelEntry entry) {
+        if (entry == null || entry.getName() == null) {
+            return;
+        }
+        modelLibrary.put(entry.getName().toLowerCase(), entry);
+    }
+
+    public void removeModelEntry(String name) {
+        if (name != null) {
+            modelLibrary.remove(name.toLowerCase());
+        }
+    }
+
     public SmoothingMode getDefaultSmoothing() {
         return defaultSmoothing;
     }
 
     public void setDefaultSmoothing(SmoothingMode defaultSmoothing) {
-        this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.EASE_IN_OUT_QUINT : defaultSmoothing;
+        this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.SMOOTH : defaultSmoothing;
     }
 
     public SmoothingQuality getSmoothingQuality() {
@@ -79,7 +106,7 @@ public class Scene {
     }
 
     public void setSmoothingQuality(SmoothingQuality smoothingQuality) {
-        this.smoothingQuality = smoothingQuality == null ? SmoothingQuality.NORMAL : smoothingQuality;
+        this.smoothingQuality = smoothingQuality == null ? SmoothingQuality.SMOOTH : smoothingQuality;
     }
 
     public String getCameraMode() {

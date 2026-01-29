@@ -8,6 +8,7 @@ public class Transform {
     private double z;
     private float yaw;
     private float pitch;
+    private String worldName;
 
     public Transform(double x, double y, double z, float yaw, float pitch) {
         this.x = x;
@@ -15,13 +16,30 @@ public class Transform {
         this.z = z;
         this.yaw = yaw;
         this.pitch = pitch;
+        this.worldName = null;
+    }
+
+    public Transform(double x, double y, double z, float yaw, float pitch, String worldName) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.yaw = yaw;
+        this.pitch = pitch;
+        this.worldName = worldName;
     }
 
     public static Transform fromLocation(Location location) {
-        return new Transform(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+        String world = location.getWorld() != null ? location.getWorld().getName() : null;
+        return new Transform(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), world);
     }
 
     public Location applyTo(Location location) {
+        if (worldName != null) {
+            org.bukkit.World world = org.bukkit.Bukkit.getWorld(worldName);
+            if (world != null) {
+                location.setWorld(world);
+            }
+        }
         location.setX(x);
         location.setY(y);
         location.setZ(z);
@@ -50,6 +68,10 @@ public class Transform {
         return pitch;
     }
 
+    public String getWorldName() {
+        return worldName;
+    }
+
     public void setX(double x) {
         this.x = x;
     }
@@ -68,5 +90,9 @@ public class Transform {
 
     public void setPitch(float pitch) {
         this.pitch = pitch;
+    }
+
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
     }
 }

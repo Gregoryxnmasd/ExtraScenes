@@ -17,6 +17,7 @@ public class SceneSession {
     private final PlayerStateSnapshot snapshot;
     private final Set<Entity> sceneEntities = new HashSet<>();
     private final Map<String, UUID> modelRefs = new HashMap<>();
+    private final Map<String, String> lastModelHandleByEntry = new HashMap<>();
     private SceneState state;
     private int timeTicks;
     private int startTick;
@@ -191,6 +192,20 @@ public class SceneSession {
 
     public void setLastModelHandle(String lastModelHandle) {
         this.lastModelHandle = lastModelHandle;
+    }
+
+    public String getLastModelHandleForEntry(String entryName) {
+        if (entryName == null) {
+            return null;
+        }
+        return lastModelHandleByEntry.get(entryName.toLowerCase());
+    }
+
+    public void setLastModelHandleForEntry(String entryName, String handle) {
+        if (entryName == null || handle == null) {
+            return;
+        }
+        lastModelHandleByEntry.put(entryName.toLowerCase(), handle);
     }
 
     public BukkitTask getRuntimeTask() {

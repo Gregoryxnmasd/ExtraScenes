@@ -12,8 +12,11 @@ public class CameraKeyframe extends Keyframe {
                           LookAtTarget lookAt) {
         super(id, timeTicks);
         this.transform = transform;
-        this.smoothingMode = smoothingMode == null ? SmoothingMode.LINEAR : smoothingMode;
-        this.instant = instant;
+        this.smoothingMode = smoothingMode == null ? SmoothingMode.SMOOTH : smoothingMode;
+        if (instant) {
+            this.smoothingMode = SmoothingMode.INSTANT;
+        }
+        this.instant = this.smoothingMode == SmoothingMode.INSTANT;
         this.lookAt = lookAt == null ? LookAtTarget.none() : lookAt;
     }
 
@@ -40,7 +43,8 @@ public class CameraKeyframe extends Keyframe {
     }
 
     public void setSmoothingMode(SmoothingMode smoothingMode) {
-        this.smoothingMode = smoothingMode;
+        this.smoothingMode = smoothingMode == null ? SmoothingMode.SMOOTH : smoothingMode;
+        this.instant = this.smoothingMode == SmoothingMode.INSTANT;
     }
 
     public boolean isInstant() {
@@ -49,6 +53,9 @@ public class CameraKeyframe extends Keyframe {
 
     public void setInstant(boolean instant) {
         this.instant = instant;
+        if (instant) {
+            this.smoothingMode = SmoothingMode.INSTANT;
+        }
     }
 
     public LookAtTarget getLookAt() {

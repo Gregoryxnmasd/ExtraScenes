@@ -17,6 +17,7 @@ public class EditorInputManager {
         KEYFRAME_TIME,
         GROUP_JUMP,
         MOVE_TICK,
+        COPY_TICK,
         SHIFT_RANGE,
         ACTIONBAR_TEXT,
         ACTIONBAR_DURATION,
@@ -26,11 +27,14 @@ public class EditorInputManager {
         MODEL_ANIMATION_ID,
         MODEL_LOOP,
         MODEL_SPEED,
-        MODEL_SPEED_EDIT
+        MODEL_SPEED_EDIT,
+        MODEL_ENTRY_CREATE_NAME,
+        MODEL_ENTRY_CREATE_MODEL_ID,
+        MODEL_ENTRY_MODEL_ID,
+        MODEL_ENTRY_ANIMATION_ID
     }
 
     public enum ModelField {
-        MODEL_ID,
         ANIMATION_ID
     }
 
@@ -43,6 +47,7 @@ public class EditorInputManager {
         private ModelKeyframe modelKeyframe;
         private CommandKeyframe commandTarget;
         private ModelField modelField;
+        private SceneModelEntry modelEntry;
         private GuiType returnGui;
         private SceneTrackType trackType;
         private UUID keyframeId;
@@ -100,6 +105,14 @@ public class EditorInputManager {
 
         public void setModelField(ModelField modelField) {
             this.modelField = modelField;
+        }
+
+        public SceneModelEntry getModelEntry() {
+            return modelEntry;
+        }
+
+        public void setModelEntry(SceneModelEntry modelEntry) {
+            this.modelEntry = modelEntry;
         }
 
         public GuiType getReturnGui() {
@@ -182,13 +195,12 @@ public class EditorInputManager {
         PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MODEL_ACTION);
         state.setReturnGui(returnGui);
         state.setModelKeyframe(new ModelKeyframe(null, session.getCursorTimeTicks(), action));
-        state.getModelKeyframe().setEntityRef("last");
         if (action == ModelKeyframe.Action.SPAWN) {
             state.setType(PromptType.MODEL_MODEL_ID);
-            player.sendMessage(ChatColor.AQUA + "Enter modelId:");
+            player.sendMessage(ChatColor.AQUA + "Enter model entry name:");
         } else {
-            state.setType(PromptType.MODEL_ANIMATION_ID);
-            player.sendMessage(ChatColor.AQUA + "Enter animationId (or leave empty for none):");
+            state.setType(PromptType.MODEL_MODEL_ID);
+            player.sendMessage(ChatColor.AQUA + "Enter model entry name:");
         }
         prompts.put(player.getUniqueId(), state);
     }
@@ -238,6 +250,14 @@ public class EditorInputManager {
         player.sendMessage(ChatColor.AQUA + "Enter destination tick. Type 'cancel' to abort.");
     }
 
+    public void beginCopyTickInput(Player player, Scene scene, EditorSession session, int fromTick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.COPY_TICK);
+        state.setReturnGui(returnGui);
+        state.getCommandBuffer().add(String.valueOf(fromTick));
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter destination tick to copy into. Type 'cancel' to abort.");
+    }
+
     public void beginShiftRangeInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
         PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.SHIFT_RANGE);
         state.setReturnGui(returnGui);
@@ -257,6 +277,32 @@ public class EditorInputManager {
         state.setReturnGui(returnGui);
         prompts.put(player.getUniqueId(), state);
         player.sendMessage(ChatColor.AQUA + "Enter actionbar duration in ticks. Type 'cancel' to abort.");
+    }
+
+    public void beginModelEntryCreate(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MODEL_ENTRY_CREATE_NAME);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter a name for the model entry. Type 'cancel' to abort.");
+    }
+
+    public void beginModelEntryModelIdInput(Player player, Scene scene, EditorSession session, SceneModelEntry entry,
+                                            GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MODEL_ENTRY_MODEL_ID);
+        state.setModelEntry(entry);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter modelId for " + entry.getName() + ". Type 'cancel' to abort.");
+    }
+
+    public void beginModelEntryAnimationInput(Player player, Scene scene, EditorSession session, SceneModelEntry entry,
+                                              GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.MODEL_ENTRY_ANIMATION_ID);
+        state.setModelEntry(entry);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        player.sendMessage(ChatColor.AQUA + "Enter default animation for " + entry.getName()
+                + " (or leave empty). Type 'cancel' to abort.");
     }
 
     public boolean handleChat(Player player, String message) {
@@ -281,6 +327,7 @@ public class EditorInputManager {
             case KEYFRAME_TIME -> handleKeyframeTimeInput(player, state, message);
             case GROUP_JUMP -> handleGroupJump(player, state, message);
             case MOVE_TICK -> handleMoveTick(player, state, message);
+            case COPY_TICK -> handleCopyTick(player, state, message);
             case SHIFT_RANGE -> handleShiftRange(player, state, message);
             case ACTIONBAR_TEXT -> handleActionBarText(player, state, message);
             case ACTIONBAR_DURATION -> handleActionBarDuration(player, state, message);
@@ -291,6 +338,10 @@ public class EditorInputManager {
             case MODEL_LOOP -> handleModelLoop(player, state, message);
             case MODEL_SPEED -> handleModelSpeed(player, state, message);
             case MODEL_SPEED_EDIT -> handleModelSpeedEdit(player, state, message);
+            case MODEL_ENTRY_CREATE_NAME -> handleModelEntryCreateName(player, state, message);
+            case MODEL_ENTRY_CREATE_MODEL_ID -> handleModelEntryCreateModelId(player, state, message);
+            case MODEL_ENTRY_MODEL_ID -> handleModelEntryModelId(player, state, message);
+            case MODEL_ENTRY_ANIMATION_ID -> handleModelEntryAnimation(player, state, message);
             default -> {
             }
         }
@@ -394,14 +445,13 @@ public class EditorInputManager {
         try {
             ModelKeyframe.Action action = ModelKeyframe.Action.valueOf(message.toUpperCase());
             ModelKeyframe keyframe = new ModelKeyframe(null, state.getEditorSession().getCursorTimeTicks(), action);
-            keyframe.setEntityRef("last");
             state.setModelKeyframe(keyframe);
             if (action == ModelKeyframe.Action.SPAWN) {
                 state.setType(PromptType.MODEL_MODEL_ID);
-                player.sendMessage(ChatColor.AQUA + "Enter modelId:");
+                player.sendMessage(ChatColor.AQUA + "Enter model entry name:");
             } else {
-                state.setType(PromptType.MODEL_ANIMATION_ID);
-                player.sendMessage(ChatColor.AQUA + "Enter animationId (or leave empty):");
+                state.setType(PromptType.MODEL_MODEL_ID);
+                player.sendMessage(ChatColor.AQUA + "Enter model entry name:");
             }
         } catch (IllegalArgumentException ex) {
             player.sendMessage(ChatColor.RED + "Invalid action. Use SPAWN/ANIM/STOP/DESPAWN.");
@@ -417,7 +467,6 @@ public class EditorInputManager {
             return;
         }
         switch (state.getModelField()) {
-            case MODEL_ID -> target.setModelId(message);
             case ANIMATION_ID -> target.setAnimationId(message);
             default -> {
             }
@@ -430,8 +479,20 @@ public class EditorInputManager {
     }
 
     private void handleModelModelId(Player player, PromptState state, String message) {
-        state.getModelKeyframe().setModelId(message);
-        finalizeModelKeyframe(player, state);
+        SceneModelEntry entry = state.getScene().getModelEntry(message);
+        if (entry == null) {
+            player.sendMessage(ChatColor.RED + "Model entry not found. Use the model library to create it first.");
+            return;
+        }
+        state.getModelKeyframe().setModelEntry(entry.getName());
+        state.getModelKeyframe().setModelId(entry.getModelId());
+        if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.SPAWN
+                || state.getModelKeyframe().getAction() == ModelKeyframe.Action.DESPAWN) {
+            finalizeModelKeyframe(player, state);
+            return;
+        }
+        player.sendMessage(ChatColor.AQUA + "Enter animationId (or leave empty):");
+        state.setType(PromptType.MODEL_ANIMATION_ID);
     }
 
     private void handleModelAnimationId(Player player, PromptState state, String message) {
@@ -439,6 +500,8 @@ public class EditorInputManager {
         if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.ANIM) {
             player.sendMessage(ChatColor.AQUA + "Loop animation? (true/false)");
             state.setType(PromptType.MODEL_LOOP);
+        } else if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.STOP) {
+            finalizeModelKeyframe(player, state);
         } else {
             finalizeModelKeyframe(player, state);
         }
@@ -460,9 +523,6 @@ public class EditorInputManager {
     }
 
     private void finalizeModelKeyframe(Player player, PromptState state) {
-        if (state.getModelKeyframe().getAction() == ModelKeyframe.Action.SPAWN) {
-            state.getModelKeyframe().setSpawnTransform(Transform.fromLocation(player.getLocation()));
-        }
         Track<ModelKeyframe> track = state.getScene().getTrack(SceneTrackType.MODEL);
         track.addKeyframe(state.getModelKeyframe());
         editorEngine.markDirty(state.getScene());
@@ -500,6 +560,19 @@ public class EditorInputManager {
             prompts.remove(player.getUniqueId());
             Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                     state.getReturnGui() == null ? GuiType.GROUP_GRID : state.getReturnGui()));
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "Invalid number. Enter destination tick.");
+        }
+    }
+
+    private void handleCopyTick(Player player, PromptState state, String message) {
+        try {
+            int toTick = Integer.parseInt(message);
+            int fromTick = Integer.parseInt(state.getCommandBuffer().get(0));
+            editorEngine.duplicateTickActions(state.getScene(), fromTick, toTick, state.getEditorSession());
+            prompts.remove(player.getUniqueId());
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.TICK_TOOLS : state.getReturnGui()));
         } catch (NumberFormatException ex) {
             player.sendMessage(ChatColor.RED + "Invalid number. Enter destination tick.");
         }
@@ -555,6 +628,64 @@ public class EditorInputManager {
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                 state.getReturnGui() == null ? GuiType.ACTIONBAR_EDITOR : state.getReturnGui()));
         player.sendMessage(ChatColor.GREEN + "Actionbar duration updated.");
+    }
+
+    private void handleModelEntryCreateName(Player player, PromptState state, String message) {
+        if (message.isBlank()) {
+            player.sendMessage(ChatColor.RED + "Entry name cannot be empty.");
+            return;
+        }
+        if (state.getScene().getModelEntry(message) != null) {
+            player.sendMessage(ChatColor.RED + "A model entry with that name already exists.");
+            return;
+        }
+        state.setModelEntry(new SceneModelEntry(message, null, null, null));
+        state.setType(PromptType.MODEL_ENTRY_CREATE_MODEL_ID);
+        player.sendMessage(ChatColor.AQUA + "Enter modelId for " + message + ":");
+    }
+
+    private void handleModelEntryCreateModelId(Player player, PromptState state, String message) {
+        SceneModelEntry entry = state.getModelEntry();
+        if (entry == null) {
+            prompts.remove(player.getUniqueId());
+            return;
+        }
+        entry.setModelId(message);
+        state.getScene().putModelEntry(entry);
+        editorEngine.markDirty(state.getScene());
+        prompts.remove(player.getUniqueId());
+        state.getEditorSession().setSelectedModelEntryName(entry.getName());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                GuiType.MODEL_ENTRY_EDITOR));
+        player.sendMessage(ChatColor.GREEN + "Model entry created. Set its spawn location with placement mode.");
+    }
+
+    private void handleModelEntryModelId(Player player, PromptState state, String message) {
+        SceneModelEntry entry = state.getModelEntry();
+        if (entry == null) {
+            prompts.remove(player.getUniqueId());
+            return;
+        }
+        entry.setModelId(message);
+        editorEngine.markDirty(state.getScene());
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                state.getReturnGui() == null ? GuiType.MODEL_ENTRY_EDITOR : state.getReturnGui()));
+        player.sendMessage(ChatColor.GREEN + "ModelId updated.");
+    }
+
+    private void handleModelEntryAnimation(Player player, PromptState state, String message) {
+        SceneModelEntry entry = state.getModelEntry();
+        if (entry == null) {
+            prompts.remove(player.getUniqueId());
+            return;
+        }
+        entry.setDefaultAnimation(message == null || message.isBlank() ? null : message);
+        editorEngine.markDirty(state.getScene());
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                state.getReturnGui() == null ? GuiType.MODEL_ENTRY_EDITOR : state.getReturnGui()));
+        player.sendMessage(ChatColor.GREEN + "Default animation updated.");
     }
 
     public void clearPrompt(UUID playerId) {

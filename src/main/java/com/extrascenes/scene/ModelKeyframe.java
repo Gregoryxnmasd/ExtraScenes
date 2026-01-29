@@ -11,6 +11,7 @@ public class ModelKeyframe extends Keyframe {
     }
 
     private Action action;
+    private String modelEntry;
     private String modelId;
     private String entityRef;
     private String animationId;
@@ -47,6 +48,14 @@ public class ModelKeyframe extends Keyframe {
 
     public void setModelId(String modelId) {
         this.modelId = modelId;
+    }
+
+    public String getModelEntry() {
+        return modelEntry;
+    }
+
+    public void setModelEntry(String modelEntry) {
+        this.modelEntry = modelEntry;
     }
 
     public String getEntityRef() {

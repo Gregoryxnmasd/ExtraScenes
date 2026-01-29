@@ -38,6 +38,7 @@ public class SceneSerializer {
         if (scene.getEndLocation() != null) {
             root.add("endLocation", serializeLocation(scene.getEndLocation()));
         }
+        root.add("modelLibrary", serializeModelLibrary(scene));
 
         JsonObject tracks = new JsonObject();
         for (Map.Entry<SceneTrackType, Track<? extends Keyframe>> entry : scene.getTracks().entrySet()) {
@@ -78,7 +79,8 @@ public class SceneSerializer {
         } else if (keyframe instanceof ModelKeyframe model) {
             payload.addProperty("action", model.getAction().name());
             payload.addProperty("modelId", model.getModelId());
-            payload.addProperty("entityRef", model.getEntityRef());
+            payload.addProperty("modelEntry", model.getModelEntry());
+            payload.addProperty("handle", model.getEntityRef());
             payload.addProperty("animationId", model.getAnimationId());
             payload.addProperty("loop", model.isLoop());
             payload.addProperty("speed", model.getSpeed());
@@ -104,6 +106,9 @@ public class SceneSerializer {
             return null;
         }
         JsonObject obj = new JsonObject();
+        if (transform.getWorldName() != null) {
+            obj.addProperty("world", transform.getWorldName());
+        }
         obj.addProperty("x", transform.getX());
         obj.addProperty("y", transform.getY());
         obj.addProperty("z", transform.getZ());
@@ -125,6 +130,19 @@ public class SceneSerializer {
             obj.addProperty("entityId", target.getEntityId().toString());
         }
         return obj;
+    }
+
+    private JsonArray serializeModelLibrary(Scene scene) {
+        JsonArray array = new JsonArray();
+        for (SceneModelEntry entry : scene.getModelLibrary().values()) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("name", entry.getName());
+            obj.addProperty("modelId", entry.getModelId());
+            obj.addProperty("defaultAnimation", entry.getDefaultAnimation());
+            obj.add("spawnTransform", serializeTransform(entry.getSpawnTransform()));
+            array.add(obj);
+        }
+        return array;
     }
 
     private JsonObject serializeTicks(Scene scene) {
@@ -161,7 +179,8 @@ public class SceneSerializer {
                     JsonObject modelPayload = new JsonObject();
                     modelPayload.addProperty("action", model.getAction().name());
                     modelPayload.addProperty("modelId", model.getModelId());
-                    modelPayload.addProperty("entityRef", model.getEntityRef());
+                    modelPayload.addProperty("modelEntry", model.getModelEntry());
+                    modelPayload.addProperty("handle", model.getEntityRef());
                     modelPayload.addProperty("animationId", model.getAnimationId());
                     modelPayload.addProperty("loop", model.isLoop());
                     modelPayload.addProperty("speed", model.getSpeed());

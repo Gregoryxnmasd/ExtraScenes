@@ -22,38 +22,49 @@ public class ModelKeyframeEditorGui implements EditorGui {
         GuiUtils.fillInventory(inventory);
 
         String timeLabel = keyframe == null ? "Unknown" : keyframe.getTimeTicks() + "t";
-        inventory.setItem(4, GuiUtils.makeItem(Material.NAME_TAG, "Editing Keyframe @ " + timeLabel,
+        inventory.setItem(4, GuiUtils.makeItem(Material.NAME_TAG, "Model Action @ " + timeLabel,
                 List.of("Model keyframe editor.")));
 
-        inventory.setItem(9, GuiUtils.makeItem(Material.CLOCK, "Change Time",
-                List.of("Set keyframe time via chat.")));
-        inventory.setItem(10, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Delete Keyframe",
-                List.of("Requires confirmation.")));
-        inventory.setItem(11, GuiUtils.makeItem(Material.PAPER, "Duplicate Keyframe",
-                List.of("Create a copy of this keyframe.")));
-
         if (keyframe != null) {
-            if (keyframe.getAction() == ModelKeyframe.Action.SPAWN && (keyframe.getEntityRef() == null || keyframe.getEntityRef().isBlank())) {
-                keyframe.setEntityRef("model_" + java.util.UUID.randomUUID());
-                editorEngine.markDirty(session.getScene());
+            if (keyframe.getModelEntry() == null || keyframe.getModelEntry().isBlank()) {
+                String defaultEntry = null;
+                if (keyframe.getModelId() != null) {
+                    SceneModelEntry entry = session.getScene().getModelEntry(keyframe.getModelId());
+                    if (entry != null) {
+                        defaultEntry = entry.getName();
+                    }
+                }
+                if (defaultEntry == null) {
+                    defaultEntry = editorEngine.nextModelEntry(session.getScene(), null);
+                }
+                if (defaultEntry != null) {
+                    keyframe.setModelEntry(defaultEntry);
+                    editorEngine.markDirty(session.getScene());
+                }
             }
             inventory.setItem(20, GuiUtils.makeItem(Material.ARMOR_STAND, "Action: " + keyframe.getAction(),
                     List.of("Cycle action.")));
             inventory.setItem(22, GuiUtils.makeItem(Material.NAME_TAG,
-                    "ModelId / Handle",
-                    List.of("Left: edit modelId", "Right: cycle handle",
-                            "Handle: " + GuiUtils.nullToPlaceholder(keyframe.getEntityRef()))));
-            inventory.setItem(24, GuiUtils.makeItem(Material.WRITABLE_BOOK,
-                    "Animation / Loop / Speed",
-                    List.of("Left: animationId", "Right: toggle loop", "Shift: speed input")));
-            inventory.setItem(31, GuiUtils.makeItem(Material.ENDER_PEARL, "Capture Spawn Transform",
-                    List.of("Only for SPAWN action.")));
+                    "Model Entry",
+                    List.of("Left: cycle entry", "Right: open library",
+                            "Entry: " + GuiUtils.nullToPlaceholder(keyframe.getModelEntry()))));
+            if (keyframe.getAction() == ModelKeyframe.Action.ANIM) {
+                inventory.setItem(24, GuiUtils.makeItem(Material.WRITABLE_BOOK,
+                        "Animation / Loop / Speed",
+                        List.of("Left: animationId", "Right: toggle loop", "Shift: speed input")));
+            } else if (keyframe.getAction() == ModelKeyframe.Action.STOP) {
+                inventory.setItem(24, GuiUtils.makeItem(Material.WRITABLE_BOOK,
+                        "Stop Animation",
+                        List.of("Left: animationId (optional)")));
+            }
+            if (keyframe.getAction() == ModelKeyframe.Action.SPAWN) {
+                inventory.setItem(31, GuiUtils.makeItem(Material.ENDER_PEARL, "Set Model Spawn Location",
+                        List.of("Placement mode.")));
+            }
         }
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to previous menu.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(53, GuiUtils.makeItem(Material.WRITABLE_BOOK, "Apply",
-                List.of("Save changes to keyframe.")));
 
         return inventory;
     }
@@ -79,27 +90,6 @@ public class ModelKeyframeEditorGui implements EditorGui {
             editorEngine.closeEditor(player, session);
             return;
         }
-        if (slot == 53) {
-            player.sendMessage(GuiUtils.TITLE_PREFIX + "Keyframe saved.");
-            refresh(session);
-            return;
-        }
-        if (slot == 9) {
-            player.closeInventory();
-            editorEngine.getInputManager().beginKeyframeTimeInput(player, session.getScene(), session,
-                    session.getSelectedTrack(), keyframe.getId(), GuiType.MODEL_EDITOR);
-            return;
-        }
-        if (slot == 10) {
-            editorEngine.openConfirm(player, session, ConfirmAction.DELETE_KEYFRAME, session.getSelectedTrack(),
-                    keyframe.getId());
-            return;
-        }
-        if (slot == 11) {
-            editorEngine.duplicateKeyframe(session, keyframe);
-            refresh(session);
-            return;
-        }
         if (slot == 20) {
             keyframe.setAction(nextAction(keyframe.getAction()));
             editorEngine.markDirty(session.getScene());
@@ -108,19 +98,31 @@ public class ModelKeyframeEditorGui implements EditorGui {
         }
         if (slot == 22) {
             if (ctx.isRightClick()) {
-                List<String> handles = editorEngine.getModelHandles(session.getScene());
-                String next = editorEngine.nextHandle(handles, keyframe.getEntityRef());
-                keyframe.setEntityRef(next);
-                editorEngine.markDirty(session.getScene());
-                refresh(session);
-            } else {
-                player.closeInventory();
-                editorEngine.getInputManager().beginModelFieldInput(player, session.getScene(), session, keyframe,
-                        EditorInputManager.ModelField.MODEL_ID, GuiType.MODEL_EDITOR);
+                editorEngine.openModelLibrary(player, session, true);
+                return;
             }
+            String nextEntry = editorEngine.nextModelEntry(session.getScene(), keyframe.getModelEntry());
+            if (nextEntry == null) {
+                player.sendMessage(org.bukkit.ChatColor.RED + "No model entries available.");
+                return;
+            }
+            keyframe.setModelEntry(nextEntry);
+            editorEngine.markDirty(session.getScene());
+            refresh(session);
             return;
         }
         if (slot == 24) {
+            if (keyframe.getAction() == ModelKeyframe.Action.STOP) {
+                if (!ctx.isRightClick() && !ctx.isShiftClick()) {
+                    player.closeInventory();
+                    editorEngine.getInputManager().beginModelFieldInput(player, session.getScene(), session, keyframe,
+                            EditorInputManager.ModelField.ANIMATION_ID, GuiType.MODEL_EDITOR);
+                }
+                return;
+            }
+            if (keyframe.getAction() != ModelKeyframe.Action.ANIM) {
+                return;
+            }
             if (ctx.isShiftClick()) {
                 player.closeInventory();
                 editorEngine.getInputManager().beginModelSpeedInput(player, session.getScene(), session, keyframe,
@@ -138,9 +140,7 @@ public class ModelKeyframeEditorGui implements EditorGui {
         }
         if (slot == 31) {
             if (keyframe.getAction() == ModelKeyframe.Action.SPAWN) {
-                keyframe.setSpawnTransform(Transform.fromLocation(player.getLocation()));
-                editorEngine.markDirty(session.getScene());
-                refresh(session);
+                editorEngine.armModelKeyframePlacement(player, session, keyframe.getId(), GuiType.MODEL_EDITOR);
             }
         }
     }

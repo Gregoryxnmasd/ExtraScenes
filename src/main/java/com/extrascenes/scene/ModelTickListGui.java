@@ -26,8 +26,9 @@ public class ModelTickListGui implements EditorGui {
         int slot = 9;
         for (ModelKeyframe keyframe : keyframes) {
             inventory.setItem(slot++, GuiUtils.makeItem(Material.REDSTONE_BLOCK,
-                    keyframe.getAction() + " • " + GuiUtils.nullToPlaceholder(keyframe.getEntityRef()),
-                    List.of("Model: " + GuiUtils.nullToPlaceholder(keyframe.getModelId()),
+                    formatModelAction(keyframe),
+                    List.of("Entry: " + GuiUtils.nullToPlaceholder(keyframe.getModelEntry()),
+                            "ModelId: " + GuiUtils.nullToPlaceholder(keyframe.getModelId()),
                             "Anim: " + GuiUtils.nullToPlaceholder(keyframe.getAnimationId()),
                             "Left: edit", "Right: delete")));
             if (slot >= 45) {
@@ -37,6 +38,8 @@ public class ModelTickListGui implements EditorGui {
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ANVIL, "Add Model Action",
                 List.of("Prompt via chat.")));
+        inventory.setItem(47, GuiUtils.makeItem(Material.BOOK, "Model Library",
+                List.of("Create reusable entries.")));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         inventory.setItem(53, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
 
@@ -64,6 +67,10 @@ public class ModelTickListGui implements EditorGui {
             editorEngine.getInputManager().beginModelInput(player, session.getScene(), session, GuiType.MODEL_TICK_LIST);
             return;
         }
+        if (slot == 47) {
+            editorEngine.openModelLibrary(player, session, true);
+            return;
+        }
         if (slot >= 9 && slot < 45) {
             List<ModelKeyframe> keyframes = TickUtils.getKeyframesAtTick(session.getScene().getTrack(SceneTrackType.MODEL),
                     session.getCurrentTick());
@@ -81,6 +88,16 @@ public class ModelTickListGui implements EditorGui {
             }
             editorEngine.openModelEditor(player, session, true);
         }
+    }
+
+    private String formatModelAction(ModelKeyframe keyframe) {
+        String entry = keyframe.getModelEntry();
+        return switch (keyframe.getAction()) {
+            case SPAWN -> "Spawn " + GuiUtils.nullToPlaceholder(entry);
+            case ANIM -> "Play Animation";
+            case STOP -> "Stop Animation";
+            case DESPAWN -> "Despawn";
+        };
     }
 
     @Override

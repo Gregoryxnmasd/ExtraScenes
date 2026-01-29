@@ -54,20 +54,20 @@ public class SceneManager {
     }
 
     private SmoothingMode readSmoothing() {
-        String smoothing = plugin.getConfig().getString("smoothing.default", "EASE_IN_OUT_QUINT");
+        String smoothing = plugin.getConfig().getString("smoothing.default", "SMOOTH");
         try {
             return SmoothingMode.valueOf(smoothing);
         } catch (IllegalArgumentException ex) {
-            return SmoothingMode.EASE_IN_OUT_QUINT;
+            return SmoothingMode.SMOOTH;
         }
     }
 
     private SmoothingQuality readSmoothingQuality() {
-        String quality = plugin.getConfig().getString("smoothing.quality", "NORMAL");
+        String quality = plugin.getConfig().getString("smoothing.quality", "SMOOTH");
         try {
             return SmoothingQuality.valueOf(quality);
         } catch (IllegalArgumentException ex) {
-            return SmoothingQuality.NORMAL;
+            return SmoothingQuality.SMOOTH;
         }
     }
 

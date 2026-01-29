@@ -35,10 +35,10 @@ public class SceneDeserializer {
         int durationTicks = root.has("durationTicks") ? root.get("durationTicks").getAsInt() : 0;
         SmoothingMode defaultSmoothing = parseSmoothing(root.has("defaultSmoothing")
                 ? root.get("defaultSmoothing").getAsString()
-                : "EASE_IN_OUT");
+                : "SMOOTH");
         SmoothingQuality smoothingQuality = parseQuality(root.has("smoothingQuality")
                 ? root.get("smoothingQuality").getAsString()
-                : "NORMAL");
+                : "SMOOTH");
         String cameraMode = root.has("cameraMode") ? root.get("cameraMode").getAsString() : "SPECTATOR";
         boolean freezePlayer = !root.has("freezePlayer") || root.get("freezePlayer").getAsBoolean();
         boolean allowGlobalCommands = root.has("allowGlobalCommands") && root.get("allowGlobalCommands").getAsBoolean();
@@ -46,6 +46,7 @@ public class SceneDeserializer {
                 ? parseEndTeleportMode(root.get("endTeleportMode").getAsString())
                 : EndTeleportMode.RETURN_TO_START;
         SceneLocation endLocation = root.has("endLocation") ? deserializeLocation(root.get("endLocation")) : null;
+        List<SceneModelEntry> modelEntries = parseModelLibrary(root);
 
         Map<SceneTrackType, Track<? extends Keyframe>> tracks = parseTicks(root);
         if (tracks.isEmpty()) {
@@ -77,14 +78,25 @@ public class SceneDeserializer {
         scene.setAllowGlobalCommands(allowGlobalCommands);
         scene.setEndTeleportMode(endTeleportMode);
         scene.setEndLocation(endLocation);
+        for (SceneModelEntry entry : modelEntries) {
+            scene.putModelEntry(entry);
+        }
+        ensureModelEntries(scene);
         return scene;
     }
 
     private SmoothingMode parseSmoothing(String value) {
+        if (value == null) {
+            return SmoothingMode.SMOOTH;
+        }
         try {
             return SmoothingMode.valueOf(value);
         } catch (IllegalArgumentException ex) {
-            return SmoothingMode.EASE_IN_OUT_QUINT;
+            return switch (value.toUpperCase()) {
+                case "NONE", "CATMULL_ROM", "SMOOTHSTEP", "EASE_IN", "EASE_OUT", "EASE_IN_OUT", "EASE_IN_OUT_CUBIC",
+                        "EASE_IN_OUT_QUINT" -> SmoothingMode.SMOOTH;
+                default -> SmoothingMode.SMOOTH;
+            };
         }
     }
 
@@ -92,7 +104,7 @@ public class SceneDeserializer {
         try {
             return SmoothingQuality.valueOf(value);
         } catch (IllegalArgumentException ex) {
-            return SmoothingQuality.NORMAL;
+            return SmoothingQuality.SMOOTH;
         }
     }
 
@@ -112,9 +124,12 @@ public class SceneDeserializer {
             case CAMERA -> {
                 Transform transform = deserializeTransform(payload.get("transform"));
                 SmoothingMode smoothing = payload.has("smoothing")
-                        ? SmoothingMode.valueOf(payload.get("smoothing").getAsString())
-                        : SmoothingMode.LINEAR;
+                        ? parseSmoothing(payload.get("smoothing").getAsString())
+                        : SmoothingMode.SMOOTH;
                 boolean instant = payload.has("instant") && payload.get("instant").getAsBoolean();
+                if (instant) {
+                    smoothing = SmoothingMode.INSTANT;
+                }
                 LookAtTarget lookAt = deserializeLookAt(payload.get("lookAt"));
                 return new CameraKeyframe(id, timeTicks, transform, smoothing, instant, lookAt);
             }
@@ -142,7 +157,11 @@ public class SceneDeserializer {
                                 ? ModelKeyframe.Action.valueOf(payload.get("action").getAsString())
                                 : ModelKeyframe.Action.SPAWN);
                 keyframe.setModelId(getString(payload, "modelId"));
-                keyframe.setEntityRef(getString(payload, "entityRef"));
+                keyframe.setModelEntry(getString(payload, "modelEntry"));
+                keyframe.setEntityRef(getString(payload, "handle"));
+                if (keyframe.getEntityRef() == null) {
+                    keyframe.setEntityRef(getString(payload, "entityRef"));
+                }
                 keyframe.setAnimationId(getString(payload, "animationId"));
                 keyframe.setLoop(payload.has("loop") && payload.get("loop").getAsBoolean());
                 keyframe.setSpeed(payload.has("speed") ? payload.get("speed").getAsDouble() : 1.0);
@@ -178,12 +197,13 @@ public class SceneDeserializer {
             return null;
         }
         JsonObject obj = element.getAsJsonObject();
+        String world = obj.has("world") ? obj.get("world").getAsString() : null;
         double x = obj.has("x") ? obj.get("x").getAsDouble() : 0.0;
         double y = obj.has("y") ? obj.get("y").getAsDouble() : 0.0;
         double z = obj.has("z") ? obj.get("z").getAsDouble() : 0.0;
         float yaw = obj.has("yaw") ? obj.get("yaw").getAsFloat() : 0.0f;
         float pitch = obj.has("pitch") ? obj.get("pitch").getAsFloat() : 0.0f;
-        return new Transform(x, y, z, yaw, pitch);
+        return new Transform(x, y, z, yaw, pitch, world);
     }
 
     private LookAtTarget deserializeLookAt(JsonElement element) {
@@ -234,9 +254,12 @@ public class SceneDeserializer {
                 JsonObject camera = tickObject.getAsJsonObject("camera");
                 Transform transform = deserializeTransform(camera.get("transform"));
                 SmoothingMode smoothing = camera.has("smoothing")
-                        ? SmoothingMode.valueOf(camera.get("smoothing").getAsString())
-                        : SmoothingMode.LINEAR;
+                        ? parseSmoothing(camera.get("smoothing").getAsString())
+                        : SmoothingMode.SMOOTH;
                 boolean instant = camera.has("instant") && camera.get("instant").getAsBoolean();
+                if (instant) {
+                    smoothing = SmoothingMode.INSTANT;
+                }
                 LookAtTarget lookAt = deserializeLookAt(camera.get("lookAt"));
                 Track<CameraKeyframe> track = getOrCreate(tracks, SceneTrackType.CAMERA);
                 track.addKeyframe(new CameraKeyframe(null, tick, transform, smoothing, instant, lookAt));
@@ -276,7 +299,11 @@ public class SceneDeserializer {
                                     ? ModelKeyframe.Action.valueOf(model.get("action").getAsString())
                                     : ModelKeyframe.Action.SPAWN);
                     keyframe.setModelId(getString(model, "modelId"));
-                    keyframe.setEntityRef(getString(model, "entityRef"));
+                    keyframe.setModelEntry(getString(model, "modelEntry"));
+                    keyframe.setEntityRef(getString(model, "handle"));
+                    if (keyframe.getEntityRef() == null) {
+                        keyframe.setEntityRef(getString(model, "entityRef"));
+                    }
                     keyframe.setAnimationId(getString(model, "animationId"));
                     keyframe.setLoop(model.has("loop") && model.get("loop").getAsBoolean());
                     keyframe.setSpeed(model.has("speed") ? model.get("speed").getAsDouble() : 1.0);
@@ -329,6 +356,55 @@ public class SceneDeserializer {
             }
         }
         return tracks;
+    }
+
+    private List<SceneModelEntry> parseModelLibrary(JsonObject root) {
+        List<SceneModelEntry> entries = new ArrayList<>();
+        if (!root.has("modelLibrary") || !root.get("modelLibrary").isJsonArray()) {
+            return entries;
+        }
+        JsonArray array = root.getAsJsonArray("modelLibrary");
+        for (JsonElement element : array) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject obj = element.getAsJsonObject();
+            String name = getString(obj, "name");
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            String modelId = getString(obj, "modelId");
+            String defaultAnimation = getString(obj, "defaultAnimation");
+            Transform spawnTransform = deserializeTransform(obj.get("spawnTransform"));
+            entries.add(new SceneModelEntry(name, modelId, spawnTransform, defaultAnimation));
+        }
+        return entries;
+    }
+
+    private void ensureModelEntries(Scene scene) {
+        Track<ModelKeyframe> track = scene.getTrack(SceneTrackType.MODEL);
+        if (track == null) {
+            return;
+        }
+        for (ModelKeyframe keyframe : track.getKeyframes()) {
+            if (keyframe.getModelEntry() != null && !keyframe.getModelEntry().isBlank()) {
+                continue;
+            }
+            String modelId = keyframe.getModelId();
+            if (modelId == null || modelId.isBlank()) {
+                continue;
+            }
+            String entryName = modelId;
+            SceneModelEntry entry = scene.getModelEntry(entryName);
+            if (entry == null) {
+                entry = new SceneModelEntry(entryName, modelId, keyframe.getSpawnTransform(), null);
+                scene.putModelEntry(entry);
+            }
+            keyframe.setModelEntry(entry.getName());
+            if (entry.getSpawnTransform() == null && keyframe.getSpawnTransform() != null) {
+                entry.setSpawnTransform(keyframe.getSpawnTransform());
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

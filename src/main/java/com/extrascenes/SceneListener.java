@@ -52,8 +52,8 @@ public class SceneListener implements Listener {
         sessionManager.handleDisconnect(event.getPlayer(), "player_quit");
         if (editorSessionManager != null) {
             EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
-            if (editorSession != null && editorSession.getArmedTick() != null) {
-                editorEngine.cancelCameraPlacementSilent(event.getPlayer(), editorSession);
+            if (editorSession != null && editorEngine.hasArmedPlacement(editorSession)) {
+                editorEngine.cancelPlacementSilent(event.getPlayer(), editorSession);
             }
             editorSessionManager.removeSession(event.getPlayer().getUniqueId());
         }
@@ -117,13 +117,13 @@ public class SceneListener implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         EditorSession editorSession = editorSessionManager.getSession(player.getUniqueId());
-        if (editorSession != null && editorSession.getArmedTick() != null) {
+        if (editorSession != null && editorEngine.hasArmedPlacement(editorSession)) {
             ItemStack item = event.getItem();
             if (SceneWand.isWand(item)) {
                 if (event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
-                    editorEngine.confirmCameraPlacement(player, editorSession);
+                    editorEngine.confirmPlacement(player, editorSession);
                 } else if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                    editorEngine.cancelCameraPlacement(player, editorSession);
+                    editorEngine.cancelPlacement(player, editorSession);
                 }
                 event.setCancelled(true);
                 return;

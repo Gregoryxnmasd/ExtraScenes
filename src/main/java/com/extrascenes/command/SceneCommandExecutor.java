@@ -24,7 +24,7 @@ import org.bukkit.entity.Player;
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "group", "tick", "cancel", "setend"
+            "create", "delete", "group", "tick", "cancel", "here", "setend"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -54,6 +54,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "group" -> handleGroup(sender, args);
             case "tick" -> handleTick(sender, args);
             case "cancel" -> handleCancel(sender);
+            case "here" -> handleHere(sender);
             case "setend" -> handleSetEnd(sender, args);
             case "play" -> handlePlay(sender, args);
             case "stop" -> handleStop(sender, args);
@@ -80,6 +81,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene group <number>");
         sender.sendMessage(ChatColor.AQUA + "/scene tick <tick>");
         sender.sendMessage(ChatColor.AQUA + "/scene cancel");
+        sender.sendMessage(ChatColor.AQUA + "/scene here");
         sender.sendMessage(ChatColor.AQUA + "/scene setend <here|x y z yaw pitch>");
     }
 
@@ -194,7 +196,15 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         if (session == null) {
             return;
         }
-        editorEngine.cancelCameraPlacement((Player) sender, session);
+        editorEngine.cancelPlacement((Player) sender, session);
+    }
+
+    private void handleHere(CommandSender sender) {
+        EditorSession session = requireEditorSession(sender);
+        if (session == null) {
+            return;
+        }
+        editorEngine.confirmPlacement((Player) sender, session);
     }
 
     private void handleSetEnd(CommandSender sender, String[] args) {
