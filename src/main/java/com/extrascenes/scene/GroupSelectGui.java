@@ -9,6 +9,7 @@ import org.bukkit.inventory.Inventory;
 
 public class GroupSelectGui implements EditorGui {
     private static final int GROUP_SIZE = 9;
+    private static final int GROUPS_PER_PAGE = 36;
     private final SceneEditorEngine editorEngine;
 
     public GroupSelectGui(SceneEditorEngine editorEngine) {
@@ -20,14 +21,24 @@ public class GroupSelectGui implements EditorGui {
         Scene scene = session.getScene();
         int duration = Math.max(scene.getDurationTicks(), GROUP_SIZE);
         int totalGroups = (int) Math.ceil(duration / (double) GROUP_SIZE);
+        int totalPages = (int) Math.ceil(totalGroups / (double) GROUPS_PER_PAGE);
+        int maxPage = Math.max(0, totalPages - 1);
+        int currentPage = Math.min(session.getGroupPage(), maxPage);
+        if (currentPage != session.getGroupPage()) {
+            session.setGroupPage(currentPage);
+        }
         Inventory inventory = GuiUtils.createInventory(54, session.getSceneName() + " • Groups");
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.BOOK, "Groups",
-                List.of("Scene: " + scene.getName(), "Duration: " + scene.getDurationTicks() + "t")));
+                List.of("Scene: " + scene.getName(),
+                        "Duration: " + scene.getDurationTicks() + "t",
+                        "Page " + (currentPage + 1) + "/" + Math.max(1, totalPages))));
 
         int slot = 9;
-        for (int group = 1; group <= totalGroups; group++) {
+        int startGroup = currentPage * GROUPS_PER_PAGE + 1;
+        int endGroup = Math.min(totalGroups, startGroup + GROUPS_PER_PAGE - 1);
+        for (int group = startGroup; group <= endGroup; group++) {
             int startTick = (group - 1) * GROUP_SIZE + 1;
             int endTick = Math.min(group * GROUP_SIZE, scene.getDurationTicks());
             List<String> lore = new ArrayList<>();
@@ -40,12 +51,15 @@ public class GroupSelectGui implements EditorGui {
             lore.add("Click to open grid.");
             Material material = summary.editedTicks > 0 ? Material.BOOK : Material.PAPER;
             inventory.setItem(slot++, GuiUtils.makeItem(material, "Group " + group, lore));
-            if (slot >= 45) {
-                break;
-            }
         }
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));
+        if (totalPages > 1) {
+            inventory.setItem(46, GuiUtils.makeItem(Material.ARROW, "Previous Page",
+                    List.of("Page " + (currentPage + 1) + "/" + totalPages)));
+            inventory.setItem(52, GuiUtils.makeItem(Material.ARROW, "Next Page",
+                    List.of("Page " + (currentPage + 1) + "/" + totalPages)));
+        }
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         inventory.setItem(47, GuiUtils.makeItem(Material.LIME_WOOL, "Extend +9", List.of("Add 9 ticks.")));
         inventory.setItem(48, GuiUtils.makeItem(Material.GREEN_WOOL, "Extend +90", List.of("Add 90 ticks.")));
@@ -63,8 +77,18 @@ public class GroupSelectGui implements EditorGui {
         }
         int slot = ctx.getSlot();
         Scene scene = session.getScene();
+        int duration = Math.max(scene.getDurationTicks(), GROUP_SIZE);
+        int totalGroups = (int) Math.ceil(duration / (double) GROUP_SIZE);
+        int totalPages = (int) Math.ceil(totalGroups / (double) GROUPS_PER_PAGE);
+        int maxPage = Math.max(0, totalPages - 1);
+        int currentPage = Math.min(session.getGroupPage(), maxPage);
         if (slot == 45) {
             editorEngine.navigateBack(player, session);
+            return;
+        }
+        if (slot == 46 && totalPages > 1) {
+            session.setGroupPage(Math.max(0, currentPage - 1));
+            refresh(session);
             return;
         }
         if (slot == 49) {
@@ -88,6 +112,11 @@ public class GroupSelectGui implements EditorGui {
             editorEngine.openConfirm(player, session, ConfirmAction.TRIM_DURATION, null, null);
             return;
         }
+        if (slot == 52 && totalPages > 1) {
+            session.setGroupPage(Math.min(maxPage, currentPage + 1));
+            refresh(session);
+            return;
+        }
         if (slot == 53) {
             player.closeInventory();
             editorEngine.getInputManager().beginGroupJumpInput(player, session.getScene(), session, GuiType.GROUP_SELECT);
@@ -95,7 +124,11 @@ public class GroupSelectGui implements EditorGui {
         }
 
         if (slot >= 9 && slot < 45) {
-            int group = slot - 9 + 1;
+            int startGroup = currentPage * GROUPS_PER_PAGE + 1;
+            int group = startGroup + (slot - 9);
+            if (group > totalGroups) {
+                return;
+            }
             session.setCurrentGroup(group);
             editorEngine.openGroupGrid(player, session, true);
         }
