@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import net.kyori.adventure.key.Key;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -37,6 +38,7 @@ public class SceneSessionManager {
         this.plugin = plugin;
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
+        this.movementLockKey = new NamespacedKey(plugin, "cutscene_movement_lock");
     }
 
     public SceneSession startScene(Player player, Scene scene) {
@@ -278,9 +280,10 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        AttributeModifier existing = findMovementLock(attribute);
+        Key key = Key.key(movementLockKey.toString());
+        AttributeModifier existing = attribute.getModifier(key);
         if (existing != null) {
-            attribute.removeModifier(existing);
+            return;
         }
         AttributeModifier modifier = new AttributeModifier(MOVEMENT_LOCK_UUID, "scene-movement-lock", -10.0,
                 AttributeModifier.Operation.ADD_NUMBER);
@@ -292,18 +295,10 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        AttributeModifier existing = findMovementLock(attribute);
-        if (existing != null) {
-            attribute.removeModifier(existing);
+        Key key = Key.key(movementLockKey.toString());
+        if (attribute.getModifier(key) != null) {
+            attribute.removeModifier(key);
         }
     }
 
-    private AttributeModifier findMovementLock(AttributeInstance attribute) {
-        for (AttributeModifier modifier : attribute.getModifiers()) {
-            if (MOVEMENT_LOCK_UUID.equals(modifier.getUniqueId())) {
-                return modifier;
-            }
-        }
-        return null;
-    }
 }
