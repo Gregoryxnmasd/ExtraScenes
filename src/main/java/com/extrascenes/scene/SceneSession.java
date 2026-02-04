@@ -32,7 +32,7 @@ public class SceneSession {
     private String activeActionBarText;
     private String lastModelHandle;
     private BukkitTask runtimeTask;
-    private int lockWindowTicks;
+    private int spectatorRecoveryCooldownUntilTick;
     private org.bukkit.inventory.ItemStack originalHelmet;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
@@ -48,7 +48,7 @@ public class SceneSession {
         this.endTick = endTick <= 0 ? Integer.MAX_VALUE : endTick;
         this.timeTicks = this.startTick;
         this.preview = preview;
-        this.lockWindowTicks = 0;
+        this.spectatorRecoveryCooldownUntilTick = 0;
     }
 
     public UUID getPlayerId() {
@@ -219,13 +219,12 @@ public class SceneSession {
         this.runtimeTask = runtimeTask;
     }
 
-    public int getLockWindowTicksLeft() {
-        int elapsed = Math.max(0, timeTicks - startTick);
-        return Math.max(0, lockWindowTicks - elapsed);
+    public int getSpectatorRecoveryCooldownUntilTick() {
+        return spectatorRecoveryCooldownUntilTick;
     }
 
-    public void setLockWindowTicks(int lockWindowTicks) {
-        this.lockWindowTicks = Math.max(0, lockWindowTicks);
+    public void setSpectatorRecoveryCooldownUntilTick(int spectatorRecoveryCooldownUntilTick) {
+        this.spectatorRecoveryCooldownUntilTick = Math.max(0, spectatorRecoveryCooldownUntilTick);
     }
 
     public org.bukkit.inventory.ItemStack getOriginalHelmet() {

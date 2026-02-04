@@ -39,7 +39,6 @@ public class SceneDeserializer {
         SmoothingQuality smoothingQuality = parseQuality(root.has("smoothingQuality")
                 ? root.get("smoothingQuality").getAsString()
                 : "SMOOTH");
-        String cameraMode = root.has("cameraMode") ? root.get("cameraMode").getAsString() : "SPECTATOR";
         boolean freezePlayer = !root.has("freezePlayer") || root.get("freezePlayer").getAsBoolean();
         boolean allowGlobalCommands = root.has("allowGlobalCommands") && root.get("allowGlobalCommands").getAsBoolean();
         EndTeleportMode endTeleportMode = root.has("endTeleportMode")
@@ -73,7 +72,6 @@ public class SceneDeserializer {
         Scene scene = new Scene(name, durationTicks, formatVersion, tracks);
         scene.setDefaultSmoothing(defaultSmoothing);
         scene.setSmoothingQuality(smoothingQuality);
-        scene.setCameraMode(cameraMode);
         scene.setFreezePlayer(freezePlayer);
         scene.setAllowGlobalCommands(allowGlobalCommands);
         scene.setEndTeleportMode(endTeleportMode);
