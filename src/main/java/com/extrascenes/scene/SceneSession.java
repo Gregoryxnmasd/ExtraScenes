@@ -32,6 +32,8 @@ public class SceneSession {
     private String activeActionBarText;
     private String lastModelHandle;
     private BukkitTask runtimeTask;
+    private int lockWindowTicks;
+    private org.bukkit.inventory.ItemStack originalHelmet;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -46,6 +48,7 @@ public class SceneSession {
         this.endTick = endTick <= 0 ? Integer.MAX_VALUE : endTick;
         this.timeTicks = this.startTick;
         this.preview = preview;
+        this.lockWindowTicks = 0;
     }
 
     public UUID getPlayerId() {
@@ -214,5 +217,22 @@ public class SceneSession {
 
     public void setRuntimeTask(BukkitTask runtimeTask) {
         this.runtimeTask = runtimeTask;
+    }
+
+    public int getLockWindowTicksLeft() {
+        int elapsed = Math.max(0, timeTicks - startTick);
+        return Math.max(0, lockWindowTicks - elapsed);
+    }
+
+    public void setLockWindowTicks(int lockWindowTicks) {
+        this.lockWindowTicks = Math.max(0, lockWindowTicks);
+    }
+
+    public org.bukkit.inventory.ItemStack getOriginalHelmet() {
+        return originalHelmet;
+    }
+
+    public void setOriginalHelmet(org.bukkit.inventory.ItemStack originalHelmet) {
+        this.originalHelmet = originalHelmet;
     }
 }

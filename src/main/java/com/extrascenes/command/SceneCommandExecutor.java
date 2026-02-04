@@ -24,7 +24,7 @@ import org.bukkit.entity.Player;
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "group", "tick", "cancel", "here", "setend"
+            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -63,6 +63,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "reload" -> handleReload(sender);
             case "list" -> handleList(sender);
             case "delete" -> handleDelete(sender, args);
+            case "debugcamera" -> handleDebugCamera(sender, args);
             default -> sender.sendMessage(ChatColor.RED + "Unknown scene subcommand.");
         }
         return true;
@@ -83,6 +84,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene cancel");
         sender.sendMessage(ChatColor.AQUA + "/scene here");
         sender.sendMessage(ChatColor.AQUA + "/scene setend <here|x y z yaw pitch>");
+        sender.sendMessage(ChatColor.AQUA + "/scene debugcamera <player>");
     }
 
     private void handleCreate(CommandSender sender, String[] args) {
@@ -360,6 +362,35 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(deleted ? ChatColor.GREEN + "Scene deleted." : ChatColor.RED + "Scene not found.");
     }
 
+    private void handleDebugCamera(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene debugcamera <player>");
+            return;
+        }
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null) {
+            sender.sendMessage(ChatColor.RED + "Player not found.");
+            return;
+        }
+        SceneSession session = sessionManager.getSession(target.getUniqueId());
+        String gamemode = String.valueOf(target.getGameMode());
+        String spectatorTarget = target.getSpectatorTarget() != null
+                ? target.getSpectatorTarget().getUniqueId().toString()
+                : "null";
+        String rigUuid = session != null && session.getCameraRigId() != null
+                ? session.getCameraRigId().toString()
+                : "null";
+        boolean match = session != null && session.getCameraRigId() != null
+                && target.getSpectatorTarget() != null
+                && session.getCameraRigId().equals(target.getSpectatorTarget().getUniqueId());
+        int lockWindowLeft = session != null ? session.getLockWindowTicksLeft() : 0;
+        sender.sendMessage(ChatColor.YELLOW + "gamemode=" + gamemode
+                + " spectatorTarget=" + spectatorTarget
+                + " rigUuid=" + rigUuid
+                + " match=" + match
+                + " lockWindowTicksLeft=" + lockWindowLeft);
+    }
+
     private EditorSession requireEditorSession(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use editor commands.");
@@ -395,7 +426,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (sub.equals("tick")) {
                 return filterPrefix(validTickSuggestions(sender), args[1]);
             }
-            if (List.of("stop", "pause", "resume").contains(sub)) {
+            if (List.of("stop", "pause", "resume", "debugcamera").contains(sub)) {
                 return filterPrefix(onlinePlayerNames(), args[1]);
             }
         }

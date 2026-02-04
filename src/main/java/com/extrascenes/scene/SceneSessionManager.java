@@ -11,8 +11,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -26,6 +30,8 @@ public class SceneSessionManager {
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
+    private static final UUID MOVEMENT_LOCK_UUID = UUID.fromString("e3f0c9b6-3c08-4b47-a4c6-4bce8c1f4e9a");
+    private static final int LOCK_WINDOW_TICKS = 20;
 
     public SceneSessionManager(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController,
                                SceneProtocolAdapter protocolAdapter) {
@@ -51,6 +57,7 @@ public class SceneSessionManager {
         SceneSession session = new SceneSession(player, scene, preview, startTick, endTick);
         sessions.put(player.getUniqueId(), session);
         session.setStartLocation(player.getLocation().clone());
+        session.setLockWindowTicks(LOCK_WINDOW_TICKS);
 
         if (scene.isFreezePlayer()) {
             player.setWalkSpeed(0.0f);
@@ -68,18 +75,19 @@ public class SceneSessionManager {
         session.registerEntity(rig);
         registerSceneEntity(session, rig);
         visibilityController.hideEntityFromAllExcept(rig, player);
+        visibilityController.showEntityToPlayer(rig, player);
         session.setCameraRigId(rig.getUniqueId());
 
         session.setRestorePending(false);
-        ItemStack fakeHelmet = new ItemStack(Material.CARVED_PUMPKIN);
-        protocolAdapter.sendFakeHelmet(player, fakeHelmet);
+        ItemStack originalHelmet = session.getSnapshot().getHelmet();
+        session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
+        player.getInventory().setHelmet(new ItemStack(Material.CARVED_PUMPKIN));
+        applyMovementLock(player);
 
-        String cameraMode = scene.getCameraMode();
-        boolean usePacket = "PACKET".equalsIgnoreCase(cameraMode) && protocolAdapter.isProtocolLibAvailable();
-        protocolAdapter.applySpectatorCamera(player, rig);
-        if (usePacket) {
-            protocolAdapter.sendCameraPacket(player, rig);
-        }
+        player.setGameMode(GameMode.SPECTATOR);
+        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 1L);
+        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 2L);
+        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 10L);
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -114,8 +122,7 @@ public class SceneSessionManager {
             return;
         }
         plugin.getRuntimeEngine().stopSession(session);
-        session.setRestorePending(true);
-        pendingRestores.put(player.getUniqueId(), session);
+        restorePlayerState(player, session);
         cleanupSessionEntities(session);
         Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
     }
@@ -185,16 +192,14 @@ public class SceneSessionManager {
     private void restorePlayerState(Player player, SceneSession session) {
         protocolAdapter.clearSpectatorCamera(player);
         player.setGameMode(session.getSnapshot().getGameMode());
+        removeMovementLock(player);
+        player.getInventory().setHelmet(session.getOriginalHelmet());
 
         if (session.getScene().isFreezePlayer()) {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
             player.setFlySpeed(session.getSnapshot().getFlySpeed());
         }
         player.setFlying(session.getSnapshot().isFlying());
-
-        protocolAdapter.sendFakeEquipmentRestore(player, session.getSnapshot().getHelmet() == null
-                ? new ItemStack(Material.AIR)
-                : session.getSnapshot().getHelmet());
     }
 
     private void teleportOnEnd(Player player, SceneSession session) {
@@ -227,5 +232,48 @@ public class SceneSessionManager {
             entity.remove();
         }
         session.clearSceneEntities();
+    }
+
+    private void scheduleSpectatorApply(UUID playerId, UUID rigId, long delayTicks) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            SceneSession session = sessions.get(playerId);
+            if (session == null) {
+                return;
+            }
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null) {
+                return;
+            }
+            Entity rig = player.getWorld().getEntity(rigId);
+            if (rig == null) {
+                return;
+            }
+            protocolAdapter.applySpectatorCamera(player, rig);
+        }, delayTicks);
+    }
+
+    private void applyMovementLock(Player player) {
+        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        if (attribute == null) {
+            return;
+        }
+        AttributeModifier existing = attribute.getModifier(MOVEMENT_LOCK_UUID);
+        if (existing != null) {
+            attribute.removeModifier(existing);
+        }
+        AttributeModifier modifier = new AttributeModifier(MOVEMENT_LOCK_UUID, "scene-movement-lock", -10.0,
+                AttributeModifier.Operation.ADD_NUMBER);
+        attribute.addModifier(modifier);
+    }
+
+    private void removeMovementLock(Player player) {
+        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        if (attribute == null) {
+            return;
+        }
+        AttributeModifier existing = attribute.getModifier(MOVEMENT_LOCK_UUID);
+        if (existing != null) {
+            attribute.removeModifier(existing);
+        }
     }
 }
