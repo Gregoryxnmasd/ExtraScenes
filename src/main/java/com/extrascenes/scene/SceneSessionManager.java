@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -27,10 +28,10 @@ public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
+    private final NamespacedKey movementLockKey;
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
-    private static final UUID MOVEMENT_LOCK_UUID = UUID.fromString("e3f0c9b6-3c08-4b47-a4c6-4bce8c1f4e9a");
     private static final int LOCK_WINDOW_TICKS = 20;
 
     public SceneSessionManager(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController,
@@ -38,6 +39,7 @@ public class SceneSessionManager {
         this.plugin = plugin;
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
+        this.movementLockKey = new NamespacedKey(plugin, "scene-movement-lock");
     }
 
     public SceneSession startScene(Player player, Scene scene) {
@@ -253,27 +255,35 @@ public class SceneSessionManager {
     }
 
     private void applyMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        AttributeInstance attribute = player.getAttribute(Attribute.MOVEMENT_SPEED);
         if (attribute == null) {
             return;
         }
-        AttributeModifier existing = attribute.getModifier(MOVEMENT_LOCK_UUID);
+        AttributeModifier existing = findMovementLock(attribute);
         if (existing != null) {
             attribute.removeModifier(existing);
         }
-        AttributeModifier modifier = new AttributeModifier(MOVEMENT_LOCK_UUID, "scene-movement-lock", -10.0,
-                AttributeModifier.Operation.ADD_NUMBER);
+        AttributeModifier modifier = new AttributeModifier(movementLockKey, -10.0, AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
 
     private void removeMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        AttributeInstance attribute = player.getAttribute(Attribute.MOVEMENT_SPEED);
         if (attribute == null) {
             return;
         }
-        AttributeModifier existing = attribute.getModifier(MOVEMENT_LOCK_UUID);
+        AttributeModifier existing = findMovementLock(attribute);
         if (existing != null) {
             attribute.removeModifier(existing);
         }
+    }
+
+    private AttributeModifier findMovementLock(AttributeInstance attribute) {
+        for (AttributeModifier modifier : attribute.getModifiers()) {
+            if (movementLockKey.equals(modifier.getKey())) {
+                return modifier;
+            }
+        }
+        return null;
     }
 }
