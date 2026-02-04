@@ -18,9 +18,11 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 
@@ -90,12 +92,33 @@ public class SceneListener implements Listener {
 
     @EventHandler
     public void onEntityInteract(PlayerInteractAtEntityEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING) {
+            event.setCancelled(true);
+            return;
+        }
         Entity target = event.getRightClicked();
         if (sessionManager.isSceneEntity(target.getUniqueId())) {
             SceneSession owner = sessionManager.getSessionByEntity(target.getUniqueId());
             if (owner == null || !owner.getPlayerId().equals(event.getPlayer().getUniqueId())) {
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler
+    public void onEntityInteract(PlayerInteractEntityEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING) {
+            event.setCancelled(true);
         }
     }
 

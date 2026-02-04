@@ -100,7 +100,14 @@ public class SceneRuntimeEngine {
             return;
         }
         Entity current = player.getSpectatorTarget();
-        if (current == null || !current.getUniqueId().equals(cameraRig.getUniqueId())) {
+        boolean targetLost = current == null || !current.getUniqueId().equals(cameraRig.getUniqueId());
+        if (session.getLockWindowTicksLeft() > 0) {
+            if (targetLost) {
+                protocolAdapter.applySpectatorCamera(player, cameraRig);
+            }
+            return;
+        }
+        if (targetLost) {
             protocolAdapter.applySpectatorCamera(player, cameraRig);
         }
     }
@@ -111,6 +118,7 @@ public class SceneRuntimeEngine {
             return;
         }
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
+        visibilityController.showEntityToPlayer(cameraRig, player);
         if ("PACKET".equalsIgnoreCase(session.getScene().getCameraMode())) {
             protocolAdapter.sendCameraPacket(player, cameraRig);
         }
