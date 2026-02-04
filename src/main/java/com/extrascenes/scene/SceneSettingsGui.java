@@ -26,11 +26,9 @@ public class SceneSettingsGui implements EditorGui {
                 List.of("Cycle easing mode.")));
         inventory.setItem(12, GuiUtils.makeItem(Material.SLIME_BALL, "Smoothing Quality: " + scene.getSmoothingQuality(),
                 List.of("Cycle quality preset.")));
-        inventory.setItem(14, GuiUtils.makeItem(Material.COMPASS, "Camera Mode: " + scene.getCameraMode(),
-                List.of("Toggle spectator/packet.")));
-        inventory.setItem(16, GuiUtils.makeItem(Material.ICE, "Freeze Player: " + scene.isFreezePlayer(),
+        inventory.setItem(14, GuiUtils.makeItem(Material.ICE, "Freeze Player: " + scene.isFreezePlayer(),
                 List.of("Toggle player freeze.")));
-        inventory.setItem(18, GuiUtils.makeItem(Material.COMMAND_BLOCK,
+        inventory.setItem(16, GuiUtils.makeItem(Material.COMMAND_BLOCK,
                 "Allow Global Commands: " + scene.isAllowGlobalCommands(),
                 List.of("Toggle global command execution.")));
 
@@ -68,18 +66,12 @@ public class SceneSettingsGui implements EditorGui {
             return;
         }
         if (slot == 14) {
-            scene.setCameraMode(scene.getCameraMode().equalsIgnoreCase("SPECTATOR") ? "PACKET" : "SPECTATOR");
-            editorEngine.markDirty(scene);
-            refresh(session);
-            return;
-        }
-        if (slot == 16) {
             scene.setFreezePlayer(!scene.isFreezePlayer());
             editorEngine.markDirty(scene);
             refresh(session);
             return;
         }
-        if (slot == 18) {
+        if (slot == 16) {
             scene.setAllowGlobalCommands(!scene.isAllowGlobalCommands());
             editorEngine.markDirty(scene);
             refresh(session);

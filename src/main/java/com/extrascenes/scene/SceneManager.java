@@ -46,7 +46,6 @@ public class SceneManager {
         Scene scene = new Scene(name, durationTicks, FORMAT_VERSION, tracks);
         scene.setDefaultSmoothing(readSmoothing());
         scene.setSmoothingQuality(readSmoothingQuality());
-        scene.setCameraMode(plugin.getConfig().getString("camera.mode", "SPECTATOR"));
         scene.setFreezePlayer(plugin.getConfig().getBoolean("player.freeze", true));
         scene.setAllowGlobalCommands(plugin.getConfig().getBoolean("commands.allowGlobalDefault", false));
         cache.put(name.toLowerCase(), scene);

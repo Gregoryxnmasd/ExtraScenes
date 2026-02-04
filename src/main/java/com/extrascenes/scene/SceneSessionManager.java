@@ -32,7 +32,6 @@ public class SceneSessionManager {
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
-    private static final int LOCK_WINDOW_TICKS = 20;
 
     public SceneSessionManager(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController,
                                SceneProtocolAdapter protocolAdapter) {
@@ -59,7 +58,6 @@ public class SceneSessionManager {
         SceneSession session = new SceneSession(player, scene, preview, startTick, endTick);
         sessions.put(player.getUniqueId(), session);
         session.setStartLocation(player.getLocation().clone());
-        session.setLockWindowTicks(LOCK_WINDOW_TICKS);
 
         if (scene.isFreezePlayer()) {
             player.setWalkSpeed(0.0f);
@@ -68,17 +66,22 @@ public class SceneSessionManager {
 
         session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
 
-        ArmorStand rig = (ArmorStand) player.getWorld().spawnEntity(player.getLocation(), EntityType.ARMOR_STAND);
+        Location rigStartLocation = resolveRigStartLocation(player, scene);
+        ArmorStand rig = (ArmorStand) rigStartLocation.getWorld().spawnEntity(rigStartLocation, EntityType.ARMOR_STAND);
         rig.setInvisible(true);
         rig.setMarker(false);
         rig.setGravity(false);
         rig.setSilent(true);
         rig.setInvulnerable(true);
+        rig.setCollidable(false);
+        rig.setSmall(true);
         session.registerEntity(rig);
         registerSceneEntity(session, rig);
         visibilityController.hideEntityFromAllExcept(rig, player);
         visibilityController.showEntityToPlayer(rig, player);
         session.setCameraRigId(rig.getUniqueId());
+        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
+                + " marker=" + rig.isMarker());
 
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
@@ -86,10 +89,10 @@ public class SceneSessionManager {
         player.getInventory().setHelmet(new ItemStack(Material.CARVED_PUMPKIN));
         applyMovementLock(player);
 
+        player.teleport(rigStartLocation);
         player.setGameMode(GameMode.SPECTATOR);
-        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 1L);
-        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 2L);
-        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 10L);
+        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 1L, "camera +1");
+        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 2L, "camera +2");
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -236,7 +239,7 @@ public class SceneSessionManager {
         session.clearSceneEntities();
     }
 
-    private void scheduleSpectatorApply(UUID playerId, UUID rigId, long delayTicks) {
+    private void scheduleSpectatorApply(UUID playerId, UUID rigId, long delayTicks, String label) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             SceneSession session = sessions.get(playerId);
             if (session == null) {
@@ -251,7 +254,25 @@ public class SceneSessionManager {
                 return;
             }
             protocolAdapter.applySpectatorCamera(player, rig);
+            Entity current = player.getSpectatorTarget();
+            boolean matched = current != null && current.getUniqueId().equals(rig.getUniqueId());
+            plugin.getLogger().info("Camera rig target check (" + label + ") for " + player.getName()
+                    + " matched=" + matched);
         }, delayTicks);
+    }
+
+    private Location resolveRigStartLocation(Player player, Scene scene) {
+        Track<CameraKeyframe> cameraTrack = scene.getTrack(SceneTrackType.CAMERA);
+        if (cameraTrack != null && !cameraTrack.getKeyframes().isEmpty()) {
+            CameraKeyframe keyframe = cameraTrack.getKeyframes().get(0);
+            Transform transform = keyframe.getTransform();
+            if (transform != null) {
+                Location location = player.getLocation().clone();
+                transform.applyTo(location);
+                return location;
+            }
+        }
+        return player.getLocation().clone();
     }
 
     private void applyMovementLock(Player player) {

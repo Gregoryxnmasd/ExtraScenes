@@ -383,12 +383,14 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         boolean match = session != null && session.getCameraRigId() != null
                 && target.getSpectatorTarget() != null
                 && session.getCameraRigId().equals(target.getSpectatorTarget().getUniqueId());
-        int lockWindowLeft = session != null ? session.getLockWindowTicksLeft() : 0;
+        int cooldownLeft = session != null
+                ? Math.max(0, session.getSpectatorRecoveryCooldownUntilTick() - session.getTimeTicks())
+                : 0;
         sender.sendMessage(ChatColor.YELLOW + "gamemode=" + gamemode
                 + " spectatorTarget=" + spectatorTarget
                 + " rigUuid=" + rigUuid
                 + " match=" + match
-                + " lockWindowTicksLeft=" + lockWindowLeft);
+                + " recoveryCooldown=" + cooldownLeft);
     }
 
     private EditorSession requireEditorSession(CommandSender sender) {

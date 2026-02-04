@@ -13,7 +13,6 @@ public class Scene {
     private final Map<String, SceneModelEntry> modelLibrary;
     private SmoothingMode defaultSmoothing;
     private SmoothingQuality smoothingQuality;
-    private String cameraMode;
     private boolean freezePlayer;
     private boolean allowGlobalCommands;
     private EndTeleportMode endTeleportMode;
@@ -32,7 +31,6 @@ public class Scene {
         this.modelLibrary = new LinkedHashMap<>();
         this.defaultSmoothing = SmoothingMode.SMOOTH;
         this.smoothingQuality = SmoothingQuality.SMOOTH;
-        this.cameraMode = "SPECTATOR";
         this.freezePlayer = true;
         this.allowGlobalCommands = false;
         this.endTeleportMode = EndTeleportMode.RETURN_TO_START;
@@ -107,14 +105,6 @@ public class Scene {
 
     public void setSmoothingQuality(SmoothingQuality smoothingQuality) {
         this.smoothingQuality = smoothingQuality == null ? SmoothingQuality.SMOOTH : smoothingQuality;
-    }
-
-    public String getCameraMode() {
-        return cameraMode;
-    }
-
-    public void setCameraMode(String cameraMode) {
-        this.cameraMode = cameraMode == null || cameraMode.isBlank() ? "SPECTATOR" : cameraMode;
     }
 
     public boolean isFreezePlayer() {

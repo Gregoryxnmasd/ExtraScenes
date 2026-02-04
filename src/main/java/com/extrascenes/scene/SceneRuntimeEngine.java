@@ -22,6 +22,7 @@ public class SceneRuntimeEngine {
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
+    private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
                               SceneVisibilityController visibilityController,
@@ -101,15 +102,29 @@ public class SceneRuntimeEngine {
         }
         Entity current = player.getSpectatorTarget();
         boolean targetLost = current == null || !current.getUniqueId().equals(cameraRig.getUniqueId());
-        if (session.getLockWindowTicksLeft() > 0) {
-            if (targetLost) {
-                protocolAdapter.applySpectatorCamera(player, cameraRig);
-            }
+        if (!targetLost) {
             return;
         }
-        if (targetLost) {
-            protocolAdapter.applySpectatorCamera(player, cameraRig);
+
+        int timeTicks = session.getTimeTicks();
+        boolean cooldownReady = timeTicks >= session.getSpectatorRecoveryCooldownUntilTick();
+        if (cooldownReady) {
+            session.setSpectatorRecoveryCooldownUntilTick(timeTicks + SPECTATOR_RECOVERY_COOLDOWN_TICKS);
+            player.teleport(cameraRig.getLocation());
+            plugin.getLogger().info("Camera rig target lost; recovering for " + player.getName()
+                    + " rig=" + cameraRig.getUniqueId());
         }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            SceneSession active = sessionManager.getSession(player.getUniqueId());
+            if (active == null) {
+                return;
+            }
+            Entity rig = getCameraRig(active, player);
+            if (rig == null) {
+                return;
+            }
+            protocolAdapter.applySpectatorCamera(player, rig);
+        }, 1L);
     }
 
     private void updateCamera(Player player, SceneSession session, int timeTicks) {
@@ -119,9 +134,6 @@ public class SceneRuntimeEngine {
         }
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
         visibilityController.showEntityToPlayer(cameraRig, player);
-        if ("PACKET".equalsIgnoreCase(session.getScene().getCameraMode())) {
-            protocolAdapter.sendCameraPacket(player, cameraRig);
-        }
 
         Track<CameraKeyframe> cameraTrack = session.getScene().getTrack(SceneTrackType.CAMERA);
         if (cameraTrack == null || cameraTrack.getKeyframes().isEmpty()) {
@@ -131,7 +143,7 @@ public class SceneRuntimeEngine {
         if (transform == null) {
             return;
         }
-        Location location = player.getLocation().clone();
+        Location location = cameraRig.getLocation().clone();
         transform.applyTo(location);
         cameraRig.teleport(location);
         session.setLastCameraLocation(location);
