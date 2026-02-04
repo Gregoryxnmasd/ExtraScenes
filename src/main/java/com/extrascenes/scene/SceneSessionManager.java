@@ -15,7 +15,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -26,10 +25,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 public class SceneSessionManager {
+    private static final UUID MOVEMENT_LOCK_UUID = UUID.fromString("4b8e83b7-dad9-4f5b-8a63-1d5ea67d4001");
     private final ExtraScenesPlugin plugin;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
-    private final NamespacedKey movementLockKey;
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
@@ -286,7 +285,8 @@ public class SceneSessionManager {
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(movementLockKey, -10.0, AttributeModifier.Operation.ADD_NUMBER);
+        AttributeModifier modifier = new AttributeModifier(MOVEMENT_LOCK_UUID, "scene-movement-lock", -10.0,
+                AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
 
