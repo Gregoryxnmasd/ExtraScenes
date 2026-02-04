@@ -276,7 +276,7 @@ public class SceneSessionManager {
     }
 
     private void applyMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.MOVEMENT_SPEED);
+        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute == null) {
             return;
         }
@@ -291,7 +291,7 @@ public class SceneSessionManager {
     }
 
     private void removeMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.MOVEMENT_SPEED);
+        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute == null) {
             return;
         }
