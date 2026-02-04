@@ -15,6 +15,7 @@ public class EditorSession {
     private boolean previewPlaying;
     private int previewTimeTicks;
     private int keyframePage;
+    private int groupPage;
     private int currentGroup;
     private int currentTick;
     private Integer armedTick;
@@ -40,6 +41,7 @@ public class EditorSession {
         this.selectedTrack = SceneTrackType.CAMERA;
         this.cursorTimeTicks = 0;
         this.keyframePage = 0;
+        this.groupPage = 0;
         this.currentGroup = 1;
         this.currentTick = 1;
         this.armedTick = null;
@@ -113,6 +115,14 @@ public class EditorSession {
 
     public void setKeyframePage(int keyframePage) {
         this.keyframePage = Math.max(0, keyframePage);
+    }
+
+    public int getGroupPage() {
+        return groupPage;
+    }
+
+    public void setGroupPage(int groupPage) {
+        this.groupPage = Math.max(0, groupPage);
     }
 
     public int getCurrentGroup() {
