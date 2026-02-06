@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import net.kyori.adventure.key.Key;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -288,12 +287,12 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        Key key = Key.key(movementLockKey.toString());
-        AttributeModifier existing = attribute.getModifier(key);
+        AttributeModifier existing = attribute.getModifier(movementLockKey);
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(key, -10.0, AttributeModifier.Operation.ADD_NUMBER);
+        AttributeModifier modifier = new AttributeModifier(movementLockKey, "scene-movement-lock", -10.0,
+                AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
 
@@ -306,10 +305,17 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        Key key = Key.key(movementLockKey.toString());
-        if (attribute.getModifier(key) != null) {
-            attribute.removeModifier(key);
+        if (attribute.getModifier(movementLockKey) != null) {
+            attribute.removeModifier(movementLockKey);
         }
+    }
+
+    private static Attribute resolveMovementSpeedAttribute() {
+        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MOVEMENT_SPEED_KEY);
+        if (attribute != null) {
+            return attribute;
+        }
+        return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
     }
 
     private static Attribute resolveMovementSpeedAttribute() {
