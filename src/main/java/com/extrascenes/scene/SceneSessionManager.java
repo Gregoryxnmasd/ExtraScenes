@@ -318,12 +318,4 @@ public class SceneSessionManager {
         return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
     }
 
-    private static Attribute resolveMovementSpeedAttribute() {
-        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MOVEMENT_SPEED_KEY);
-        if (attribute != null) {
-            return attribute;
-        }
-        return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
-    }
-
 }
