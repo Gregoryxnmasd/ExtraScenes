@@ -291,7 +291,7 @@ public class SceneSessionManager {
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(movementLockKey, "scene-movement-lock", -10.0,
+        AttributeModifier modifier = new AttributeModifier(movementLockKey, -10.0,
                 AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
@@ -308,14 +308,6 @@ public class SceneSessionManager {
         if (attribute.getModifier(movementLockKey) != null) {
             attribute.removeModifier(movementLockKey);
         }
-    }
-
-    private static Attribute resolveMovementSpeedAttribute() {
-        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MOVEMENT_SPEED_KEY);
-        if (attribute != null) {
-            return attribute;
-        }
-        return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
     }
 
     private static Attribute resolveMovementSpeedAttribute() {
