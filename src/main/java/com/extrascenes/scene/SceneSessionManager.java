@@ -291,7 +291,7 @@ public class SceneSessionManager {
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(movementLockKey, "scene-movement-lock", -10.0,
+        AttributeModifier modifier = new AttributeModifier(movementLockKey, -10.0,
                 AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
