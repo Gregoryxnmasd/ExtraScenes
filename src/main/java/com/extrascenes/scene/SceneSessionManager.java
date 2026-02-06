@@ -10,11 +10,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import net.kyori.adventure.key.Key;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -25,13 +26,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 public class SceneSessionManager {
-    private static final UUID MOVEMENT_LOCK_UUID = UUID.fromString("4b8e83b7-dad9-4f5b-8a63-1d5ea67d4001");
+    private static final NamespacedKey GENERIC_MOVEMENT_SPEED_KEY = NamespacedKey.minecraft("generic.movement_speed");
+    private static final NamespacedKey LEGACY_MOVEMENT_SPEED_KEY = NamespacedKey.minecraft("movement_speed");
     private final ExtraScenesPlugin plugin;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
+    private final NamespacedKey movementLockKey;
 
     public SceneSessionManager(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController,
                                SceneProtocolAdapter protocolAdapter) {
@@ -276,29 +279,43 @@ public class SceneSessionManager {
     }
 
     private void applyMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        Attribute movementSpeed = resolveMovementSpeedAttribute();
+        if (movementSpeed == null) {
+            return;
+        }
+        AttributeInstance attribute = player.getAttribute(movementSpeed);
         if (attribute == null) {
             return;
         }
-        Key key = Key.key(movementLockKey.toString());
-        AttributeModifier existing = attribute.getModifier(key);
+        AttributeModifier existing = attribute.getModifier(movementLockKey);
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(MOVEMENT_LOCK_UUID, "scene-movement-lock", -10.0,
+        AttributeModifier modifier = new AttributeModifier(movementLockKey, "scene-movement-lock", -10.0,
                 AttributeModifier.Operation.ADD_NUMBER);
         attribute.addModifier(modifier);
     }
 
     private void removeMovementLock(Player player) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        Attribute movementSpeed = resolveMovementSpeedAttribute();
+        if (movementSpeed == null) {
+            return;
+        }
+        AttributeInstance attribute = player.getAttribute(movementSpeed);
         if (attribute == null) {
             return;
         }
-        Key key = Key.key(movementLockKey.toString());
-        if (attribute.getModifier(key) != null) {
-            attribute.removeModifier(key);
+        if (attribute.getModifier(movementLockKey) != null) {
+            attribute.removeModifier(movementLockKey);
         }
+    }
+
+    private static Attribute resolveMovementSpeedAttribute() {
+        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MOVEMENT_SPEED_KEY);
+        if (attribute != null) {
+            return attribute;
+        }
+        return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
     }
 
 }
