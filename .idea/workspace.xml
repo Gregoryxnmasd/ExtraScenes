@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/extrascenes/SceneProtocolAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/extrascenes/SceneProtocolAdapter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

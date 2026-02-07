@@ -106,7 +106,7 @@ public class SceneProtocolAdapter {
                     cutsceneSpeedLockKey,
                     PUMPKIN_MOVEMENT_LOCK_AMOUNT,
                     AttributeModifier.Operation.ADD_SCALAR,
-                    EquipmentSlot.HEAD
+                    EquipmentSlot.HEAD.getGroup()
             );
             meta.addAttributeModifier(attribute, modifier);
         }
