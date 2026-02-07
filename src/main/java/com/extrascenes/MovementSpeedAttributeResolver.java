@@ -9,14 +9,17 @@ public final class MovementSpeedAttributeResolver {
     }
 
     public static Attribute resolveMovementSpeedAttribute() {
-        if (cachedMovementSpeed != null) {
-            return cachedMovementSpeed;
+        Attribute cached = cachedMovementSpeed;
+        if (cached != null) {
+            return cached;
         }
         Attribute attribute = resolveAttribute("MOVEMENT_SPEED");
         if (attribute == null) {
             attribute = resolveAttribute("GENERIC_MOVEMENT_SPEED");
         }
-        cachedMovementSpeed = attribute;
+        if (attribute != null) {
+            cachedMovementSpeed = attribute;
+        }
         return attribute;
     }
 
