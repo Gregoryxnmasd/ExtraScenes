@@ -1,6 +1,7 @@
 package com.extrascenes.scene;
 
 import com.extrascenes.ExtraScenesPlugin;
+import com.extrascenes.MovementSpeedAttributeResolver;
 import com.extrascenes.SceneProtocolAdapter;
 import com.extrascenes.visibility.SceneVisibilityController;
 import java.util.Collection;
@@ -15,7 +16,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -26,8 +26,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 public class SceneSessionManager {
-    private static final NamespacedKey GENERIC_MOVEMENT_SPEED_KEY = NamespacedKey.minecraft("generic.movement_speed");
-    private static final NamespacedKey LEGACY_MOVEMENT_SPEED_KEY = NamespacedKey.minecraft("movement_speed");
     private final ExtraScenesPlugin plugin;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
@@ -279,7 +277,7 @@ public class SceneSessionManager {
     }
 
     private void applyMovementLock(Player player) {
-        Attribute movementSpeed = resolveMovementSpeedAttribute();
+        Attribute movementSpeed = MovementSpeedAttributeResolver.resolveMovementSpeedAttribute();
         if (movementSpeed == null) {
             return;
         }
@@ -297,7 +295,7 @@ public class SceneSessionManager {
     }
 
     private void removeMovementLock(Player player) {
-        Attribute movementSpeed = resolveMovementSpeedAttribute();
+        Attribute movementSpeed = MovementSpeedAttributeResolver.resolveMovementSpeedAttribute();
         if (movementSpeed == null) {
             return;
         }
@@ -308,14 +306,6 @@ public class SceneSessionManager {
         if (attribute.getModifier(movementLockKey) != null) {
             attribute.removeModifier(movementLockKey);
         }
-    }
-
-    private static Attribute resolveMovementSpeedAttribute() {
-        Attribute attribute = Registry.ATTRIBUTE.get(GENERIC_MOVEMENT_SPEED_KEY);
-        if (attribute != null) {
-            return attribute;
-        }
-        return Registry.ATTRIBUTE.get(LEGACY_MOVEMENT_SPEED_KEY);
     }
 
 }
