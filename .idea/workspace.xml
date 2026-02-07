@@ -5,49 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneListener.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneModelTrackAdapter.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/ScenePlaceholderExpansion.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/command/SceneCommandExecutor.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ActionBarKeyframeEditorGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/AddKeyframeGui$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/AddKeyframeGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/BlockIllusionKeyframe.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CameraKeyframeEditorGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CameraOptionsGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CommandKeyframeEditorGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorChatListener.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EffectsTickMenuGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GroupGridGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GroupSelectGui$GroupSummary.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GroupSelectGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GuiUtils.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/KeyframeListGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelEntryEditorGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelKeyframeEditorGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelLibraryGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelTickListGui$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelTickListGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ParticleKeyframe.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/PlayerStateSnapshot.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneDashboardGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEditorListener.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEndEvent.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneKeyframeEvent.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSession.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSettingsGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneStartEvent.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneState.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneTextFormatter.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneWand.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SoundKeyframe.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/TickActionMenuGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/TickToolsGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/TickUtils.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/TrackSelectGui.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
