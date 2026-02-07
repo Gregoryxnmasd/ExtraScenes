@@ -87,7 +87,7 @@ public class SceneSessionManager {
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
-        player.getInventory().setHelmet(new ItemStack(Material.CARVED_PUMPKIN));
+        player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         applyMovementLock(player);
 
         player.teleport(rigStartLocation);
