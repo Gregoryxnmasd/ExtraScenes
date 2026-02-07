@@ -87,7 +87,8 @@ public class SceneProtocolAdapter {
                 }
                 if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
                         && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
-                        && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
+                        && (modifier.getSlot() == EquipmentSlot.HEAD
+                        || modifier.getSlotGroup() == EquipmentSlotGroup.HEAD)) {
                     hasCorrectModifier = true;
                 } else {
                     meta.removeAttributeModifier(attribute, modifier);
@@ -99,7 +100,7 @@ public class SceneProtocolAdapter {
                     cutsceneSpeedLockKey,
                     PUMPKIN_MOVEMENT_LOCK_AMOUNT,
                     AttributeModifier.Operation.ADD_SCALAR,
-                    EquipmentSlotGroup.HEAD
+                    EquipmentSlot.HEAD
             );
             meta.addAttributeModifier(attribute, modifier);
         }
