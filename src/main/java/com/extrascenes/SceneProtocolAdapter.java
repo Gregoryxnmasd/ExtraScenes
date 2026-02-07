@@ -73,7 +73,10 @@ public class SceneProtocolAdapter {
         if (meta == null) {
             return;
         }
-        Attribute attribute = Attribute.GENERIC_MOVEMENT_SPEED;
+        Attribute attribute = MovementSpeedAttributeResolver.resolveMovementSpeedAttribute();
+        if (attribute == null) {
+            return;
+        }
         Collection<AttributeModifier> existingModifiers = meta.getAttributeModifiers(attribute);
         boolean hasCorrectModifier = false;
         if (existingModifiers != null && !existingModifiers.isEmpty()) {
