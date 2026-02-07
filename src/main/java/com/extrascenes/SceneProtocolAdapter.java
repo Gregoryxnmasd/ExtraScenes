@@ -62,6 +62,12 @@ public class SceneProtocolAdapter {
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
+    public ItemStack createMovementLockedPumpkin() {
+        ItemStack itemStack = new ItemStack(Material.CARVED_PUMPKIN);
+        ensurePumpkinMovementLock(itemStack);
+        return itemStack;
+    }
+
     public void sendFakeEquipmentRestore(Player player, ItemStack itemStack) {
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
