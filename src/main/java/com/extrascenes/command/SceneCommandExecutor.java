@@ -92,6 +92,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene debugcamera <player>");
         sender.sendMessage(ChatColor.AQUA + "/scene actor add <scene> <actorId>");
         sender.sendMessage(ChatColor.AQUA + "/scene actor skin <scene> <actorId> <skin>");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor playback <scene> <actorId> <exact|walk>");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor scale <scene> <actorId> <value|snap>");
         sender.sendMessage(ChatColor.AQUA + "/scene actor record <scene> <actorId> start [tick]");
         sender.sendMessage(ChatColor.AQUA + "/scene actor record stop");
     }
@@ -430,7 +432,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|skin|record> ...");
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|skin|playback|scale|record> ...");
             return;
         }
         String mode = args[1].toLowerCase(Locale.ROOT);
@@ -480,8 +482,78 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ChatColor.RED + "Failed to save scene.");
                 }
             }
+            case "playback" -> handleActorPlayback(sender, args);
+            case "scale" -> handleActorScale(sender, player, args);
             case "record" -> handleActorRecord(sender, player, args);
             default -> sender.sendMessage(ChatColor.RED + "Unknown actor subcommand.");
+        }
+    }
+
+
+    private void handleActorPlayback(CommandSender sender, String[] args) {
+        if (args.length < 5) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor playback <scene> <actorId> <exact|walk>");
+            return;
+        }
+        Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+        if (scene == null) {
+            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            return;
+        }
+        SceneActorTemplate template = scene.getActorTemplate(args[3]);
+        if (template == null) {
+            sender.sendMessage(ChatColor.RED + "Actor not found.");
+            return;
+        }
+        String mode = args[4].toUpperCase(Locale.ROOT);
+        try {
+            template.setPlaybackMode(com.extrascenes.scene.ActorPlaybackMode.valueOf(mode));
+            scene.setDirty(true);
+            sceneManager.saveScene(scene);
+            sender.sendMessage(ChatColor.GREEN + "Actor playback mode updated to " + mode + ".");
+        } catch (IllegalArgumentException ex) {
+            sender.sendMessage(ChatColor.RED + "Playback mode must be exact or walk.");
+        } catch (Exception ex) {
+            sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+        }
+    }
+
+    private void handleActorScale(CommandSender sender, Player player, String[] args) {
+        if (args.length < 5) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor scale <scene> <actorId> <value|snap>");
+            return;
+        }
+        Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+        if (scene == null) {
+            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            return;
+        }
+        SceneActorTemplate template = scene.getActorTemplate(args[3]);
+        if (template == null) {
+            sender.sendMessage(ChatColor.RED + "Actor not found.");
+            return;
+        }
+        if ("snap".equalsIgnoreCase(args[4])) {
+            org.bukkit.attribute.Attribute attribute = com.extrascenes.ScaleAttributeResolver.resolveScaleAttribute();
+            if (attribute == null || player.getAttribute(attribute) == null) {
+                sender.sendMessage(ChatColor.RED + "Scale attribute not available on this server build.");
+                return;
+            }
+            template.setScale(player.getAttribute(attribute).getValue());
+        } else {
+            try {
+                template.setScale(Double.parseDouble(args[4]));
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(ChatColor.RED + "Invalid scale value.");
+                return;
+            }
+        }
+        scene.setDirty(true);
+        try {
+            sceneManager.saveScene(scene);
+            sender.sendMessage(ChatColor.GREEN + "Actor scale updated to " + String.format(Locale.ROOT, "%.3f", template.getScale()) + ".");
+        } catch (Exception ex) {
+            sender.sendMessage(ChatColor.RED + "Failed to save scene.");
         }
     }
 
@@ -556,7 +628,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         }
         if (sub.equals("actor")) {
             if (args.length == 2) {
-                return filterPrefix(List.of("add", "skin", "record"), args[1]);
+                return filterPrefix(List.of("add", "skin", "playback", "scale", "record"), args[1]);
             }
             if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
@@ -570,8 +642,20 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (args.length == 5 && "record".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("start"), args[4]);
             }
-            if (args.length == 3 && List.of("add", "skin").contains(args[1].toLowerCase(Locale.ROOT))) {
+            if (args.length == 3 && List.of("add", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
+            }
+            if (args.length == 4 && List.of("skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene != null) {
+                    return filterPrefix(new ArrayList<>(scene.getActorTemplates().keySet()), args[3]);
+                }
+            }
+            if (args.length == 5 && "playback".equalsIgnoreCase(args[1])) {
+                return filterPrefix(List.of("exact", "walk"), args[4]);
+            }
+            if (args.length == 5 && "scale".equalsIgnoreCase(args[1])) {
+                return filterPrefix(List.of("snap", "1.0", "0.5", "1.5"), args[4]);
             }
         }
         return List.of();

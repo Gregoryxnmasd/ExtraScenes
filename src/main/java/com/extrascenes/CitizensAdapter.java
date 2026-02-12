@@ -20,6 +20,7 @@ public class CitizensAdapter {
     private Method npcGetEntityMethod;
     private Method npcGetOrAddTraitMethod;
     private Method npcSetProtectedMethod;
+    private Method npcSetUseMinecraftAI;
     private Method npcSetMoveDestinationMethod;
     private Method playerFilterSetMethod;
     private Method skinTraitSetSkinNameMethod;
@@ -60,20 +61,22 @@ public class CitizensAdapter {
         }
     }
 
-    public void applyPlayerFilter(Object npc, UUID sessionOwner) {
-        if (!available || npc == null || sessionOwner == null) {
-            return;
+    public boolean applyPlayerFilter(Object npc, UUID sessionOwner) {
+        if (!available || npc == null || sessionOwner == null || playerFilterSetMethod == null) {
+            return false;
         }
         try {
             Object playerFilter = npcGetOrAddTraitMethod.invoke(npc,
                     resolveClass("net.citizensnpcs.trait.versioned.PlayerFilter"));
             if (playerFilter == null) {
-                return;
+                return false;
             }
             Predicate<Player> predicate = player -> !player.getUniqueId().equals(sessionOwner);
             playerFilterSetMethod.invoke(playerFilter, predicate);
+            return true;
         } catch (Exception ex) {
             plugin.getLogger().warning("Failed to apply Citizens PlayerFilter: " + ex.getMessage());
+            return false;
         }
     }
 
@@ -83,6 +86,9 @@ public class CitizensAdapter {
         }
         try {
             npcSetProtectedMethod.invoke(npc, true);
+            if (npcSetUseMinecraftAI != null) {
+                npcSetUseMinecraftAI.invoke(npc, false);
+            }
         } catch (Exception ex) {
             plugin.getLogger().warning("Failed to configure Citizens NPC: " + ex.getMessage());
         }
@@ -143,7 +149,6 @@ public class CitizensAdapter {
             Class<?> citizensApi = resolveClass("net.citizensnpcs.api.CitizensAPI");
             Class<?> npcRegistryClass = resolveClass("net.citizensnpcs.api.npc.NPCRegistry");
             Class<?> npcClass = resolveClass("net.citizensnpcs.api.npc.NPC");
-            Class<?> playerFilterClass = resolveClass("net.citizensnpcs.trait.versioned.PlayerFilter");
             Class<?> skinTraitClass = resolveClass("net.citizensnpcs.trait.SkinTrait");
 
             Method getRegistry = citizensApi.getMethod("getNPCRegistry");
@@ -156,12 +161,23 @@ public class CitizensAdapter {
             npcGetOrAddTraitMethod = npcClass.getMethod("getOrAddTrait", Class.class);
             npcSetProtectedMethod = npcClass.getMethod("setProtected", boolean.class);
             try {
+                npcSetUseMinecraftAI = npcClass.getMethod("setUseMinecraftAI", boolean.class);
+            } catch (NoSuchMethodException ignored) {
+                npcSetUseMinecraftAI = null;
+            }
+            try {
                 npcSetMoveDestinationMethod = npcClass.getMethod("setMoveDestination", Location.class);
             } catch (NoSuchMethodException ignored) {
                 npcSetMoveDestinationMethod = null;
             }
 
-            playerFilterSetMethod = playerFilterClass.getMethod("setPlayerFilter", Predicate.class);
+            try {
+                Class<?> playerFilterClass = resolveClass("net.citizensnpcs.trait.versioned.PlayerFilter");
+                playerFilterSetMethod = playerFilterClass.getMethod("setPlayerFilter", Predicate.class);
+            } catch (Exception ignored) {
+                playerFilterSetMethod = null;
+                plugin.getLogger().info("Citizens PlayerFilter trait not available; using Bukkit visibility fallback.");
+            }
             skinTraitSetSkinNameMethod = skinTraitClass.getMethod("setSkinName", String.class);
         } catch (Exception ex) {
             available = false;
