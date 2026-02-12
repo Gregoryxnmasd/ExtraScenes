@@ -2,6 +2,7 @@ package com.extrascenes;
 
 import com.extrascenes.command.SceneCommandExecutor;
 import com.extrascenes.scene.EditorChatListener;
+import com.extrascenes.scene.ActorRecordingService;
 import com.extrascenes.scene.EditorSessionManager;
 import com.extrascenes.scene.SceneEditorEngine;
 import com.extrascenes.scene.SceneEditorListener;
@@ -21,16 +22,20 @@ public class ExtraScenesPlugin extends JavaPlugin {
     private SceneVisibilityController visibilityController;
     private SceneProtocolAdapter protocolAdapter;
     private SceneModelTrackAdapter modelTrackAdapter;
+    private CitizensAdapter citizensAdapter;
     private EditorSessionManager editorSessionManager;
     private SceneEditorEngine editorEngine;
+    private ActorRecordingService actorRecordingService;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
 
         this.protocolAdapter = new SceneProtocolAdapter(this);
+        this.citizensAdapter = new CitizensAdapter(this);
         this.visibilityController = new SceneVisibilityController(this);
         this.sceneManager = new SceneManager(this);
+        this.actorRecordingService = new ActorRecordingService(this);
         this.editorSessionManager = new EditorSessionManager();
         this.editorEngine = new SceneEditorEngine(this, sceneManager, editorSessionManager);
         this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
@@ -88,6 +93,16 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SceneModelTrackAdapter getModelTrackAdapter() {
         return modelTrackAdapter;
+    }
+
+
+    public CitizensAdapter getCitizensAdapter() {
+        return citizensAdapter;
+    }
+
+
+    public ActorRecordingService getActorRecordingService() {
+        return actorRecordingService;
     }
 
     public SceneEditorEngine getEditorEngine() {

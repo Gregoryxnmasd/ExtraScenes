@@ -1,6 +1,8 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.CitizensAdapter;
 import com.extrascenes.ExtraScenesPlugin;
+import com.extrascenes.ScaleAttributeResolver;
 import com.extrascenes.SceneModelTrackAdapter;
 import com.extrascenes.SceneProtocolAdapter;
 import com.extrascenes.visibility.SceneVisibilityController;
@@ -12,7 +14,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attributable;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -22,6 +26,7 @@ public class SceneRuntimeEngine {
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
+    private final CitizensAdapter citizensAdapter;
     private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
@@ -31,6 +36,7 @@ public class SceneRuntimeEngine {
         this.sessionManager = sessionManager;
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
+        this.citizensAdapter = plugin.getCitizensAdapter();
     }
 
     public void start() {
@@ -89,12 +95,90 @@ public class SceneRuntimeEngine {
         }
 
         ensureSpectatorTarget(player, session);
+        tickSessionActors(player, session, time);
         updateCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
         tickActionBar(player, session, time);
         session.incrementTime();
     }
 
+
+    private void tickSessionActors(Player viewer, SceneSession session, int tick) {
+        if (!citizensAdapter.isAvailable()) {
+            return;
+        }
+        if (session.getActorHandles().isEmpty()) {
+            spawnSessionActors(viewer, session);
+        }
+        for (SceneActorTemplate template : session.getScene().getActorTemplates().values()) {
+            ActorTransformTick transformTick = template.getTransformTick(tick);
+            if (transformTick == null || transformTick.getTransform() == null) {
+                continue;
+            }
+            SessionActorHandle handle = session.getActorHandle(template.getActorId());
+            if (handle == null || handle.getEntity() == null || !handle.getEntity().isValid()) {
+                continue;
+            }
+            Location target = handle.getEntity().getLocation().clone();
+            transformTick.getTransform().applyTo(target);
+            if (template.getPlaybackMode() == ActorPlaybackMode.WALK) {
+                citizensAdapter.setMoveDestination(handle.getCitizensNpc(), target);
+            } else {
+                handle.getEntity().teleport(target);
+            }
+            if (handle.getEntity() instanceof LivingEntity living) {
+                living.setGliding(transformTick.isGliding());
+            }
+        }
+    }
+
+    private void spawnSessionActors(Player viewer, SceneSession session) {
+        for (SceneActorTemplate template : session.getScene().getActorTemplates().values()) {
+            Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
+            if (npc == null) {
+                continue;
+            }
+            citizensAdapter.applySkin(npc, template.getSkinName());
+            citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
+            citizensAdapter.configureNpc(npc);
+
+            Location spawnLocation = viewer.getLocation().clone();
+            ActorTransformTick first = template.getTransformTicks().values().stream().findFirst().orElse(null);
+            if (first != null && first.getTransform() != null) {
+                first.getTransform().applyTo(spawnLocation);
+            }
+            if (!citizensAdapter.spawn(npc, spawnLocation)) {
+                citizensAdapter.destroy(npc);
+                continue;
+            }
+            Entity entity = citizensAdapter.getEntity(npc);
+            if (entity == null) {
+                citizensAdapter.destroy(npc);
+                continue;
+            }
+            entity.setSilent(true);
+            entity.setInvulnerable(true);
+            entity.setGravity(false);
+            if (entity instanceof LivingEntity livingEntity) {
+                livingEntity.setAI(false);
+            }
+            applyScale(entity, template.getScale());
+            session.registerEntity(entity);
+            session.registerActorHandle(new SessionActorHandle(template.getActorId(), npc, entity));
+            sessionManager.registerSceneEntity(session, entity);
+            visibilityController.hideEntityFromAllExcept(entity, viewer);
+            visibilityController.showEntityToPlayer(entity, viewer);
+        }
+    }
+
+    private void applyScale(Entity entity, double scale) {
+        org.bukkit.attribute.Attribute attribute = ScaleAttributeResolver.resolveScaleAttribute();
+        if (attribute == null || !(entity instanceof Attributable attributable)
+                || attributable.getAttribute(attribute) == null) {
+            return;
+        }
+        attributable.getAttribute(attribute).setBaseValue(scale <= 0.0 ? 1.0 : scale);
+    }
     private void ensureSpectatorTarget(Player player, SceneSession session) {
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {

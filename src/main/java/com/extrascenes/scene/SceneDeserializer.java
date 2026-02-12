@@ -46,6 +46,7 @@ public class SceneDeserializer {
                 : EndTeleportMode.RETURN_TO_START;
         SceneLocation endLocation = root.has("endLocation") ? deserializeLocation(root.get("endLocation")) : null;
         List<SceneModelEntry> modelEntries = parseModelLibrary(root);
+        List<SceneActorTemplate> actorTemplates = parseActorTemplates(root);
 
         Map<SceneTrackType, Track<? extends Keyframe>> tracks = parseTicks(root);
         if (tracks.isEmpty()) {
@@ -78,6 +79,9 @@ public class SceneDeserializer {
         scene.setEndLocation(endLocation);
         for (SceneModelEntry entry : modelEntries) {
             scene.putModelEntry(entry);
+        }
+        for (SceneActorTemplate actorTemplate : actorTemplates) {
+            scene.putActorTemplate(actorTemplate);
         }
         ensureModelEntries(scene);
         return scene;
@@ -377,6 +381,61 @@ public class SceneDeserializer {
             entries.add(new SceneModelEntry(name, modelId, spawnTransform, defaultAnimation));
         }
         return entries;
+    }
+
+    private List<SceneActorTemplate> parseActorTemplates(JsonObject root) {
+        List<SceneActorTemplate> templates = new ArrayList<>();
+        if (!root.has("actorTemplates") || !root.get("actorTemplates").isJsonArray()) {
+            return templates;
+        }
+        JsonArray array = root.getAsJsonArray("actorTemplates");
+        for (JsonElement element : array) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject obj = element.getAsJsonObject();
+            String actorId = getString(obj, "actorId");
+            if (actorId == null || actorId.isBlank()) {
+                continue;
+            }
+            SceneActorTemplate template = new SceneActorTemplate(actorId);
+            if (obj.has("entityType")) {
+                try {
+                    template.setEntityType(org.bukkit.entity.EntityType.valueOf(obj.get("entityType").getAsString()));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            template.setDisplayName(getString(obj, "displayName"));
+            template.setSkinName(getString(obj, "skin"));
+            if (obj.has("scale")) {
+                template.setScale(obj.get("scale").getAsDouble());
+            }
+            if (obj.has("playbackMode")) {
+                try {
+                    template.setPlaybackMode(ActorPlaybackMode.valueOf(obj.get("playbackMode").getAsString()));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            if (obj.has("movement") && obj.get("movement").isJsonArray()) {
+                for (JsonElement tickElement : obj.getAsJsonArray("movement")) {
+                    if (!tickElement.isJsonObject()) {
+                        continue;
+                    }
+                    JsonObject tickObj = tickElement.getAsJsonObject();
+                    int tick = tickObj.has("tick") ? tickObj.get("tick").getAsInt() : 0;
+                    template.putTransformTick(new ActorTransformTick(
+                            tick,
+                            deserializeTransform(tickObj.get("transform")),
+                            tickObj.has("sneaking") && tickObj.get("sneaking").getAsBoolean(),
+                            tickObj.has("sprinting") && tickObj.get("sprinting").getAsBoolean(),
+                            tickObj.has("swimming") && tickObj.get("swimming").getAsBoolean(),
+                            tickObj.has("gliding") && tickObj.get("gliding").getAsBoolean()
+                    ));
+                }
+            }
+            templates.add(template);
+        }
+        return templates;
     }
 
     private void ensureModelEntries(Scene scene) {

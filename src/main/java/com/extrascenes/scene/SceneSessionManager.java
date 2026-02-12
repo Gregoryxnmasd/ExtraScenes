@@ -1,5 +1,6 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.CitizensAdapter;
 import com.extrascenes.ExtraScenesPlugin;
 import com.extrascenes.MovementSpeedAttributeResolver;
 import com.extrascenes.SceneProtocolAdapter;
@@ -29,6 +30,7 @@ public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
+    private final CitizensAdapter citizensAdapter;
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
@@ -39,6 +41,7 @@ public class SceneSessionManager {
         this.plugin = plugin;
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
+        this.citizensAdapter = plugin.getCitizensAdapter();
         this.movementLockKey = new NamespacedKey(plugin, "cutscene_movement_lock");
     }
 
@@ -233,10 +236,18 @@ public class SceneSessionManager {
     }
 
     private void cleanupSessionEntities(SceneSession session) {
+        for (SessionActorHandle actorHandle : session.getActorHandles().values()) {
+            if (actorHandle.getCitizensNpc() != null && citizensAdapter.isAvailable()) {
+                citizensAdapter.destroy(actorHandle.getCitizensNpc());
+            }
+        }
         for (Entity entity : session.getSceneEntities()) {
             unregisterSceneEntity(entity);
-            entity.remove();
+            if (entity.isValid()) {
+                entity.remove();
+            }
         }
+        session.clearActorHandles();
         session.clearSceneEntities();
     }
 

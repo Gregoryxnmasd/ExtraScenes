@@ -1,6 +1,7 @@
 package com.extrascenes.command;
 
 import com.extrascenes.ExtraScenesPlugin;
+import com.extrascenes.scene.ActorRecordingService;
 import com.extrascenes.scene.EditorSession;
 import com.extrascenes.scene.Scene;
 import com.extrascenes.scene.SceneEditorEngine;
@@ -8,6 +9,7 @@ import com.extrascenes.scene.SceneLocation;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneSession;
 import com.extrascenes.scene.SceneSessionManager;
+import com.extrascenes.scene.SceneActorTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,13 +26,14 @@ import org.bukkit.entity.Player;
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera"
+            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
     private final SceneManager sceneManager;
     private final SceneSessionManager sessionManager;
     private final SceneEditorEngine editorEngine;
+    private final ActorRecordingService actorRecordingService;
 
     public SceneCommandExecutor(ExtraScenesPlugin plugin, SceneManager sceneManager,
                                 SceneSessionManager sessionManager, SceneEditorEngine editorEngine) {
@@ -38,6 +41,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         this.sceneManager = sceneManager;
         this.sessionManager = sessionManager;
         this.editorEngine = editorEngine;
+        this.actorRecordingService = plugin.getActorRecordingService();
     }
 
     @Override
@@ -64,6 +68,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "list" -> handleList(sender);
             case "delete" -> handleDelete(sender, args);
             case "debugcamera" -> handleDebugCamera(sender, args);
+            case "actor" -> handleActor(sender, args);
             default -> sender.sendMessage(ChatColor.RED + "Unknown scene subcommand.");
         }
         return true;
@@ -85,6 +90,10 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene here");
         sender.sendMessage(ChatColor.AQUA + "/scene setend <here|x y z yaw pitch>");
         sender.sendMessage(ChatColor.AQUA + "/scene debugcamera <player>");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor add <scene> <actorId>");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor skin <scene> <actorId> <skin>");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor record <scene> <actorId> start [tick]");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor record stop");
     }
 
     private void handleCreate(CommandSender sender, String[] args) {
@@ -415,6 +424,100 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         return null;
     }
 
+    private void handleActor(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + "Only players can manage actors.");
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|skin|record> ...");
+            return;
+        }
+        String mode = args[1].toLowerCase(Locale.ROOT);
+        switch (mode) {
+            case "add" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor add <scene> <actorId>");
+                    return;
+                }
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene == null) {
+                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    return;
+                }
+                SceneActorTemplate template = new SceneActorTemplate(args[3]);
+                template.setDisplayName(args[3]);
+                scene.putActorTemplate(template);
+                scene.setDirty(true);
+                try {
+                    sceneManager.saveScene(scene);
+                    sender.sendMessage(ChatColor.GREEN + "Actor template created: " + args[3]);
+                } catch (Exception ex) {
+                    sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+                }
+            }
+            case "skin" -> {
+                if (args.length < 5) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor skin <scene> <actorId> <skin>");
+                    return;
+                }
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene == null) {
+                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    return;
+                }
+                SceneActorTemplate template = scene.getActorTemplate(args[3]);
+                if (template == null) {
+                    sender.sendMessage(ChatColor.RED + "Actor not found.");
+                    return;
+                }
+                template.setSkinName(args[4]);
+                scene.setDirty(true);
+                try {
+                    sceneManager.saveScene(scene);
+                    sender.sendMessage(ChatColor.GREEN + "Actor skin updated.");
+                } catch (Exception ex) {
+                    sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+                }
+            }
+            case "record" -> handleActorRecord(sender, player, args);
+            default -> sender.sendMessage(ChatColor.RED + "Unknown actor subcommand.");
+        }
+    }
+
+    private void handleActorRecord(CommandSender sender, Player player, String[] args) {
+        if (args.length >= 3 && "stop".equalsIgnoreCase(args[2])) {
+            boolean stopped = actorRecordingService.stopRecording(player, true);
+            sender.sendMessage(stopped ? ChatColor.GREEN + "Actor recording stopped and saved."
+                    : ChatColor.RED + "No active actor recording.");
+            return;
+        }
+        if (args.length < 5 || !"start".equalsIgnoreCase(args[4])) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor record <scene> <actorId> start [tick]");
+            return;
+        }
+        Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+        if (scene == null) {
+            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            return;
+        }
+        SceneActorTemplate template = scene.getActorTemplate(args[3]);
+        if (template == null) {
+            sender.sendMessage(ChatColor.RED + "Actor not found.");
+            return;
+        }
+        int startTick = 0;
+        if (args.length >= 6) {
+            try {
+                startTick = Integer.parseInt(args[5]);
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(ChatColor.RED + "Invalid tick; using 0.");
+            }
+        }
+        actorRecordingService.startRecording(player, scene, template, startTick);
+        sender.sendMessage(ChatColor.GREEN + "Recording actor " + template.getActorId() + " from tick " + startTick + ".");
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
@@ -449,6 +552,26 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 if (scene != null) {
                     return filterPrefix(validGroupSuggestions(scene), args[2]);
                 }
+            }
+        }
+        if (sub.equals("actor")) {
+            if (args.length == 2) {
+                return filterPrefix(List.of("add", "skin", "record"), args[1]);
+            }
+            if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
+                return filterPrefix(sceneManager.listScenes(), args[2]);
+            }
+            if (args.length == 4 && "record".equalsIgnoreCase(args[1])) {
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene != null) {
+                    return filterPrefix(new ArrayList<>(scene.getActorTemplates().keySet()), args[3]);
+                }
+            }
+            if (args.length == 5 && "record".equalsIgnoreCase(args[1])) {
+                return filterPrefix(List.of("start"), args[4]);
+            }
+            if (args.length == 3 && List.of("add", "skin").contains(args[1].toLowerCase(Locale.ROOT))) {
+                return filterPrefix(sceneManager.listScenes(), args[2]);
             }
         }
         return List.of();
