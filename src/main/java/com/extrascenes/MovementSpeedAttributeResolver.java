@@ -4,23 +4,24 @@ import org.bukkit.attribute.Attribute;
 
 public final class MovementSpeedAttributeResolver {
     private static Attribute cachedMovementSpeed;
+    private static boolean movementSpeedResolved;
 
     private MovementSpeedAttributeResolver() {
     }
 
     public static Attribute resolveMovementSpeedAttribute() {
-        Attribute cached = cachedMovementSpeed;
-        if (cached != null) {
-            return cached;
+        if (movementSpeedResolved) {
+            return cachedMovementSpeed;
         }
+
         Attribute attribute = resolveAttribute("MOVEMENT_SPEED");
         if (attribute == null) {
             attribute = resolveAttribute("GENERIC_MOVEMENT_SPEED");
         }
-        if (attribute != null) {
-            cachedMovementSpeed = attribute;
-        }
-        return attribute;
+
+        cachedMovementSpeed = attribute;
+        movementSpeedResolved = true;
+        return cachedMovementSpeed;
     }
 
     private static Attribute resolveAttribute(String name) {
