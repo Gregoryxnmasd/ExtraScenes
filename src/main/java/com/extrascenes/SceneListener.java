@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
@@ -65,8 +66,18 @@ public class SceneListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerKick(PlayerKickEvent event) {
+        sessionManager.handleDisconnect(event.getPlayer(), "player_kick");
+    }
+
+    @EventHandler
     public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
         visibilityController.hideAllSceneEntities(event.getPlayer());
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null) {
+            sessionManager.stopScene(event.getPlayer(), "world_change");
+            return;
+        }
         sessionManager.reapplyVisibility(event.getPlayer());
     }
 
