@@ -146,7 +146,7 @@ public class SceneRuntimeEngine {
                 continue;
             }
             citizensAdapter.applySkin(npc, template.getSkinName());
-            citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
+            boolean playerFilterApplied = citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
             citizensAdapter.configureNpc(npc);
 
             Location spawnLocation = viewer.getLocation().clone();
@@ -173,7 +173,9 @@ public class SceneRuntimeEngine {
             session.registerEntity(entity);
             session.registerActorHandle(new SessionActorHandle(template.getActorId(), npc, entity));
             sessionManager.registerSceneEntity(session, entity);
-            visibilityController.hideEntityFromAllExcept(entity, viewer);
+            if (!playerFilterApplied) {
+                visibilityController.hideEntityFromAllExcept(entity, viewer);
+            }
             visibilityController.showEntityToPlayer(entity, viewer);
         }
     }

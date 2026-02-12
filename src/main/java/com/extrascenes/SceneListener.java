@@ -1,6 +1,7 @@
 package com.extrascenes;
 
 import com.extrascenes.scene.EditorInputManager;
+import com.extrascenes.scene.ActorRecordingService;
 import com.extrascenes.scene.EditorSessionManager;
 import com.extrascenes.scene.EditorSession;
 import com.extrascenes.scene.SceneEditorEngine;
@@ -33,15 +34,17 @@ public class SceneListener implements Listener {
     private final EditorSessionManager editorSessionManager;
     private final EditorInputManager inputManager;
     private final SceneEditorEngine editorEngine;
+    private final ActorRecordingService actorRecordingService;
 
     public SceneListener(SceneSessionManager sessionManager, SceneVisibilityController visibilityController,
                          EditorSessionManager editorSessionManager, EditorInputManager inputManager,
-                         SceneEditorEngine editorEngine) {
+                         SceneEditorEngine editorEngine, ActorRecordingService actorRecordingService) {
         this.sessionManager = sessionManager;
         this.visibilityController = visibilityController;
         this.editorSessionManager = editorSessionManager;
         this.inputManager = inputManager;
         this.editorEngine = editorEngine;
+        this.actorRecordingService = actorRecordingService;
     }
 
     @EventHandler
@@ -52,6 +55,7 @@ public class SceneListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
+        actorRecordingService.stopRecording(event.getPlayer(), true);
         sessionManager.handleDisconnect(event.getPlayer(), "player_quit");
         if (editorSessionManager != null) {
             EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
@@ -67,6 +71,7 @@ public class SceneListener implements Listener {
 
     @EventHandler
     public void onPlayerKick(PlayerKickEvent event) {
+        actorRecordingService.stopRecording(event.getPlayer(), true);
         sessionManager.handleDisconnect(event.getPlayer(), "player_kick");
     }
 

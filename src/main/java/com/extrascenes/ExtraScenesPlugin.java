@@ -46,7 +46,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
         getLogger().info("ModelEngine detected " + (modelEngineDetected ? "YES" : "NO"));
 
         Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
-                editorSessionManager, editorEngine.getInputManager(), editorEngine), this);
+                editorSessionManager, editorEngine.getInputManager(), editorEngine, actorRecordingService), this);
         Bukkit.getPluginManager().registerEvents(new SceneEditorListener(editorEngine, editorSessionManager), this);
         Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager()), this);
 
@@ -65,6 +65,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (actorRecordingService != null) {
+            actorRecordingService.stopAll(true);
+        }
         if (runtimeEngine != null) {
             runtimeEngine.stop();
         }

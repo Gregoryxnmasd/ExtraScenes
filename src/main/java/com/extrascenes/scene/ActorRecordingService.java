@@ -46,6 +46,31 @@ public class ActorRecordingService {
         return true;
     }
 
+
+    public void stopAll(boolean markDirty) {
+        for (UUID playerId : new java.util.ArrayList<>(activeRecordings.keySet())) {
+            Player player = plugin.getServer().getPlayer(playerId);
+            if (player != null) {
+                stopRecording(player, markDirty);
+                continue;
+            }
+            ActiveRecording recording = activeRecordings.remove(playerId);
+            if (recording == null) {
+                continue;
+            }
+            if (recording.task != null) {
+                recording.task.cancel();
+            }
+            if (markDirty) {
+                recording.scene.setDirty(true);
+                try {
+                    plugin.getSceneManager().saveScene(recording.scene);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
     private void capture(Player player, ActiveRecording recording) {
         int tick = recording.startTick + recording.relativeTick;
         Location loc = player.getLocation();
