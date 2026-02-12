@@ -2,7 +2,7 @@ name: ExtraScenes
 main: com.extrascenes.ExtraScenesPlugin
 version: 1.0.0
 api-version: 1.21
-softdepend: [ProtocolLib, PlaceholderAPI, ModelEngine]
+softdepend: [ProtocolLib, PlaceholderAPI, ModelEngine, Citizens]
 commands:
   scene:
     description: Scene command root.

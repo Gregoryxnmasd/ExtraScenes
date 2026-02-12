@@ -11,6 +11,7 @@ public class Scene {
     private final Map<SceneTrackType, Track<? extends Keyframe>> tracks;
     private final SceneTimeline timeline;
     private final Map<String, SceneModelEntry> modelLibrary;
+    private final Map<String, SceneActorTemplate> actorTemplates;
     private SmoothingMode defaultSmoothing;
     private SmoothingQuality smoothingQuality;
     private boolean freezePlayer;
@@ -29,6 +30,7 @@ public class Scene {
         }
         this.timeline = new SceneTimeline(this);
         this.modelLibrary = new LinkedHashMap<>();
+        this.actorTemplates = new LinkedHashMap<>();
         this.defaultSmoothing = SmoothingMode.SMOOTH;
         this.smoothingQuality = SmoothingQuality.SMOOTH;
         this.freezePlayer = true;
@@ -88,6 +90,31 @@ public class Scene {
     public void removeModelEntry(String name) {
         if (name != null) {
             modelLibrary.remove(name.toLowerCase());
+        }
+    }
+
+
+    public Map<String, SceneActorTemplate> getActorTemplates() {
+        return actorTemplates;
+    }
+
+    public SceneActorTemplate getActorTemplate(String actorId) {
+        if (actorId == null) {
+            return null;
+        }
+        return actorTemplates.get(actorId.toLowerCase());
+    }
+
+    public void putActorTemplate(SceneActorTemplate template) {
+        if (template == null || template.getActorId() == null) {
+            return;
+        }
+        actorTemplates.put(template.getActorId().toLowerCase(), template);
+    }
+
+    public void removeActorTemplate(String actorId) {
+        if (actorId != null) {
+            actorTemplates.remove(actorId.toLowerCase());
         }
     }
 

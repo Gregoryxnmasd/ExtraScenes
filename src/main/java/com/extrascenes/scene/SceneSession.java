@@ -18,6 +18,7 @@ public class SceneSession {
     private final Set<Entity> sceneEntities = new HashSet<>();
     private final Map<String, UUID> modelRefs = new HashMap<>();
     private final Map<String, String> lastModelHandleByEntry = new HashMap<>();
+    private final Map<String, SessionActorHandle> actorHandles = new HashMap<>();
     private SceneState state;
     private int timeTicks;
     private int startTick;
@@ -209,6 +210,29 @@ public class SceneSession {
             return;
         }
         lastModelHandleByEntry.put(entryName.toLowerCase(), handle);
+    }
+
+
+    public Map<String, SessionActorHandle> getActorHandles() {
+        return Collections.unmodifiableMap(actorHandles);
+    }
+
+    public void registerActorHandle(SessionActorHandle handle) {
+        if (handle == null || handle.getActorId() == null) {
+            return;
+        }
+        actorHandles.put(handle.getActorId().toLowerCase(), handle);
+    }
+
+    public SessionActorHandle getActorHandle(String actorId) {
+        if (actorId == null) {
+            return null;
+        }
+        return actorHandles.get(actorId.toLowerCase());
+    }
+
+    public void clearActorHandles() {
+        actorHandles.clear();
     }
 
     public BukkitTask getRuntimeTask() {

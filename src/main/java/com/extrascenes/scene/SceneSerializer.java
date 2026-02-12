@@ -38,6 +38,7 @@ public class SceneSerializer {
             root.add("endLocation", serializeLocation(scene.getEndLocation()));
         }
         root.add("modelLibrary", serializeModelLibrary(scene));
+        root.add("actorTemplates", serializeActorTemplates(scene));
 
         JsonObject tracks = new JsonObject();
         for (Map.Entry<SceneTrackType, Track<? extends Keyframe>> entry : scene.getTracks().entrySet()) {
@@ -139,6 +140,33 @@ public class SceneSerializer {
             obj.addProperty("modelId", entry.getModelId());
             obj.addProperty("defaultAnimation", entry.getDefaultAnimation());
             obj.add("spawnTransform", serializeTransform(entry.getSpawnTransform()));
+            array.add(obj);
+        }
+        return array;
+    }
+
+    private JsonArray serializeActorTemplates(Scene scene) {
+        JsonArray array = new JsonArray();
+        for (SceneActorTemplate template : scene.getActorTemplates().values()) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("actorId", template.getActorId());
+            obj.addProperty("entityType", template.getEntityType().name());
+            obj.addProperty("displayName", template.getDisplayName());
+            obj.addProperty("skin", template.getSkinName());
+            obj.addProperty("scale", template.getScale());
+            obj.addProperty("playbackMode", template.getPlaybackMode().name());
+            JsonArray ticks = new JsonArray();
+            for (ActorTransformTick tick : template.getTransformTicks().values()) {
+                JsonObject tickObject = new JsonObject();
+                tickObject.addProperty("tick", tick.getTick());
+                tickObject.add("transform", serializeTransform(tick.getTransform()));
+                tickObject.addProperty("sneaking", tick.isSneaking());
+                tickObject.addProperty("sprinting", tick.isSprinting());
+                tickObject.addProperty("swimming", tick.isSwimming());
+                tickObject.addProperty("gliding", tick.isGliding());
+                ticks.add(tickObject);
+            }
+            obj.add("movement", ticks);
             array.add(obj);
         }
         return array;
