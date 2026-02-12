@@ -56,7 +56,13 @@ public class SceneRuntimeEngine {
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
-                tickSession(session);
+                try {
+                    tickSession(session);
+                } catch (Exception ex) {
+                    plugin.getLogger().severe("Cutscene session aborted due to runtime exception for "
+                            + session.getPlayerId() + ": " + ex.getMessage());
+                    sessionManager.abortSession(session.getPlayerId(), "runtime_exception");
+                }
             }
         }.runTaskTimer(plugin, 1L, 1L);
         session.setRuntimeTask(task);
@@ -79,6 +85,7 @@ public class SceneRuntimeEngine {
         }
         Player player = Bukkit.getPlayer(session.getPlayerId());
         if (player == null) {
+            sessionManager.abortSession(session.getPlayerId(), "viewer_missing");
             return;
         }
 

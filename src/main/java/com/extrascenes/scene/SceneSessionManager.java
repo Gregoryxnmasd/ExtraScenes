@@ -105,42 +105,50 @@ public class SceneSessionManager {
     }
 
     public void stopScene(Player player, String reason) {
-        SceneSession session = sessions.remove(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        plugin.getRuntimeEngine().stopSession(session);
-        restorePlayerState(player, session);
-        teleportOnEnd(player, session);
-        clearActionBar(player, session);
-        cleanupSessionEntities(session);
-        Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
-
-        if (session.isPreview() && plugin.getEditorEngine() != null) {
-            EditorSession editorSession = plugin.getEditorEngine().getEditorSessionManager().getSession(player.getUniqueId());
-            if (editorSession != null) {
-                editorSession.setPreviewPlaying(false);
-                plugin.getEditorEngine().openDashboard(player, editorSession, false);
-            }
-        }
+        finishSession(player.getUniqueId(), reason, true, true);
     }
 
     public void handleDisconnect(Player player, String reason) {
-        SceneSession session = sessions.remove(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        plugin.getRuntimeEngine().stopSession(session);
-        restorePlayerState(player, session);
-        cleanupSessionEntities(session);
-        Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
+        finishSession(player.getUniqueId(), reason, false, true);
+    }
+
+    public void abortSession(UUID playerId, String reason) {
+        finishSession(playerId, reason, false, true);
     }
 
     public void stopAll(String reason) {
         for (UUID uuid : new HashSet<>(sessions.keySet())) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-                stopScene(player, reason);
+            finishSession(uuid, reason, false, false);
+        }
+    }
+
+    private void finishSession(UUID playerId, String reason, boolean teleportOnEnd, boolean openPreviewDashboard) {
+        SceneSession session = sessions.remove(playerId);
+        if (session == null) {
+            return;
+        }
+        pendingRestores.remove(playerId);
+        plugin.getRuntimeEngine().stopSession(session);
+
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null) {
+            restorePlayerState(player, session);
+            if (teleportOnEnd) {
+                teleportOnEnd(player, session);
+            }
+            clearActionBar(player, session);
+        }
+
+        cleanupSessionEntities(session);
+
+        if (player != null) {
+            Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
+            if (openPreviewDashboard && session.isPreview() && plugin.getEditorEngine() != null) {
+                EditorSession editorSession = plugin.getEditorEngine().getEditorSessionManager().getSession(player.getUniqueId());
+                if (editorSession != null) {
+                    editorSession.setPreviewPlaying(false);
+                    plugin.getEditorEngine().openDashboard(player, editorSession, false);
+                }
             }
         }
     }
