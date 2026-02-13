@@ -94,7 +94,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene actor skin <scene> <actorId> <skin>");
         sender.sendMessage(ChatColor.AQUA + "/scene actor playback <scene> <actorId> <exact|walk>");
         sender.sendMessage(ChatColor.AQUA + "/scene actor scale <scene> <actorId> <value|snap>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor record <scene> <actorId> start [tick]");
+        sender.sendMessage(ChatColor.AQUA + "/scene actor record start <scene> <actorId> [startTick]");
         sender.sendMessage(ChatColor.AQUA + "/scene actor record stop");
     }
 
@@ -564,16 +564,16 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     : ChatColor.RED + "No active actor recording.");
             return;
         }
-        if (args.length < 5 || !"start".equalsIgnoreCase(args[4])) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor record <scene> <actorId> start [tick]");
+        if (args.length < 5 || !"start".equalsIgnoreCase(args[2])) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor record start <scene> <actorId> [tick]");
             return;
         }
-        Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+        Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
         if (scene == null) {
             sender.sendMessage(ChatColor.RED + "Scene not found.");
             return;
         }
-        SceneActorTemplate template = scene.getActorTemplate(args[3]);
+        SceneActorTemplate template = scene.getActorTemplate(args[4]);
         if (template == null) {
             sender.sendMessage(ChatColor.RED + "Actor not found.");
             return;
@@ -589,6 +589,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         actorRecordingService.startRecording(player, scene, template, startTick);
         sender.sendMessage(ChatColor.GREEN + "Recording actor " + template.getActorId() + " from tick " + startTick + ".");
     }
+
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
@@ -631,16 +632,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 return filterPrefix(List.of("add", "skin", "playback", "scale", "record"), args[1]);
             }
             if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
-                return filterPrefix(sceneManager.listScenes(), args[2]);
-            }
-            if (args.length == 4 && "record".equalsIgnoreCase(args[1])) {
-                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
-                if (scene != null) {
-                    return filterPrefix(new ArrayList<>(scene.getActorTemplates().keySet()), args[3]);
-                }
-            }
-            if (args.length == 5 && "record".equalsIgnoreCase(args[1])) {
-                return filterPrefix(List.of("start"), args[4]);
+                return filterPrefix(List.of("start", "stop"), args[2]);
             }
             if (args.length == 3 && List.of("add", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
@@ -656,6 +648,15 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             }
             if (args.length == 5 && "scale".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("snap", "1.0", "0.5", "1.5"), args[4]);
+            }
+            if (args.length == 4 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
+                return filterPrefix(sceneManager.listScenes(), args[3]);
+            }
+            if (args.length == 5 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
+                Scene sc = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
+                if (sc != null) {
+                    return filterPrefix(new ArrayList<>(sc.getActorTemplates().keySet()), args[4]);
+                }
             }
         }
         return List.of();

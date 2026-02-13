@@ -23,6 +23,7 @@ public class EditorSession {
     private int wandSlot;
     private ItemStack wandBackup;
     private String selectedModelEntryName;
+    private String selectedActorId;
     private String armedModelEntryName;
     private UUID armedModelKeyframeId;
     private GuiType armedReturnGui;
@@ -171,6 +172,14 @@ public class EditorSession {
 
     public void setWandBackup(ItemStack wandBackup) {
         this.wandBackup = wandBackup;
+    }
+
+    public String getSelectedActorId() {
+        return selectedActorId;
+    }
+
+    public void setSelectedActorId(String selectedActorId) {
+        this.selectedActorId = selectedActorId;
     }
 
     public String getSelectedModelEntryName() {

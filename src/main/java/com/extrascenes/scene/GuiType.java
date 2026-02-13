@@ -19,5 +19,7 @@ public enum GuiType {
     MODEL_ENTRY_EDITOR,
     ACTIONBAR_EDITOR,
     SCENE_SETTINGS,
+    ACTORS_LIST,
+    ACTOR_DETAIL,
     CONFIRM
 }

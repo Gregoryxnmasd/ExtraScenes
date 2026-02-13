@@ -118,7 +118,10 @@ public class SceneRuntimeEngine {
             spawnSessionActors(viewer, session);
         }
         for (SceneActorTemplate template : session.getScene().getActorTemplates().values()) {
-            ActorTransformTick transformTick = template.getTransformTick(tick);
+            if (session.isPreview() && !template.isPreviewEnabled()) {
+                continue;
+            }
+            ActorTransformTick transformTick = resolveTransformTick(template, tick);
             if (transformTick == null || transformTick.getTransform() == null) {
                 continue;
             }
@@ -145,7 +148,7 @@ public class SceneRuntimeEngine {
             if (npc == null) {
                 continue;
             }
-            citizensAdapter.applySkin(npc, template.getSkinName());
+            citizensAdapter.applySkinPersistent(npc, template);
             boolean playerFilterApplied = citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
             citizensAdapter.configureNpc(npc);
 
@@ -178,6 +181,21 @@ public class SceneRuntimeEngine {
             }
             visibilityController.showEntityToPlayer(entity, viewer);
         }
+    }
+
+    private ActorTransformTick resolveTransformTick(SceneActorTemplate template, int tick) {
+        ActorTransformTick exact = template.getTransformTick(tick);
+        if (exact != null) {
+            return exact;
+        }
+        ActorTransformTick last = null;
+        for (ActorTransformTick candidate : template.getTransformTicks().values()) {
+            if (candidate.getTick() > tick) {
+                break;
+            }
+            last = candidate;
+        }
+        return last;
     }
 
     private void applyScale(Entity entity, double scale) {
