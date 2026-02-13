@@ -1,6 +1,7 @@
 com\extrascenes\scene\SceneTimeline.class
 com\extrascenes\scene\SoundKeyframe.class
 com\extrascenes\scene\TickToolsGui.class
+com\extrascenes\CitizensAdapter.class
 com\extrascenes\scene\AddKeyframeGui.class
 com\extrascenes\MovementSpeedAttributeResolver.class
 com\extrascenes\scene\CameraKeyframe.class
@@ -17,6 +18,7 @@ com\extrascenes\scene\Keyframe.class
 com\extrascenes\scene\SceneModelEntry.class
 com\extrascenes\scene\SceneLocation.class
 com\extrascenes\SceneModelTrackAdapter.class
+com\extrascenes\scene\ActorRecordingService.class
 com\extrascenes\scene\SceneWand.class
 com\extrascenes\scene\TickUtils.class
 com\extrascenes\scene\SmoothingQuality.class
@@ -32,6 +34,7 @@ com\extrascenes\scene\SceneEditorListener.class
 com\extrascenes\scene\TickActionMenuGui.class
 com\extrascenes\scene\LookAtTarget.class
 com\extrascenes\scene\SceneTrackType.class
+com\extrascenes\scene\SceneActorTemplate.class
 com\extrascenes\scene\SceneKeyframeEvent.class
 com\extrascenes\scene\EditorChatListener.class
 com\extrascenes\scene\GuiType.class
@@ -41,7 +44,9 @@ com\extrascenes\scene\ModelKeyframeEditorGui.class
 com\extrascenes\scene\CameraKeyframeEditorGui.class
 com\extrascenes\visibility\SceneVisibilityController.class
 com\extrascenes\scene\SceneRuntimeEngine$2.class
+com\extrascenes\scene\ActorPlaybackMode.class
 com\extrascenes\scene\ModelEntryEditorGui.class
+com\extrascenes\ScaleAttributeResolver.class
 com\extrascenes\scene\GroupGridGui.class
 com\extrascenes\scene\ModelKeyframe$Action.class
 com\extrascenes\scene\ModelLibraryGui.class
@@ -56,6 +61,7 @@ com\extrascenes\scene\SceneEditorEngine.class
 com\extrascenes\scene\EffectsTickMenuGui.class
 com\extrascenes\scene\CommandKeyframe.class
 com\extrascenes\ScenePlaceholderExpansion.class
+com\extrascenes\scene\ActorRecordingService$ActiveRecording.class
 com\extrascenes\scene\ConfirmGui$1.class
 com\extrascenes\scene\SmoothingMode.class
 com\extrascenes\scene\Transform.class
@@ -63,6 +69,8 @@ com\extrascenes\scene\SceneDeserializer$1.class
 com\extrascenes\scene\EndTeleportMode.class
 com\extrascenes\scene\SceneSerializer.class
 com\extrascenes\scene\BlockIllusionKeyframe.class
+com\extrascenes\scene\ActorTransformTick.class
+com\extrascenes\scene\SessionActorHandle.class
 com\extrascenes\scene\SceneSession.class
 com\extrascenes\scene\CommandKeyframe$ExecutorMode.class
 com\extrascenes\scene\GuiUtils.class

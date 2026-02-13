@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="" />
+    <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

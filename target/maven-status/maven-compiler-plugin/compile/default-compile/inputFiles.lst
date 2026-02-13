@@ -1,8 +1,13 @@
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\CitizensAdapter.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\command\SceneCommandExecutor.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ExtraScenesPlugin.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\MovementSpeedAttributeResolver.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ScaleAttributeResolver.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActionBarKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActionBarKeyframeEditorGui.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActorPlaybackMode.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActorRecordingService.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActorTransformTick.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\AddKeyframeGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\BlockIllusionKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\CameraKeyframe.java
@@ -35,6 +40,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ParticleKeyframe.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\PlayerStateSnapshot.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\Scene.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneActorTemplate.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneDashboardGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneDeserializer.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneEditorEngine.java
@@ -55,6 +61,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTimeline.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTrackType.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneWand.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SessionActorHandle.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingMode.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingQuality.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SoundKeyframe.java
