@@ -407,8 +407,14 @@ public class SceneDeserializer {
             }
             template.setDisplayName(getString(obj, "displayName"));
             template.setSkinName(getString(obj, "skin"));
+            template.setSkinSignature(getString(obj, "skinSignature"));
+            template.setSkinTexture(getString(obj, "skinTexture"));
+            template.setSkinCacheKey(getString(obj, "skinCacheKey"));
             if (obj.has("scale")) {
                 template.setScale(obj.get("scale").getAsDouble());
+            }
+            if (obj.has("previewEnabled")) {
+                template.setPreviewEnabled(obj.get("previewEnabled").getAsBoolean());
             }
             if (obj.has("playbackMode")) {
                 try {

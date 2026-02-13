@@ -153,8 +153,12 @@ public class SceneSerializer {
             obj.addProperty("entityType", template.getEntityType().name());
             obj.addProperty("displayName", template.getDisplayName());
             obj.addProperty("skin", template.getSkinName());
+            obj.addProperty("skinSignature", template.getSkinSignature());
+            obj.addProperty("skinTexture", template.getSkinTexture());
+            obj.addProperty("skinCacheKey", template.getSkinCacheKey());
             obj.addProperty("scale", template.getScale());
             obj.addProperty("playbackMode", template.getPlaybackMode().name());
+            obj.addProperty("previewEnabled", template.isPreviewEnabled());
             JsonArray ticks = new JsonArray();
             for (ActorTransformTick tick : template.getTransformTicks().values()) {
                 JsonObject tickObject = new JsonObject();

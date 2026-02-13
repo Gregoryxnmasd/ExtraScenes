@@ -1,6 +1,7 @@
 package com.extrascenes;
 
 import java.lang.reflect.Method;
+import com.extrascenes.scene.SceneActorTemplate;
 import java.util.UUID;
 import java.util.function.Predicate;
 import org.bukkit.Bukkit;
@@ -24,6 +25,11 @@ public class CitizensAdapter {
     private Method npcSetMoveDestinationMethod;
     private Method playerFilterSetMethod;
     private Method skinTraitSetSkinNameMethod;
+    private Method skinTraitSetSkinPersistentMethod;
+    private Method skinTraitGetSignatureMethod;
+    private Method skinTraitGetTextureMethod;
+    private Method npcGetIdMethod;
+    private Method npcRegistryGetByIdMethod;
 
     public CitizensAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
@@ -61,6 +67,28 @@ public class CitizensAdapter {
         }
     }
 
+    public void applySkinPersistent(Object npc, SceneActorTemplate actorTemplate) {
+        if (!available || npc == null || actorTemplate == null) {
+            return;
+        }
+        if (skinTraitSetSkinPersistentMethod == null
+                || actorTemplate.getSkinTexture() == null || actorTemplate.getSkinTexture().isBlank()
+                || actorTemplate.getSkinSignature() == null || actorTemplate.getSkinSignature().isBlank()) {
+            applySkin(npc, actorTemplate.getSkinName());
+            return;
+        }
+        try {
+            Object skinTrait = npcGetOrAddTraitMethod.invoke(npc, resolveClass("net.citizensnpcs.trait.SkinTrait"));
+            if (skinTrait != null) {
+                String key = actorTemplate.getSkinCacheKey() == null || actorTemplate.getSkinCacheKey().isBlank()
+                        ? actorTemplate.getSkinName() : actorTemplate.getSkinCacheKey();
+                skinTraitSetSkinPersistentMethod.invoke(skinTrait, key, actorTemplate.getSkinSignature(), actorTemplate.getSkinTexture());
+            }
+        } catch (Exception ex) {
+            plugin.getLogger().warning("Failed to apply persistent skin: " + ex.getMessage());
+        }
+    }
+
     public boolean applyPlayerFilter(Object npc, UUID sessionOwner) {
         if (!available || npc == null || sessionOwner == null || playerFilterSetMethod == null) {
             return false;
@@ -76,6 +104,49 @@ public class CitizensAdapter {
             return true;
         } catch (Exception ex) {
             plugin.getLogger().warning("Failed to apply Citizens PlayerFilter: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public Integer resolveSelectedNpcId(Player player) {
+        if (!available || player == null || npcRegistryGetByIdMethod == null) {
+            return null;
+        }
+        try {
+            Method getSelected = resolveClass("net.citizensnpcs.api.CitizensAPI").getMethod("getDefaultNPCSelector");
+            Object selector = getSelected.invoke(null);
+            Method selected = selector.getClass().getMethod("getSelected", Player.class);
+            Object npc = selected.invoke(selector, player);
+            if (npc == null || npcGetIdMethod == null) {
+                return null;
+            }
+            return (Integer) npcGetIdMethod.invoke(npc);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public boolean copySkinFromNpc(SceneActorTemplate target, int npcId) {
+        if (!available || target == null || npcRegistryGetByIdMethod == null) {
+            return false;
+        }
+        try {
+            Object sourceNpc = npcRegistryGetByIdMethod.invoke(npcRegistry, npcId);
+            if (sourceNpc == null) {
+                return false;
+            }
+            Object skinTrait = npcGetOrAddTraitMethod.invoke(sourceNpc, resolveClass("net.citizensnpcs.trait.SkinTrait"));
+            if (skinTrait == null || skinTraitGetTextureMethod == null || skinTraitGetSignatureMethod == null) {
+                return false;
+            }
+            String texture = String.valueOf(skinTraitGetTextureMethod.invoke(skinTrait));
+            String signature = String.valueOf(skinTraitGetSignatureMethod.invoke(skinTrait));
+            target.setSkinTexture(texture);
+            target.setSkinSignature(signature);
+            target.setSkinCacheKey("npc-" + npcId);
+            target.setSkinName(target.getSkinCacheKey());
+            return texture != null && !texture.isBlank() && signature != null && !signature.isBlank();
+        } catch (Exception ex) {
             return false;
         }
     }
@@ -154,11 +225,13 @@ public class CitizensAdapter {
             Method getRegistry = citizensApi.getMethod("getNPCRegistry");
             npcRegistry = getRegistry.invoke(null);
             createNpcMethod = npcRegistryClass.getMethod("createNPC", EntityType.class, String.class);
+            npcRegistryGetByIdMethod = npcRegistryClass.getMethod("getById", int.class);
 
             npcSpawnMethod = npcClass.getMethod("spawn", Location.class);
             npcDestroyMethod = npcClass.getMethod("destroy");
             npcGetEntityMethod = npcClass.getMethod("getEntity");
             npcGetOrAddTraitMethod = npcClass.getMethod("getOrAddTrait", Class.class);
+            npcGetIdMethod = npcClass.getMethod("getId");
             npcSetProtectedMethod = npcClass.getMethod("setProtected", boolean.class);
             try {
                 npcSetUseMinecraftAI = npcClass.getMethod("setUseMinecraftAI", boolean.class);
@@ -179,6 +252,15 @@ public class CitizensAdapter {
                 plugin.getLogger().info("Citizens PlayerFilter trait not available; using Bukkit visibility fallback.");
             }
             skinTraitSetSkinNameMethod = skinTraitClass.getMethod("setSkinName", String.class);
+            try {
+                skinTraitSetSkinPersistentMethod = skinTraitClass.getMethod("setSkinPersistent", String.class, String.class, String.class);
+                skinTraitGetSignatureMethod = skinTraitClass.getMethod("getSignature");
+                skinTraitGetTextureMethod = skinTraitClass.getMethod("getTexture");
+            } catch (Exception ignored) {
+                skinTraitSetSkinPersistentMethod = null;
+                skinTraitGetSignatureMethod = null;
+                skinTraitGetTextureMethod = null;
+            }
         } catch (Exception ex) {
             available = false;
             plugin.getLogger().warning("Citizens detected but API bridge failed: " + ex.getMessage());

@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -33,6 +35,7 @@ public class SceneSession {
     private String activeActionBarText;
     private String lastModelHandle;
     private BukkitTask runtimeTask;
+    private final List<BukkitTask> ownedTasks = new ArrayList<>();
     private int spectatorRecoveryCooldownUntilTick;
     private org.bukkit.inventory.ItemStack originalHelmet;
 
@@ -241,6 +244,20 @@ public class SceneSession {
 
     public void setRuntimeTask(BukkitTask runtimeTask) {
         this.runtimeTask = runtimeTask;
+    }
+
+    public void registerOwnedTask(BukkitTask task) {
+        if (task != null) {
+            ownedTasks.add(task);
+        }
+    }
+
+    public List<BukkitTask> getOwnedTasks() {
+        return Collections.unmodifiableList(ownedTasks);
+    }
+
+    public void clearOwnedTasks() {
+        ownedTasks.clear();
     }
 
     public int getSpectatorRecoveryCooldownUntilTick() {

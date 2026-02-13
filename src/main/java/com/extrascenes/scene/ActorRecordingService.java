@@ -47,6 +47,18 @@ public class ActorRecordingService {
     }
 
 
+    public boolean isRecording(Player player) {
+        return player != null && activeRecordings.containsKey(player.getUniqueId());
+    }
+
+    public boolean isRecordingActor(Player player, String actorId) {
+        if (player == null || actorId == null) {
+            return false;
+        }
+        ActiveRecording active = activeRecordings.get(player.getUniqueId());
+        return active != null && active.template.getActorId().equalsIgnoreCase(actorId);
+    }
+
     public void stopAll(boolean markDirty) {
         for (UUID playerId : new java.util.ArrayList<>(activeRecordings.keySet())) {
             Player player = plugin.getServer().getPlayer(playerId);
@@ -72,6 +84,10 @@ public class ActorRecordingService {
     }
 
     private void capture(Player player, ActiveRecording recording) {
+        if (!player.isOnline()) {
+            stopRecording(player, true);
+            return;
+        }
         int tick = recording.startTick + recording.relativeTick;
         Location loc = player.getLocation();
         Transform transform = Transform.fromLocation(loc);
@@ -82,6 +98,7 @@ public class ActorRecordingService {
                 player.isSprinting(),
                 player.isSwimming(),
                 player.isGliding()));
+        player.sendActionBar("§cREC §7• §f" + recording.template.getActorId() + " §7• §f tick " + String.format("%04d", tick));
         recording.relativeTick++;
     }
 

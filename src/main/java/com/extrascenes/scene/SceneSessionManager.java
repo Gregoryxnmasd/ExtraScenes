@@ -95,8 +95,8 @@ public class SceneSessionManager {
 
         player.teleport(rigStartLocation);
         player.setGameMode(GameMode.SPECTATOR);
-        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 1L, "camera +1");
-        scheduleSpectatorApply(player.getUniqueId(), rig.getUniqueId(), 2L, "camera +2");
+        scheduleSpectatorApply(session, player.getUniqueId(), rig.getUniqueId(), 1L, "camera +1");
+        scheduleSpectatorApply(session, player.getUniqueId(), rig.getUniqueId(), 2L, "camera +2");
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -109,16 +109,16 @@ public class SceneSessionManager {
     }
 
     public void handleDisconnect(Player player, String reason) {
-        finishSession(player.getUniqueId(), reason, false, true);
+        abortSession(player.getUniqueId(), reason);
     }
 
     public void abortSession(UUID playerId, String reason) {
-        finishSession(playerId, reason, false, true);
+        finishSession(playerId, reason, false, false);
     }
 
     public void stopAll(String reason) {
         for (UUID uuid : new HashSet<>(sessions.keySet())) {
-            finishSession(uuid, reason, false, false);
+            abortSession(uuid, reason);
         }
     }
 
@@ -139,6 +139,10 @@ public class SceneSessionManager {
             clearActionBar(player, session);
         }
 
+        for (org.bukkit.scheduler.BukkitTask owned : session.getOwnedTasks()) {
+            owned.cancel();
+        }
+        session.clearOwnedTasks();
         cleanupSessionEntities(session);
 
         if (player != null) {
@@ -259,8 +263,8 @@ public class SceneSessionManager {
         session.clearSceneEntities();
     }
 
-    private void scheduleSpectatorApply(UUID playerId, UUID rigId, long delayTicks, String label) {
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+    private void scheduleSpectatorApply(SceneSession ownerSession, UUID playerId, UUID rigId, long delayTicks, String label) {
+        org.bukkit.scheduler.BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             SceneSession session = sessions.get(playerId);
             if (session == null) {
                 return;
@@ -279,6 +283,7 @@ public class SceneSessionManager {
             plugin.getLogger().info("Camera rig target check (" + label + ") for " + player.getName()
                     + " matched=" + matched);
         }, delayTicks);
+        ownerSession.registerOwnedTask(task);
     }
 
     private Location resolveRigStartLocation(Player player, Scene scene) {

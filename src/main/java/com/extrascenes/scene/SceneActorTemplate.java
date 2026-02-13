@@ -9,8 +9,12 @@ public class SceneActorTemplate {
     private EntityType entityType;
     private String displayName;
     private String skinName;
+    private String skinSignature;
+    private String skinTexture;
+    private String skinCacheKey;
     private double scale;
     private ActorPlaybackMode playbackMode;
+    private boolean previewEnabled;
     private final Map<Integer, ActorTransformTick> transformTicks;
 
     public SceneActorTemplate(String actorId) {
@@ -18,6 +22,7 @@ public class SceneActorTemplate {
         this.entityType = EntityType.PLAYER;
         this.scale = 1.0D;
         this.playbackMode = ActorPlaybackMode.EXACT;
+        this.previewEnabled = true;
         this.transformTicks = new TreeMap<>();
     }
 
@@ -67,6 +72,38 @@ public class SceneActorTemplate {
 
     public Map<Integer, ActorTransformTick> getTransformTicks() {
         return transformTicks;
+    }
+
+    public String getSkinSignature() {
+        return skinSignature;
+    }
+
+    public void setSkinSignature(String skinSignature) {
+        this.skinSignature = skinSignature;
+    }
+
+    public String getSkinTexture() {
+        return skinTexture;
+    }
+
+    public void setSkinTexture(String skinTexture) {
+        this.skinTexture = skinTexture;
+    }
+
+    public String getSkinCacheKey() {
+        return skinCacheKey;
+    }
+
+    public void setSkinCacheKey(String skinCacheKey) {
+        this.skinCacheKey = skinCacheKey;
+    }
+
+    public boolean isPreviewEnabled() {
+        return previewEnabled;
+    }
+
+    public void setPreviewEnabled(boolean previewEnabled) {
+        this.previewEnabled = previewEnabled;
     }
 
     public void putTransformTick(ActorTransformTick tick) {

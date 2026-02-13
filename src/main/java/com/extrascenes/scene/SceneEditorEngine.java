@@ -45,6 +45,8 @@ public class SceneEditorEngine {
         guis.put(GuiType.ACTIONBAR_EDITOR, new ActionBarKeyframeEditorGui(this));
         guis.put(GuiType.EFFECTS_MENU, new EffectsTickMenuGui(this));
         guis.put(GuiType.SCENE_SETTINGS, new SceneSettingsGui(this));
+        guis.put(GuiType.ACTORS_LIST, new ActorsListGui(this));
+        guis.put(GuiType.ACTOR_DETAIL, new ActorDetailGui(this));
         guis.put(GuiType.CONFIRM, new ConfirmGui(this));
     }
 
@@ -142,6 +144,29 @@ public class SceneEditorEngine {
 
     public void openSceneSettings(Player player, EditorSession session, boolean pushHistory) {
         openGui(player, session, GuiType.SCENE_SETTINGS, pushHistory);
+    }
+
+    public void openActorsList(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.ACTORS_LIST, pushHistory);
+    }
+
+    public void openActorDetail(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.ACTOR_DETAIL, pushHistory);
+    }
+
+    public ExtraScenesPlugin getPlugin() {
+        return plugin;
+    }
+
+    public void snapActorScaleFromPlayer(Player player, Scene scene, SceneActorTemplate actor) {
+        org.bukkit.attribute.Attribute attribute = com.extrascenes.ScaleAttributeResolver.resolveScaleAttribute();
+        if (attribute == null || player.getAttribute(attribute) == null) {
+            player.sendMessage(ChatColor.RED + "Scale attribute not available on this server build.");
+            return;
+        }
+        actor.setScale(player.getAttribute(attribute).getValue());
+        markDirty(scene);
+        player.sendMessage(ChatColor.GREEN + "Actor scale snapped from player.");
     }
 
     public void openConfirm(Player player, EditorSession session, ConfirmAction action, SceneTrackType track, UUID keyframeId) {

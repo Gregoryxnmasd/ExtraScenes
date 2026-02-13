@@ -36,6 +36,8 @@ public class SceneDashboardGui implements EditorGui {
                 List.of("Run the scene for real.")));
         inventory.setItem(16, GuiUtils.makeItem(Material.REPEATER, "Settings",
                 List.of("Scene-level settings.")));
+        inventory.setItem(20, GuiUtils.makeItem(Material.PLAYER_HEAD, "Actors",
+                List.of("Manage actor recordings and skins.")));
 
         if (session.hasHistory()) {
             inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to previous menu.")));
@@ -67,6 +69,10 @@ public class SceneDashboardGui implements EditorGui {
         }
         if (slot == 16) {
             editorEngine.openSceneSettings(player, session, true);
+            return;
+        }
+        if (slot == 20) {
+            editorEngine.openActorsList(player, session, true);
             return;
         }
         if (slot == 18 && session.hasHistory()) {

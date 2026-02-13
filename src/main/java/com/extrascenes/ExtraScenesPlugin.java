@@ -8,6 +8,7 @@ import com.extrascenes.scene.SceneEditorEngine;
 import com.extrascenes.scene.SceneEditorListener;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneRuntimeEngine;
+import com.extrascenes.scene.SkinLibrary;
 import com.extrascenes.scene.SceneSessionManager;
 import com.extrascenes.visibility.SceneVisibilityController;
 import org.bukkit.Bukkit;
@@ -26,6 +27,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
     private EditorSessionManager editorSessionManager;
     private SceneEditorEngine editorEngine;
     private ActorRecordingService actorRecordingService;
+    private SkinLibrary skinLibrary;
 
     @Override
     public void onEnable() {
@@ -36,6 +38,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
         this.visibilityController = new SceneVisibilityController(this);
         this.sceneManager = new SceneManager(this);
         this.actorRecordingService = new ActorRecordingService(this);
+        this.skinLibrary = new SkinLibrary(getDataFolder());
         this.editorSessionManager = new EditorSessionManager();
         this.editorEngine = new SceneEditorEngine(this, sceneManager, editorSessionManager);
         this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
@@ -114,5 +117,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SceneRuntimeEngine getRuntimeEngine() {
         return runtimeEngine;
+    }
+
+    public SkinLibrary getSkinLibrary() {
+        return skinLibrary;
     }
 }
