@@ -22,13 +22,15 @@ public class ActorsListGui implements EditorGui {
         for (int i = 0; i < Math.min(45, actors.size()); i++) {
             SceneActorTemplate actor = actors.get(i);
             boolean hasRecording = !actor.getTransformTicks().isEmpty();
+            boolean selected = actor.getActorId().equalsIgnoreCase(session.getSelectedActorId());
             inventory.setItem(i, GuiUtils.makeItem(
-                    hasRecording ? Material.LIME_DYE : Material.GRAY_DYE,
+                    selected ? Material.GLOWSTONE_DUST : (hasRecording ? Material.LIME_DYE : Material.GRAY_DYE),
                     actor.getActorId(),
                     List.of(
                             "Recorded ticks: " + actor.getTransformTicks().size(),
                             "Preview: " + (actor.isPreviewEnabled() ? "ON" : "OFF"),
-                            "Click for details"
+                            "Click for details",
+                            selected ? "[SELECTED]" : ""
                     )));
         }
         inventory.setItem(49, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));

@@ -23,6 +23,9 @@ public class CitizensAdapter {
     private Method npcSetProtectedMethod;
     private Method npcSetUseMinecraftAI;
     private Method npcSetMoveDestinationMethod;
+    private Method npcDataMethod;
+    private Method dataSetPersistentMethod;
+    private Method hologramTraitSetUseNameMethod;
     private Method playerFilterSetMethod;
     private Method skinTraitSetSkinNameMethod;
     private Method skinTraitSetSkinPersistentMethod;
@@ -160,8 +163,31 @@ public class CitizensAdapter {
             if (npcSetUseMinecraftAI != null) {
                 npcSetUseMinecraftAI.invoke(npc, false);
             }
+            disableNameplate(npc);
         } catch (Exception ex) {
             plugin.getLogger().warning("Failed to configure Citizens NPC: " + ex.getMessage());
+        }
+    }
+
+    public void disableNameplate(Object npc) {
+        if (!available || npc == null) {
+            return;
+        }
+        try {
+            if (npcDataMethod != null && dataSetPersistentMethod != null) {
+                Object data = npcDataMethod.invoke(npc);
+                dataSetPersistentMethod.invoke(data, "nameplate-visible", false);
+                dataSetPersistentMethod.invoke(data, "always-use-name-holograms", false);
+            }
+            if (hologramTraitSetUseNameMethod != null) {
+                Object hologramTrait = npcGetOrAddTraitMethod.invoke(npc,
+                        resolveClass("net.citizensnpcs.trait.HologramTrait"));
+                if (hologramTrait != null) {
+                    hologramTraitSetUseNameMethod.invoke(hologramTrait, false);
+                }
+            }
+        } catch (Exception ignored) {
+            // Optional trait/settings in different Citizens versions.
         }
     }
 
@@ -242,6 +268,20 @@ public class CitizensAdapter {
                 npcSetMoveDestinationMethod = npcClass.getMethod("setMoveDestination", Location.class);
             } catch (NoSuchMethodException ignored) {
                 npcSetMoveDestinationMethod = null;
+            }
+            try {
+                npcDataMethod = npcClass.getMethod("data");
+                Class<?> dataClass = resolveClass("net.citizensnpcs.api.util.DataKey");
+                dataSetPersistentMethod = dataClass.getMethod("setBoolean", String.class, boolean.class);
+            } catch (Exception ignored) {
+                npcDataMethod = null;
+                dataSetPersistentMethod = null;
+            }
+            try {
+                Class<?> hologramTraitClass = resolveClass("net.citizensnpcs.trait.HologramTrait");
+                hologramTraitSetUseNameMethod = hologramTraitClass.getMethod("setUseDisplayName", boolean.class);
+            } catch (Exception ignored) {
+                hologramTraitSetUseNameMethod = null;
             }
 
             try {

@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Scene {
+    private final String sceneId;
     private final String name;
     private int durationTicks;
     private final int formatVersion;
@@ -20,7 +21,8 @@ public class Scene {
     private SceneLocation endLocation;
     private boolean dirty;
 
-    public Scene(String name, int durationTicks, int formatVersion, Map<SceneTrackType, Track<? extends Keyframe>> tracks) {
+    public Scene(String sceneId, String name, int durationTicks, int formatVersion, Map<SceneTrackType, Track<? extends Keyframe>> tracks) {
+        this.sceneId = sceneId == null || sceneId.isBlank() ? java.util.UUID.randomUUID().toString() : sceneId;
         this.name = name;
         this.durationTicks = durationTicks;
         this.formatVersion = formatVersion;
@@ -38,6 +40,10 @@ public class Scene {
         this.endTeleportMode = EndTeleportMode.RETURN_TO_START;
         this.endLocation = null;
         this.dirty = false;
+    }
+
+    public String getSceneId() {
+        return sceneId;
     }
 
     public String getName() {

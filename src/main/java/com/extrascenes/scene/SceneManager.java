@@ -43,7 +43,7 @@ public class SceneManager {
         tracks.put(SceneTrackType.PARTICLE, new Track<>(SceneTrackType.PARTICLE));
         tracks.put(SceneTrackType.SOUND, new Track<>(SceneTrackType.SOUND));
         tracks.put(SceneTrackType.BLOCK_ILLUSION, new Track<>(SceneTrackType.BLOCK_ILLUSION));
-        Scene scene = new Scene(name, durationTicks, FORMAT_VERSION, tracks);
+        Scene scene = new Scene(java.util.UUID.randomUUID().toString(), name, durationTicks, FORMAT_VERSION, tracks);
         scene.setDefaultSmoothing(readSmoothing());
         scene.setSmoothingQuality(readSmoothingQuality());
         scene.setFreezePlayer(plugin.getConfig().getBoolean("player.freeze", true));
@@ -82,6 +82,11 @@ public class SceneManager {
         }
         String key = name.toLowerCase();
         if (cache.containsKey(key)) {
+            File cachedFile = new File(scenesFolder, name + ".json");
+            if (!cachedFile.exists()) {
+                cache.remove(key);
+                return null;
+            }
             return cache.get(key);
         }
         File file = new File(scenesFolder, name + ".json");
@@ -146,9 +151,17 @@ public class SceneManager {
     }
 
     public boolean deleteScene(String name) {
+        if (name == null) {
+            return false;
+        }
+        String key = name.toLowerCase();
+        BukkitTask pending = pendingSaves.remove(key);
+        if (pending != null) {
+            pending.cancel();
+        }
+        cache.remove(key);
         File file = new File(scenesFolder, name + ".json");
-        cache.remove(name.toLowerCase());
-        return file.delete();
+        return !file.exists() || file.delete();
     }
 
     public boolean exportScene(String name) throws IOException {

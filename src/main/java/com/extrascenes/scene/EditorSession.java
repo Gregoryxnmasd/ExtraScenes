@@ -24,6 +24,8 @@ public class EditorSession {
     private ItemStack wandBackup;
     private String selectedModelEntryName;
     private String selectedActorId;
+    private boolean previewOtherActors;
+    private int actorRecordingStartTick;
     private String armedModelEntryName;
     private UUID armedModelKeyframeId;
     private GuiType armedReturnGui;
@@ -50,6 +52,8 @@ public class EditorSession {
         this.wandSlot = -1;
         this.wandBackup = null;
         this.currentGui = GuiType.SCENE_DASHBOARD;
+        this.previewOtherActors = true;
+        this.actorRecordingStartTick = 1;
     }
 
     public UUID getPlayerUuid() {
@@ -180,6 +184,22 @@ public class EditorSession {
 
     public void setSelectedActorId(String selectedActorId) {
         this.selectedActorId = selectedActorId;
+    }
+
+    public boolean isPreviewOtherActors() {
+        return previewOtherActors;
+    }
+
+    public void setPreviewOtherActors(boolean previewOtherActors) {
+        this.previewOtherActors = previewOtherActors;
+    }
+
+    public int getActorRecordingStartTick() {
+        return actorRecordingStartTick;
+    }
+
+    public void setActorRecordingStartTick(int actorRecordingStartTick) {
+        this.actorRecordingStartTick = Math.max(1, actorRecordingStartTick);
     }
 
     public String getSelectedModelEntryName() {
