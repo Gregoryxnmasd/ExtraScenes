@@ -42,20 +42,25 @@ public class ActorDetailGui implements EditorGui {
         }
 
         if (!recording) {
-            inventory.setItem(10, GuiUtils.makeItem(Material.LIME_DYE, "Record Start", List.of("Start at current tick: " + session.getCurrentTick())));
+            inventory.setItem(10, GuiUtils.makeItem(Material.LIME_DYE, "Record Start", List.of("Start at selected tick: " + session.getActorRecordingStartTick())));
         }
         if (recording) {
             inventory.setItem(11, GuiUtils.makeItem(Material.RED_DYE, "Record Stop", List.of("Stop active recording.")));
         }
         inventory.setItem(12, GuiUtils.makeItem(actor.isPreviewEnabled() ? Material.ENDER_EYE : Material.ENDER_PEARL,
                 "Preview Toggle", List.of("Current: " + (actor.isPreviewEnabled() ? "ON" : "OFF"))));
+        inventory.setItem(17, GuiUtils.makeItem(session.isPreviewOtherActors() ? Material.LIME_DYE : Material.GRAY_DYE,
+                "Preview other actors", List.of("Current: " + (session.isPreviewOtherActors() ? "ON" : "OFF"))));
         inventory.setItem(13, GuiUtils.makeItem(Material.PLAYER_HEAD, "Skin",
                 List.of("L-Click: set skin name", "R-Click: load first from skin library", "Shift+Click: copy selected Citizens NPC")));
         inventory.setItem(14, GuiUtils.makeItem(Material.SLIME_BALL, "Scale: Snap from Player", List.of("Current: " + String.format(Locale.ROOT, "%.3f", actor.getScale()))));
         inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Delete", List.of("Remove this actor template.")));
         inventory.setItem(16, GuiUtils.makeItem(Material.CLOCK, "Timeline Window",
                 List.of("Cursor tick: " + session.getCurrentTick(), "Window: " + groupStart + "-" + (groupStart + 8),
-                        "Recorded: " + (ticks.isEmpty() ? "none" : ticks.stream().map(String::valueOf).collect(Collectors.joining(", "))))));
+                        "Recorded: " + (ticks.isEmpty() ? "none" : ticks.stream().map(String::valueOf).collect(Collectors.joining(", "))),
+                        "Click: actors timeline")));
+        inventory.setItem(21, GuiUtils.makeItem(Material.REPEATER, "Set Start Tick",
+                List.of("Current: " + session.getActorRecordingStartTick(), "Left: -9", "Right: +9", "Shift: sync with cursor")));
         inventory.setItem(22, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to actors.")));
         return inventory;
     }
@@ -76,8 +81,8 @@ public class ActorDetailGui implements EditorGui {
                 player.sendMessage(ChatColor.RED + "Already recording this actor.");
                 return;
             }
-            editorEngine.getPlugin().getActorRecordingService().startRecording(player, scene, actor, session.getCurrentTick());
-            player.sendMessage(ChatColor.GREEN + "Recording actor " + actor.getActorId() + " from tick " + session.getCurrentTick());
+            editorEngine.getPlugin().getActorRecordingService().startRecording(player, scene, actor, session.getActorRecordingStartTick(), session.isPreviewOtherActors());
+            player.sendMessage(ChatColor.GREEN + "Recording actor " + actor.getActorId() + " from tick " + session.getActorRecordingStartTick());
         } else if (ctx.getSlot() == 11) {
             if (!recording) {
                 player.sendMessage(ChatColor.RED + "No active recording.");
@@ -119,6 +124,21 @@ public class ActorDetailGui implements EditorGui {
             }
         } else if (ctx.getSlot() == 14) {
             editorEngine.snapActorScaleFromPlayer(player, scene, actor);
+        } else if (ctx.getSlot() == 16) {
+            editorEngine.openActorTimeline(player, session, true);
+            return;
+        } else if (ctx.getSlot() == 17) {
+            session.setPreviewOtherActors(!session.isPreviewOtherActors());
+        } else if (ctx.getSlot() == 21) {
+            int value = session.getActorRecordingStartTick();
+            if (ctx.isShiftClick()) {
+                value = session.getCurrentTick();
+            } else if (ctx.isRightClick()) {
+                value += 9;
+            } else {
+                value -= 9;
+            }
+            session.setActorRecordingStartTick(Math.max(1, Math.min(scene.getDurationTicks(), value)));
         } else if (ctx.getSlot() == 15) {
             scene.removeActorTemplate(actor.getActorId());
             editorEngine.markDirty(scene);

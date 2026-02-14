@@ -21,6 +21,10 @@ public class EditorSessionManager {
         sessions.remove(playerId);
     }
 
+    public java.util.Map<UUID, EditorSession> getSessionsView() {
+        return java.util.Collections.unmodifiableMap(sessions);
+    }
+
     public void clear() {
         sessions.clear();
     }

@@ -370,6 +370,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         boolean deleted = sceneManager.deleteScene(name);
+        if (deleted) {
+            editorEngine.forceCloseEditorsForScene(name);
+        }
         sender.sendMessage(deleted ? ChatColor.GREEN + "Scene deleted." : ChatColor.RED + "Scene not found.");
     }
 

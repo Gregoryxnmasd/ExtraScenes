@@ -31,6 +31,7 @@ public class SceneDeserializer {
 
     public Scene fromJson(JsonObject root) {
         int formatVersion = root.has("formatVersion") ? root.get("formatVersion").getAsInt() : 1;
+        String sceneId = getString(root, "sceneId");
         String name = root.has("name") ? root.get("name").getAsString() : "scene";
         int durationTicks = root.has("durationTicks") ? root.get("durationTicks").getAsInt() : 0;
         SmoothingMode defaultSmoothing = parseSmoothing(root.has("defaultSmoothing")
@@ -70,7 +71,7 @@ public class SceneDeserializer {
             }
         }
 
-        Scene scene = new Scene(name, durationTicks, formatVersion, tracks);
+        Scene scene = new Scene(sceneId, name, durationTicks, formatVersion, tracks);
         scene.setDefaultSmoothing(defaultSmoothing);
         scene.setSmoothingQuality(smoothingQuality);
         scene.setFreezePlayer(freezePlayer);
@@ -437,6 +438,23 @@ public class SceneDeserializer {
                             tickObj.has("swimming") && tickObj.get("swimming").getAsBoolean(),
                             tickObj.has("gliding") && tickObj.get("gliding").getAsBoolean()
                     ));
+                }
+            }
+            if (obj.has("actions") && obj.get("actions").isJsonArray()) {
+                for (JsonElement actionElement : obj.getAsJsonArray("actions")) {
+                    if (!actionElement.isJsonObject()) {
+                        continue;
+                    }
+                    JsonObject actionObj = actionElement.getAsJsonObject();
+                    int tick = actionObj.has("tick") ? actionObj.get("tick").getAsInt() : 0;
+                    ActorTickAction action = template.getOrCreateTickAction(tick);
+                    action.setSpawn(actionObj.has("spawn") && actionObj.get("spawn").getAsBoolean());
+                    action.setDespawn(actionObj.has("despawn") && actionObj.get("despawn").getAsBoolean());
+                    action.setManualTransform(actionObj.has("manualTransform") && actionObj.get("manualTransform").getAsBoolean());
+                    action.setAnimation(getString(actionObj, "animation"));
+                    action.setStopAnimation(actionObj.has("stopAnimation") && actionObj.get("stopAnimation").getAsBoolean());
+                    action.setLookAtTarget(deserializeLookAt(actionObj.get("lookAt")));
+                    action.setCommand(getString(actionObj, "command"));
                 }
             }
             templates.add(template);

@@ -16,6 +16,7 @@ public class SceneActorTemplate {
     private ActorPlaybackMode playbackMode;
     private boolean previewEnabled;
     private final Map<Integer, ActorTransformTick> transformTicks;
+    private final Map<Integer, ActorTickAction> tickActions;
 
     public SceneActorTemplate(String actorId) {
         this.actorId = actorId;
@@ -24,6 +25,7 @@ public class SceneActorTemplate {
         this.playbackMode = ActorPlaybackMode.EXACT;
         this.previewEnabled = true;
         this.transformTicks = new TreeMap<>();
+        this.tickActions = new TreeMap<>();
     }
 
     public String getActorId() {
@@ -114,5 +116,17 @@ public class SceneActorTemplate {
 
     public ActorTransformTick getTransformTick(int tick) {
         return transformTicks.get(tick);
+    }
+
+    public Map<Integer, ActorTickAction> getTickActions() {
+        return tickActions;
+    }
+
+    public ActorTickAction getOrCreateTickAction(int tick) {
+        return tickActions.computeIfAbsent(Math.max(0, tick), ActorTickAction::new);
+    }
+
+    public ActorTickAction getTickAction(int tick) {
+        return tickActions.get(Math.max(0, tick));
     }
 }

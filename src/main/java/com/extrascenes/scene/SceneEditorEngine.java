@@ -17,6 +17,7 @@ public class SceneEditorEngine {
     private final EditorSessionManager editorSessionManager;
     private final EditorInputManager inputManager;
     private final Map<GuiType, EditorGui> guis = new EnumMap<>(GuiType.class);
+    private final Map<UUID, String> lastSelectedSceneByPlayer = new java.util.HashMap<>();
 
     public SceneEditorEngine(ExtraScenesPlugin plugin, SceneManager sceneManager, EditorSessionManager editorSessionManager) {
         this.plugin = plugin;
@@ -47,6 +48,8 @@ public class SceneEditorEngine {
         guis.put(GuiType.SCENE_SETTINGS, new SceneSettingsGui(this));
         guis.put(GuiType.ACTORS_LIST, new ActorsListGui(this));
         guis.put(GuiType.ACTOR_DETAIL, new ActorDetailGui(this));
+        guis.put(GuiType.ACTOR_TIMELINE, new ActorTimelineGui(this));
+        guis.put(GuiType.ACTOR_TICK_ACTIONS, new ActorTickActionsGui(this));
         guis.put(GuiType.CONFIRM, new ConfirmGui(this));
     }
 
@@ -59,11 +62,16 @@ public class SceneEditorEngine {
     }
 
     public void openEditor(Player player, Scene scene) {
+        if (scene == null) {
+            return;
+        }
         Scene cached = sceneManager.loadScene(scene.getName());
         if (cached == null) {
-            cached = scene;
+            player.sendMessage(ChatColor.RED + "Scene file is missing; cannot open editor.");
+            return;
         }
         sceneManager.cacheScene(cached);
+        lastSelectedSceneByPlayer.put(player.getUniqueId(), cached.getName());
         EditorSession session = editorSessionManager.getSession(player.getUniqueId());
         if (session == null) {
             session = editorSessionManager.createSession(player.getUniqueId(), cached);
@@ -152,6 +160,14 @@ public class SceneEditorEngine {
 
     public void openActorDetail(Player player, EditorSession session, boolean pushHistory) {
         openGui(player, session, GuiType.ACTOR_DETAIL, pushHistory);
+    }
+
+    public void openActorTimeline(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.ACTOR_TIMELINE, pushHistory);
+    }
+
+    public void openActorTickActions(Player player, EditorSession session, boolean pushHistory) {
+        openGui(player, session, GuiType.ACTOR_TICK_ACTIONS, pushHistory);
     }
 
     public ExtraScenesPlugin getPlugin() {
@@ -964,4 +980,30 @@ public class SceneEditorEngine {
             }
         }
     }
+
+    public void clearLastSelectedScene(UUID playerId, String sceneName) {
+        if (playerId == null || sceneName == null) {
+            return;
+        }
+        String selected = lastSelectedSceneByPlayer.get(playerId);
+        if (selected != null && selected.equalsIgnoreCase(sceneName)) {
+            lastSelectedSceneByPlayer.remove(playerId);
+        }
+    }
+
+    public void forceCloseEditorsForScene(String sceneName) {
+        for (var entry : new java.util.HashMap<>(editorSessionManager.getSessionsView()).entrySet()) {
+            EditorSession session = entry.getValue();
+            if (session != null && session.getScene() != null && session.getScene().getName().equalsIgnoreCase(sceneName)) {
+                Player player = org.bukkit.Bukkit.getPlayer(entry.getKey());
+                if (player != null) {
+                    closeEditor(player, session);
+                    player.sendMessage(ChatColor.RED + "Scene was deleted; editor closed.");
+                }
+                editorSessionManager.removeSession(entry.getKey());
+                clearLastSelectedScene(entry.getKey(), sceneName);
+            }
+        }
+    }
+
 }

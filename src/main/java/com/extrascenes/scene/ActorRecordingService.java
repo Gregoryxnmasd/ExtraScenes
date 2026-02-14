@@ -19,8 +19,12 @@ public class ActorRecordingService {
     }
 
     public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick) {
+        return startRecording(player, scene, template, startTick, true);
+    }
+
+    public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers) {
         stopRecording(player, false);
-        ActiveRecording recording = new ActiveRecording(scene, template, startTick);
+        ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers);
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> capture(player, recording), 1L, 1L);
         recording.task = task;
         activeRecordings.put(player.getUniqueId(), recording);
@@ -36,6 +40,7 @@ public class ActorRecordingService {
         if (recording.task != null) {
             recording.task.cancel();
         }
+        plugin.getRuntimeEngine().clearRecordingPreview(player);
         if (markDirty) {
             recording.scene.setDirty(true);
             try {
@@ -73,7 +78,8 @@ public class ActorRecordingService {
             if (recording.task != null) {
                 recording.task.cancel();
             }
-            if (markDirty) {
+            plugin.getRuntimeEngine().clearRecordingPreview(player);
+        if (markDirty) {
                 recording.scene.setDirty(true);
                 try {
                     plugin.getSceneManager().saveScene(recording.scene);
@@ -98,7 +104,10 @@ public class ActorRecordingService {
                 player.isSprinting(),
                 player.isSwimming(),
                 player.isGliding()));
-        player.sendActionBar("§cREC §7• §f" + recording.template.getActorId() + " §7• §f tick " + String.format("%04d", tick));
+        player.sendActionBar("§cREC §7• §fActor: " + recording.template.getActorId() + " §7• §fTick: " + String.format("%04d", tick));
+        if (recording.previewOthers) {
+            plugin.getRuntimeEngine().previewActorsAtTick(player, recording.scene, recording.template.getActorId(), tick);
+        }
         recording.relativeTick++;
     }
 
@@ -116,11 +125,13 @@ public class ActorRecordingService {
         private final int startTick;
         private int relativeTick;
         private BukkitTask task;
+        private final boolean previewOthers;
 
-        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick) {
+        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers) {
             this.scene = scene;
             this.template = template;
             this.startTick = Math.max(0, startTick);
+            this.previewOthers = previewOthers;
         }
     }
 }

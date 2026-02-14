@@ -21,5 +21,7 @@ public enum GuiType {
     SCENE_SETTINGS,
     ACTORS_LIST,
     ACTOR_DETAIL,
+    ACTOR_TIMELINE,
+    ACTOR_TICK_ACTIONS,
     CONFIRM
 }

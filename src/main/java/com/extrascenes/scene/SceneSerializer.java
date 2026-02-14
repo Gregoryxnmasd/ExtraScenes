@@ -27,6 +27,7 @@ public class SceneSerializer {
     public JsonObject toJson(Scene scene) {
         JsonObject root = new JsonObject();
         root.addProperty("formatVersion", scene.getFormatVersion());
+        root.addProperty("sceneId", scene.getSceneId());
         root.addProperty("name", scene.getName());
         root.addProperty("durationTicks", scene.getDurationTicks());
         root.addProperty("defaultSmoothing", scene.getDefaultSmoothing().name());
@@ -171,6 +172,20 @@ public class SceneSerializer {
                 ticks.add(tickObject);
             }
             obj.add("movement", ticks);
+            JsonArray actions = new JsonArray();
+            for (ActorTickAction action : template.getTickActions().values()) {
+                JsonObject actionObj = new JsonObject();
+                actionObj.addProperty("tick", action.getTick());
+                actionObj.addProperty("spawn", action.isSpawn());
+                actionObj.addProperty("despawn", action.isDespawn());
+                actionObj.addProperty("manualTransform", action.isManualTransform());
+                actionObj.addProperty("animation", action.getAnimation());
+                actionObj.addProperty("stopAnimation", action.isStopAnimation());
+                actionObj.add("lookAt", serializeLookAt(action.getLookAtTarget()));
+                actionObj.addProperty("command", action.getCommand());
+                actions.add(actionObj);
+            }
+            obj.add("actions", actions);
             array.add(obj);
         }
         return array;
