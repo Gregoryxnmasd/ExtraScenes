@@ -31,6 +31,7 @@ public class SceneRuntimeEngine {
     private final CitizensAdapter citizensAdapter;
     private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
     private final Map<UUID, Map<String, SessionActorHandle>> recordingPreviewHandles = new HashMap<>();
+    private volatile boolean actorDebugEnabled = false;
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
                               SceneVisibilityController visibilityController,
@@ -40,6 +41,16 @@ public class SceneRuntimeEngine {
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
         this.citizensAdapter = plugin.getCitizensAdapter();
+    }
+
+
+    public void setActorDebugEnabled(boolean actorDebugEnabled) {
+        this.actorDebugEnabled = actorDebugEnabled;
+        plugin.getLogger().info("Actor transform debug " + (actorDebugEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    public boolean isActorDebugEnabled() {
+        return actorDebugEnabled;
     }
 
     public void start() {
@@ -113,6 +124,31 @@ public class SceneRuntimeEngine {
     }
 
 
+
+    private void maybeLogActorTransform(Player viewer, String actorId, int tick, Transform transform, SessionActorHandle handle,
+                                        boolean recordingPreview) {
+        if (!actorDebugEnabled || transform == null || tick % 20 != 0) {
+            return;
+        }
+        String mode = recordingPreview ? "preview" : "runtime";
+        String entityInfo = handle != null && handle.getEntity() != null
+                ? handle.getEntity().getUniqueId().toString() + " visible=" + viewer.canSee(handle.getEntity())
+                : "missing";
+        plugin.getLogger().info(String.format(java.util.Locale.ROOT,
+                "Actor %s tick %d -> %.2f %.2f %.2f %.1f %.1f (applied, %s, entity=%s)",
+                actorId, tick, transform.getX(), transform.getY(), transform.getZ(), transform.getYaw(), transform.getPitch(),
+                mode, entityInfo));
+    }
+
+    private void clearNameplate(Entity entity, Object npc) {
+        if (entity != null) {
+            entity.customName(null);
+            entity.setCustomName(null);
+            entity.setCustomNameVisible(false);
+        }
+        citizensAdapter.disableNameplate(npc);
+    }
+
     private void tickSessionActors(Player viewer, SceneSession session, int tick) {
         if (!citizensAdapter.isAvailable()) {
             return;
@@ -158,6 +194,7 @@ public class SceneRuntimeEngine {
             if (transformTick != null && handle.getEntity() instanceof LivingEntity living) {
                 living.setGliding(transformTick.isGliding());
             }
+            maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, false);
             if (action != null && action.getCommand() != null && !action.getCommand().isBlank()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), action.getCommand().replace("{player}", viewer.getName()));
             }
@@ -191,8 +228,7 @@ public class SceneRuntimeEngine {
             entity.setSilent(true);
             entity.setInvulnerable(true);
             entity.setGravity(false);
-            entity.customName(null);
-            entity.setCustomNameVisible(false);
+            clearNameplate(entity, npc);
             if (entity instanceof LivingEntity livingEntity) {
                 livingEntity.setAI(false);
             }
@@ -266,10 +302,8 @@ public class SceneRuntimeEngine {
                     citizensAdapter.destroy(npc);
                     continue;
                 }
-                entity.customName(null);
-                entity.setCustomNameVisible(false);
+                clearNameplate(entity, npc);
                 entity.setInvisible(true);
-                citizensAdapter.disableNameplate(npc);
                 citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
                 handles.put(template.getActorId().toLowerCase(), handle);
@@ -282,6 +316,7 @@ public class SceneRuntimeEngine {
                 handle.getEntity().teleport(loc);
                 handle.getEntity().setInvisible(false);
                 handle.setLastTransform(transform);
+                maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true);
             }
         }
     }

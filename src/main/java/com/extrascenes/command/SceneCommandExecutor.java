@@ -25,8 +25,8 @@ import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
-            "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend", "debugcamera", "actor"
+            "edit", "stop", "reload", "list",
+            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera", "debugactors", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -64,16 +64,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "cancel" -> handleCancel(sender);
             case "here" -> handleHere(sender);
             case "setend" -> handleSetEnd(sender, args);
-            case "play" -> handlePlay(sender, args);
             case "stop" -> handleStop(sender, args);
-            case "pause" -> handlePause(sender, args);
-            case "resume" -> handleResume(sender, args);
             case "reload" -> handleReload(sender);
             case "list" -> handleList(sender);
             case "delete" -> handleDelete(sender, args);
-            case "rename" -> handleRename(sender, args);
-            case "duplicate" -> handleDuplicate(sender, args);
-            case "debugcamera" -> handleDebugCamera(sender, args);
+            case "debugactors" -> handleDebugActors(sender, args);
+        sender.sendMessage(ChatColor.AQUA + "/scene debugactors <on|off>");
             case "actor" -> handleActor(sender, args);
             default -> sender.sendMessage(ChatColor.RED + "Unknown scene subcommand.");
         }
@@ -241,51 +237,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Usage: /scene setend <here|x y z yaw pitch>");
             return;
         }
-        if (args[1].equalsIgnoreCase("here")) {
-            session.getScene().setEndLocation(SceneLocation.fromLocation(player.getLocation()));
-            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
-            editorEngine.markDirty(session.getScene());
-            sender.sendMessage(ChatColor.GREEN + "Scene end location set to your current position.");
-            return;
-        }
-        if (args.length < 6) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene setend <here|x y z yaw pitch>");
-            return;
-        }
-        try {
-            double x = Double.parseDouble(args[1]);
-            double y = Double.parseDouble(args[2]);
-            double z = Double.parseDouble(args[3]);
-            float yaw = Float.parseFloat(args[4]);
-            float pitch = Float.parseFloat(args[5]);
-            SceneLocation location = new SceneLocation(player.getWorld().getName(), x, y, z, yaw, pitch);
-            session.getScene().setEndLocation(location);
-            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
-            editorEngine.markDirty(session.getScene());
-            sender.sendMessage(ChatColor.GREEN + "Scene end location updated.");
-        } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "Invalid coordinates.");
-        }
-    }
-
-    private void handlePlay(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("scenes.play")) {
-            sender.sendMessage(ChatColor.RED + "You lack permission to play scenes.");
-            return;
-        }
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene play <name> [player] [startTick] [endTick]");
-            return;
-        }
-        String name = args[1].toLowerCase(Locale.ROOT);
-        Scene scene = sceneManager.loadScene(name);
-        if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
-            return;
-        }
-        Player target = sender instanceof Player player ? player : null;
-        if (args.length >= 3) {
-            Player specified = Bukkit.getPlayer(args[2]);
+        sender.sendMessage(ChatColor.YELLOW + "Scene playback command is temporarily disabled until stabilized.");
             if (specified != null) {
                 target = specified;
             }
@@ -355,6 +307,16 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private void handleReload(CommandSender sender) {
         plugin.reloadConfig();
         sceneManager.reloadAll();
+    private void handleDebugActors(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene debugactors <on|off>");
+            return;
+        }
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
+        sender.sendMessage(ChatColor.YELLOW + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
+    }
+
         sender.sendMessage(ChatColor.GREEN + "Scenes reloaded.");
     }
 
@@ -581,18 +543,10 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Scene not found.");
             return;
         }
-        SceneActorTemplate template = scene.getActorTemplate(args[3]);
-        if (template == null) {
-            sender.sendMessage(ChatColor.RED + "Actor not found.");
-            return;
-        }
-        String mode = args[4].toUpperCase(Locale.ROOT);
-        try {
-            template.setPlaybackMode(com.extrascenes.scene.ActorPlaybackMode.valueOf(mode));
-            scene.setDirty(true);
-            sceneManager.saveScene(scene);
-            sender.sendMessage(ChatColor.GREEN + "Actor playback mode updated to " + mode + ".");
-        } catch (IllegalArgumentException ex) {
+            if (List.of("edit", "delete", "group").contains(sub)) {
+            if (List.of("stop", "debugcamera").contains(sub)) {
+                if (sub.equals("debugactors") && args.length == 2) {
+            return filterPrefix(List.of("on", "off"), args[1]);
             sender.sendMessage(ChatColor.RED + "Playback mode must be exact or walk.");
         } catch (Exception ex) {
             sender.sendMessage(ChatColor.RED + "Failed to save scene.");
