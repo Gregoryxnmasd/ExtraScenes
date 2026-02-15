@@ -27,7 +27,7 @@ public class GroupSelectGui implements EditorGui {
         if (currentPage != session.getGroupPage()) {
             session.setGroupPage(currentPage);
         }
-        Inventory inventory = GuiUtils.createInventory(54, session.getSceneName() + " • Groups");
+        Inventory inventory = GuiUtils.createInventory(54, session.getSceneName() + " • Groups " + (currentPage + 1) + "/" + Math.max(1, totalPages));
         GuiUtils.fillInventory(inventory);
 
         inventory.setItem(4, GuiUtils.makeItem(Material.BOOK, "Groups",
@@ -83,7 +83,7 @@ public class GroupSelectGui implements EditorGui {
         int maxPage = Math.max(0, totalPages - 1);
         int currentPage = Math.min(session.getGroupPage(), maxPage);
         if (slot == 45) {
-            editorEngine.navigateBack(player, session);
+            editorEngine.openDashboard(player, session, false);
             return;
         }
         if (slot == 46 && totalPages > 1) {

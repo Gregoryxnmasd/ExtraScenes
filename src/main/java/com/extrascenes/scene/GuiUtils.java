@@ -69,7 +69,8 @@ public final class GuiUtils {
             return;
         }
         Inventory top = player.getOpenInventory().getTopInventory();
-        if (top.getSize() != updated.getSize()) {
+        String currentTitle = player.getOpenInventory().getTitle();
+        if (top.getSize() != updated.getSize() || !currentTitle.equals(updated.getTitle())) {
             player.openInventory(updated);
             return;
         }

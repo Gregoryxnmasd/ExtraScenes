@@ -82,7 +82,7 @@ public class SceneManager {
         }
         String key = name.toLowerCase();
         if (cache.containsKey(key)) {
-            File cachedFile = new File(scenesFolder, name + ".json");
+            File cachedFile = new File(scenesFolder, cache.get(key).getName() + ".json");
             if (!cachedFile.exists()) {
                 cache.remove(key);
                 return null;
@@ -164,6 +164,71 @@ public class SceneManager {
         return !file.exists() || file.delete();
     }
 
+
+    public boolean renameScene(String oldName, String newName) {
+        if (oldName == null || newName == null || newName.isBlank()) {
+            return false;
+        }
+        if (sceneExists(newName)) {
+            return false;
+        }
+        Scene source = loadScene(oldName);
+        if (source == null) {
+            return false;
+        }
+        Scene clone = deepCloneScene(source, newName);
+        if (clone == null) {
+            return false;
+        }
+        try {
+            saveScene(clone);
+        } catch (IOException ex) {
+            return false;
+        }
+        cache.put(newName.toLowerCase(), clone);
+        deleteScene(oldName);
+        return true;
+    }
+
+    public boolean duplicateScene(String sourceName, String targetName) {
+        if (sourceName == null || targetName == null || targetName.isBlank() || sceneExists(targetName)) {
+            return false;
+        }
+        Scene source = loadScene(sourceName);
+        if (source == null) {
+            return false;
+        }
+        Scene clone = deepCloneScene(source, targetName);
+        if (clone == null) {
+            return false;
+        }
+        try {
+            saveScene(clone);
+        } catch (IOException ex) {
+            return false;
+        }
+        cache.put(targetName.toLowerCase(), clone);
+        return true;
+    }
+
+    private Scene deepCloneScene(Scene source, String newName) {
+        try {
+            Path temp = java.nio.file.Files.createTempFile("extrascenes-clone", ".json");
+            serializer.write(source, temp);
+            Scene cloned = deserializer.read(temp);
+            java.nio.file.Files.deleteIfExists(temp);
+            if (cloned == null) {
+                return null;
+            }
+            cloned.setName(newName);
+            ensureTracks(cloned);
+            cloned.setDirty(true);
+            return cloned;
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
     public boolean exportScene(String name) throws IOException {
         File source = new File(scenesFolder, name + ".json");
         if (!source.exists()) {
@@ -184,6 +249,21 @@ public class SceneManager {
         return true;
     }
 
+
+    public long getSceneLastModified(String name) {
+        if (name == null) {
+            return 0L;
+        }
+        File file = new File(scenesFolder, name + ".json");
+        return file.exists() ? file.lastModified() : 0L;
+    }
+
+    public boolean sceneExists(String name) {
+        if (name == null) {
+            return false;
+        }
+        return new File(scenesFolder, name + ".json").exists();
+    }
     public List<String> listScenes() {
         File[] files = scenesFolder.listFiles((dir, fileName) -> fileName.endsWith(".json"));
         if (files == null) {

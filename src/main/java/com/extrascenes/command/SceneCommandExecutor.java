@@ -25,8 +25,8 @@ import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
-            "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera", "actor"
+            "edit", "stop", "reload", "list",
+            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera", "debugactors", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -47,7 +47,11 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sendHelp(sender);
+            if (sender instanceof Player player) {
+                editorEngine.openMainMenu(player);
+            } else {
+                sendHelp(sender);
+            }
             return true;
         }
 
@@ -60,14 +64,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "cancel" -> handleCancel(sender);
             case "here" -> handleHere(sender);
             case "setend" -> handleSetEnd(sender, args);
-            case "play" -> handlePlay(sender, args);
             case "stop" -> handleStop(sender, args);
-            case "pause" -> handlePause(sender, args);
-            case "resume" -> handleResume(sender, args);
             case "reload" -> handleReload(sender);
             case "list" -> handleList(sender);
             case "delete" -> handleDelete(sender, args);
-            case "debugcamera" -> handleDebugCamera(sender, args);
+            case "debugactors" -> handleDebugActors(sender, args);
+        sender.sendMessage(ChatColor.AQUA + "/scene debugactors <on|off>");
             case "actor" -> handleActor(sender, args);
             default -> sender.sendMessage(ChatColor.RED + "Unknown scene subcommand.");
         }
@@ -84,6 +86,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene list");
         sender.sendMessage(ChatColor.AQUA + "/scene create <name> [duration]");
         sender.sendMessage(ChatColor.AQUA + "/scene delete <name>");
+        sender.sendMessage(ChatColor.AQUA + "/scene rename <old> <new>");
+        sender.sendMessage(ChatColor.AQUA + "/scene duplicate <source> <target>");
         sender.sendMessage(ChatColor.AQUA + "/scene group <number>");
         sender.sendMessage(ChatColor.AQUA + "/scene tick <tick>");
         sender.sendMessage(ChatColor.AQUA + "/scene cancel");
@@ -233,51 +237,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Usage: /scene setend <here|x y z yaw pitch>");
             return;
         }
-        if (args[1].equalsIgnoreCase("here")) {
-            session.getScene().setEndLocation(SceneLocation.fromLocation(player.getLocation()));
-            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
-            editorEngine.markDirty(session.getScene());
-            sender.sendMessage(ChatColor.GREEN + "Scene end location set to your current position.");
-            return;
-        }
-        if (args.length < 6) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene setend <here|x y z yaw pitch>");
-            return;
-        }
-        try {
-            double x = Double.parseDouble(args[1]);
-            double y = Double.parseDouble(args[2]);
-            double z = Double.parseDouble(args[3]);
-            float yaw = Float.parseFloat(args[4]);
-            float pitch = Float.parseFloat(args[5]);
-            SceneLocation location = new SceneLocation(player.getWorld().getName(), x, y, z, yaw, pitch);
-            session.getScene().setEndLocation(location);
-            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
-            editorEngine.markDirty(session.getScene());
-            sender.sendMessage(ChatColor.GREEN + "Scene end location updated.");
-        } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "Invalid coordinates.");
-        }
-    }
-
-    private void handlePlay(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("scenes.play")) {
-            sender.sendMessage(ChatColor.RED + "You lack permission to play scenes.");
-            return;
-        }
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene play <name> [player] [startTick] [endTick]");
-            return;
-        }
-        String name = args[1].toLowerCase(Locale.ROOT);
-        Scene scene = sceneManager.loadScene(name);
-        if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
-            return;
-        }
-        Player target = sender instanceof Player player ? player : null;
-        if (args.length >= 3) {
-            Player specified = Bukkit.getPlayer(args[2]);
+        sender.sendMessage(ChatColor.YELLOW + "Scene playback command is temporarily disabled until stabilized.");
             if (specified != null) {
                 target = specified;
             }
@@ -347,6 +307,16 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private void handleReload(CommandSender sender) {
         plugin.reloadConfig();
         sceneManager.reloadAll();
+    private void handleDebugActors(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene debugactors <on|off>");
+            return;
+        }
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
+        sender.sendMessage(ChatColor.YELLOW + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
+    }
+
         sender.sendMessage(ChatColor.GREEN + "Scenes reloaded.");
     }
 
@@ -372,8 +342,32 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         boolean deleted = sceneManager.deleteScene(name);
         if (deleted) {
             editorEngine.forceCloseEditorsForScene(name);
+            editorEngine.clearLastSelectedSceneReferences(name);
         }
         sender.sendMessage(deleted ? ChatColor.GREEN + "Scene deleted." : ChatColor.RED + "Scene not found.");
+    }
+
+
+    private void handleRename(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene rename <old> <new>");
+            return;
+        }
+        boolean renamed = sceneManager.renameScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
+        if (renamed) {
+            editorEngine.forceCloseEditorsForScene(args[1]);
+            editorEngine.clearLastSelectedSceneReferences(args[1]);
+        }
+        sender.sendMessage(renamed ? ChatColor.GREEN + "Scene renamed." : ChatColor.RED + "Rename failed.");
+    }
+
+    private void handleDuplicate(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene duplicate <source> <target>");
+            return;
+        }
+        boolean duplicated = sceneManager.duplicateScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
+        sender.sendMessage(duplicated ? ChatColor.GREEN + "Scene duplicated." : ChatColor.RED + "Duplicate failed.");
     }
 
     private void handleDebugCamera(CommandSender sender, String[] args) {
@@ -435,7 +429,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|skin|playback|scale|record> ...");
+            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|rename|delete|skin|playback|scale|record> ...");
             return;
         }
         String mode = args[1].toLowerCase(Locale.ROOT);
@@ -460,6 +454,52 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 } catch (Exception ex) {
                     sender.sendMessage(ChatColor.RED + "Failed to save scene.");
                 }
+            }
+            case "rename" -> {
+                if (args.length < 5) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor rename <scene> <oldId> <newId>");
+                    return;
+                }
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene == null) {
+                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    return;
+                }
+                SceneActorTemplate template = scene.getActorTemplate(args[3]);
+                if (template == null) {
+                    sender.sendMessage(ChatColor.RED + "Actor not found.");
+                    return;
+                }
+                scene.removeActorTemplate(args[3]);
+                SceneActorTemplate renamed = new SceneActorTemplate(args[4]);
+                renamed.setDisplayName(args[4]);
+                renamed.setEntityType(template.getEntityType());
+                renamed.setSkinName(template.getSkinName());
+                renamed.setSkinSignature(template.getSkinSignature());
+                renamed.setSkinTexture(template.getSkinTexture());
+                renamed.setSkinCacheKey(template.getSkinCacheKey());
+                renamed.setScale(template.getScale());
+                renamed.setPlaybackMode(template.getPlaybackMode());
+                renamed.setPreviewEnabled(template.isPreviewEnabled());
+                renamed.getTransformTicks().putAll(template.getTransformTicks());
+                renamed.getTickActions().putAll(template.getTickActions());
+                scene.putActorTemplate(renamed);
+                sceneManager.markDirty(scene);
+                sender.sendMessage(ChatColor.GREEN + "Actor renamed.");
+            }
+            case "delete" -> {
+                if (args.length < 5 || !"confirm".equalsIgnoreCase(args[4])) {
+                    sender.sendMessage(ChatColor.YELLOW + "Usage: /scene actor delete <scene> <actorId> confirm");
+                    return;
+                }
+                Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
+                if (scene == null) {
+                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    return;
+                }
+                scene.removeActorTemplate(args[3]);
+                sceneManager.markDirty(scene);
+                sender.sendMessage(ChatColor.GREEN + "Actor deleted.");
             }
             case "skin" -> {
                 if (args.length < 5) {
@@ -503,18 +543,10 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Scene not found.");
             return;
         }
-        SceneActorTemplate template = scene.getActorTemplate(args[3]);
-        if (template == null) {
-            sender.sendMessage(ChatColor.RED + "Actor not found.");
-            return;
-        }
-        String mode = args[4].toUpperCase(Locale.ROOT);
-        try {
-            template.setPlaybackMode(com.extrascenes.scene.ActorPlaybackMode.valueOf(mode));
-            scene.setDirty(true);
-            sceneManager.saveScene(scene);
-            sender.sendMessage(ChatColor.GREEN + "Actor playback mode updated to " + mode + ".");
-        } catch (IllegalArgumentException ex) {
+            if (List.of("edit", "delete", "group").contains(sub)) {
+            if (List.of("stop", "debugcamera").contains(sub)) {
+                if (sub.equals("debugactors") && args.length == 2) {
+            return filterPrefix(List.of("on", "off"), args[1]);
             sender.sendMessage(ChatColor.RED + "Playback mode must be exact or walk.");
         } catch (Exception ex) {
             sender.sendMessage(ChatColor.RED + "Failed to save scene.");
@@ -601,7 +633,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 2) {
-            if (List.of("edit", "play", "delete", "group").contains(sub)) {
+            if (List.of("edit", "play", "delete", "group", "rename", "duplicate").contains(sub)) {
                 return filterPrefix(sceneManager.listScenes(), args[1]);
             }
             if (sub.equals("tick")) {
@@ -610,6 +642,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (List.of("stop", "pause", "resume", "debugcamera").contains(sub)) {
                 return filterPrefix(onlinePlayerNames(), args[1]);
             }
+        }
+        if ((sub.equals("rename") || sub.equals("duplicate")) && args.length == 3) {
+            return List.of();
         }
         if (sub.equals("play")) {
             if (args.length == 3) {
@@ -632,19 +667,22 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         }
         if (sub.equals("actor")) {
             if (args.length == 2) {
-                return filterPrefix(List.of("add", "skin", "playback", "scale", "record"), args[1]);
+                return filterPrefix(List.of("add", "rename", "delete", "skin", "playback", "scale", "record"), args[1]);
             }
             if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("start", "stop"), args[2]);
             }
-            if (args.length == 3 && List.of("add", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
+            if (args.length == 3 && List.of("add", "rename", "delete", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
             }
-            if (args.length == 4 && List.of("skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
+            if (args.length == 4 && List.of("rename", "delete", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
                 if (scene != null) {
                     return filterPrefix(new ArrayList<>(scene.getActorTemplates().keySet()), args[3]);
                 }
+            }
+            if (args.length == 5 && "delete".equalsIgnoreCase(args[1])) {
+                return filterPrefix(List.of("confirm"), args[4]);
             }
             if (args.length == 5 && "playback".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("exact", "walk"), args[4]);

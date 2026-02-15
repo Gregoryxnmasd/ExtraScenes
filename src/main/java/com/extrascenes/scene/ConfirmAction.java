@@ -9,5 +9,6 @@ public enum ConfirmAction {
     CLEAR_GROUP,
     CLEAR_ALL,
     CLEAR_EFFECTS,
-    TRIM_DURATION
+    TRIM_DURATION,
+    DELETE_ACTOR
 }

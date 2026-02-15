@@ -26,11 +26,12 @@ public class EditorSession {
     private String selectedActorId;
     private boolean previewOtherActors;
     private int actorRecordingStartTick;
+    private int actorsPage;
     private String armedModelEntryName;
     private UUID armedModelKeyframeId;
     private GuiType armedReturnGui;
     private GuiType currentGui;
-    private final Deque<GuiType> history = new ArrayDeque<>();
+    private final Deque<NavigationState> history = new ArrayDeque<>();
     private long lastSavedAt;
     private ConfirmAction confirmAction;
     private SceneTrackType confirmTrack;
@@ -54,6 +55,7 @@ public class EditorSession {
         this.currentGui = GuiType.SCENE_DASHBOARD;
         this.previewOtherActors = true;
         this.actorRecordingStartTick = 1;
+        this.actorsPage = 0;
     }
 
     public UUID getPlayerUuid() {
@@ -202,6 +204,14 @@ public class EditorSession {
         this.actorRecordingStartTick = Math.max(1, actorRecordingStartTick);
     }
 
+    public int getActorsPage() {
+        return actorsPage;
+    }
+
+    public void setActorsPage(int actorsPage) {
+        this.actorsPage = Math.max(0, actorsPage);
+    }
+
     public String getSelectedModelEntryName() {
         return selectedModelEntryName;
     }
@@ -244,14 +254,15 @@ public class EditorSession {
 
     public void pushHistory(GuiType guiType) {
         if (guiType != null) {
-            GuiType current = history.peek();
-            if (current != guiType) {
-                history.push(guiType);
+            NavigationState snapshot = new NavigationState(guiType, keyframePage, groupPage, currentGroup, currentTick,
+                    actorsPage, selectedActorId);
+            if (!snapshot.equals(history.peek())) {
+                history.push(snapshot);
             }
         }
     }
 
-    public GuiType popHistory() {
+    public NavigationState popHistory() {
         return history.isEmpty() ? null : history.pop();
     }
 
@@ -301,5 +312,9 @@ public class EditorSession {
 
     public void setConfirmCommandIndex(Integer confirmCommandIndex) {
         this.confirmCommandIndex = confirmCommandIndex;
+    }
+
+    public record NavigationState(GuiType guiType, int keyframePage, int groupPage, int currentGroup,
+                                  int currentTick, int actorsPage, String selectedActorId) {
     }
 }
