@@ -2,7 +2,6 @@ package com.extrascenes;
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
@@ -11,6 +10,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import net.kyori.adventure.key.Key;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,12 +19,12 @@ public class SceneProtocolAdapter {
     private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
-    private final NamespacedKey cutsceneSpeedLockKey;
+    private final Key cutsceneSpeedLockKey;
 
     public SceneProtocolAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.protocolLibAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib");
-        this.cutsceneSpeedLockKey = new NamespacedKey(plugin, "cutscene_speed_lock");
+        this.cutsceneSpeedLockKey = KeyConversionUtil.toAdventureKey(new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock"));
     }
 
     public boolean isProtocolLibAvailable() {
@@ -93,8 +93,7 @@ public class SceneProtocolAdapter {
                 }
                 if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
                         && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
-                        && (modifier.getSlot() == EquipmentSlot.HEAD
-                        || modifier.getSlotGroup() == EquipmentSlotGroup.HEAD)) {
+                        && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
                 } else {
                     meta.removeAttributeModifier(attribute, modifier);
