@@ -1,6 +1,8 @@
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\AttributeModifiers.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\CitizensAdapter.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\command\SceneCommandExecutor.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ExtraScenesPlugin.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\KeyConversionUtil.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\MovementSpeedAttributeResolver.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ScaleAttributeResolver.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\ActionBarKeyframe.java
@@ -81,4 +83,5 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\SceneL
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\SceneModelTrackAdapter.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\ScenePlaceholderExpansion.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\SceneProtocolAdapter.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\Text.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\visibility\SceneVisibilityController.java

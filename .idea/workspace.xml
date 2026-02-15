@@ -4,7 +4,61 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="" />
+    <list default="true" id="db1ca5f5-fb1f-4b40-b07e-85a39ec5cd64" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/CitizensAdapter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/ExtraScenesPlugin.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/ExtraScenesPlugin.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/ScaleAttributeResolver.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneModelTrackAdapter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/ScenePlaceholderExpansion.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/SceneProtocolAdapter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/command/SceneCommandExecutor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ActorRecordingService$ActiveRecording.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ActorRecordingService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ActorTimelineGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ActorsListGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/AddKeyframeGui$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/AddKeyframeGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/BlockIllusionKeyframe.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CameraKeyframeEditorGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CameraOptionsGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/CommandKeyframeEditorGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmAction.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmAction.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmGui$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmGui$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmGui.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ConfirmGui.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorChatListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorSession.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/EditorSession.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GuiType.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GuiType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/GuiUtils.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/KeyframeListGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelEntryEditorGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelTickListGui$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ModelTickListGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/ParticleKeyframe.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/PlayerStateSnapshot.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/Scene.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/Scene.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEditorEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneEditorEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneRuntimeEngine.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSession.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSessionManager.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneSettingsGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneStartEvent.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneState.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneTextFormatter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SceneWand.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SessionActorHandle.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SkinLibrary$SkinEntry.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SkinLibrary.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/SoundKeyframe.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/scene/TrackSelectGui.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/extrascenes/visibility/SceneVisibilityController.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/extrascenes-1.0.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
