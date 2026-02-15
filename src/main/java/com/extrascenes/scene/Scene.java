@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class Scene {
     private final String sceneId;
-    private final String name;
+    private String name;
     private int durationTicks;
     private final int formatVersion;
     private final Map<SceneTrackType, Track<? extends Keyframe>> tracks;
@@ -48,6 +48,12 @@ public class Scene {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
     }
 
     public int getDurationTicks() {

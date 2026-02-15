@@ -51,7 +51,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
                 editorSessionManager, editorEngine.getInputManager(), editorEngine, actorRecordingService), this);
         Bukkit.getPluginManager().registerEvents(new SceneEditorListener(editorEngine, editorSessionManager), this);
-        Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager()), this);
+        Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager(), editorEngine), this);
 
         PluginCommand command = getCommand("scene");
         if (command != null) {

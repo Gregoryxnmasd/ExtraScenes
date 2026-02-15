@@ -18,6 +18,9 @@ public class SceneEditorEngine {
     private final EditorInputManager inputManager;
     private final Map<GuiType, EditorGui> guis = new EnumMap<>(GuiType.class);
     private final Map<UUID, String> lastSelectedSceneByPlayer = new java.util.HashMap<>();
+    private final Map<UUID, MainMenuState> mainMenuStates = new java.util.HashMap<>();
+    private final Map<UUID, MainMenuPrompt> mainMenuPrompts = new java.util.HashMap<>();
+    private final Map<UUID, String> pendingDeleteSceneByPlayer = new java.util.HashMap<>();
 
     public SceneEditorEngine(ExtraScenesPlugin plugin, SceneManager sceneManager, EditorSessionManager editorSessionManager) {
         this.plugin = plugin;
@@ -51,6 +54,241 @@ public class SceneEditorEngine {
         guis.put(GuiType.ACTOR_TIMELINE, new ActorTimelineGui(this));
         guis.put(GuiType.ACTOR_TICK_ACTIONS, new ActorTickActionsGui(this));
         guis.put(GuiType.CONFIRM, new ConfirmGui(this));
+    }
+
+
+    public void openMainMenu(Player player) {
+        MainMenuState state = mainMenuStates.computeIfAbsent(player.getUniqueId(), id -> new MainMenuState());
+        player.openInventory(buildMainMenuInventory(state));
+    }
+
+    public boolean isMainMenuTitle(String title) {
+        return title != null && title.startsWith(GuiUtils.TITLE_PREFIX + "Scenes • Page");
+    }
+
+    public boolean isMainMenuDeleteConfirmTitle(String title) {
+        return title != null && title.startsWith(GuiUtils.TITLE_PREFIX + "Confirm Delete • "
+        );
+    }
+
+    public void handleMainMenuDeleteConfirmClick(Player player, int slot) {
+        String sceneName = pendingDeleteSceneByPlayer.get(player.getUniqueId());
+        if (sceneName == null) {
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 11) {
+            if (sceneManager.deleteScene(sceneName)) {
+                forceCloseEditorsForScene(sceneName);
+                clearLastSelectedSceneReferences(sceneName);
+            }
+            pendingDeleteSceneByPlayer.remove(player.getUniqueId());
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 15 || slot == 22) {
+            pendingDeleteSceneByPlayer.remove(player.getUniqueId());
+            openMainMenu(player);
+        }
+    }
+
+    private void openSceneDeleteConfirm(Player player, String sceneName) {
+        Inventory inventory = GuiUtils.createInventory(27, "Confirm Delete • " + sceneName);
+        for (int i = 0; i < inventory.getSize(); i++) {
+            inventory.setItem(i, null);
+        }
+        inventory.setItem(11, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Confirm Delete", java.util.List.of(sceneName)));
+        inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Cancel", java.util.List.of("Return to main menu.")));
+        inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", java.util.List.of("Return to main menu.")));
+        player.openInventory(inventory);
+    }
+
+    public void handleMainMenuClick(Player player, int slot) {
+        MainMenuState state = mainMenuStates.computeIfAbsent(player.getUniqueId(), id -> new MainMenuState());
+        java.util.List<String> scenes = filteredSceneNames(state.filter());
+        int totalPages = Math.max(1, (int) Math.ceil(scenes.size() / 36.0));
+        state.setPage(Math.min(state.page(), totalPages - 1));
+        if (slot >= 0 && slot < 36) {
+            int index = state.page() * 36 + slot;
+            if (index >= scenes.size()) {
+                return;
+            }
+            String sceneName = scenes.get(index);
+            switch (state.action()) {
+                case EDIT -> {
+                    Scene scene = sceneManager.loadScene(sceneName);
+                    if (scene != null) {
+                        openEditor(player, scene);
+                    }
+                }
+                case DELETE -> {
+                    pendingDeleteSceneByPlayer.put(player.getUniqueId(), sceneName);
+                    openSceneDeleteConfirm(player, sceneName);
+                }
+                case DUPLICATE -> {
+                    beginMainMenuPrompt(player, MainMenuPromptType.DUPLICATE, sceneName);
+                    player.closeInventory();
+                }
+                case RENAME -> {
+                    beginMainMenuPrompt(player, MainMenuPromptType.RENAME, sceneName);
+                    player.closeInventory();
+                }
+            }
+            return;
+        }
+        if (slot == 45 && totalPages > 1) {
+            state.setPage(Math.max(0, state.page() - 1));
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 53 && totalPages > 1) {
+            state.setPage(Math.min(totalPages - 1, state.page() + 1));
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 46) {
+            state.setAction(MainMenuAction.EDIT);
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 47) {
+            state.setAction(MainMenuAction.CREATE);
+            createSceneFromMainMenu(player);
+            return;
+        }
+        if (slot == 48) {
+            state.setAction(MainMenuAction.DELETE);
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 49) {
+            state.setAction(MainMenuAction.RENAME);
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 50) {
+            state.setAction(MainMenuAction.DUPLICATE);
+            openMainMenu(player);
+            return;
+        }
+        if (slot == 51) {
+            beginMainMenuPrompt(player, MainMenuPromptType.FILTER, null);
+            player.closeInventory();
+            return;
+        }
+        if (slot == 52) {
+            plugin.reloadConfig();
+            sceneManager.reloadAll();
+            openMainMenu(player);
+        }
+    }
+
+    public boolean hasMainMenuPrompt(UUID playerId) {
+        return playerId != null && mainMenuPrompts.containsKey(playerId);
+    }
+
+    public boolean handleMainMenuChat(Player player, String message) {
+        MainMenuPrompt prompt = mainMenuPrompts.get(player.getUniqueId());
+        if (prompt == null) {
+            return false;
+        }
+        if ("cancel".equalsIgnoreCase(message)) {
+            mainMenuPrompts.remove(player.getUniqueId());
+            openMainMenu(player);
+            return true;
+        }
+        MainMenuState state = mainMenuStates.computeIfAbsent(player.getUniqueId(), id -> new MainMenuState());
+        if (prompt.type() == MainMenuPromptType.FILTER) {
+            state.setFilter(message.equalsIgnoreCase("clear") ? "" : message);
+            state.setPage(0);
+        } else if (prompt.type() == MainMenuPromptType.RENAME) {
+            if (sceneManager.renameScene(prompt.sceneName(), message)) {
+                forceCloseEditorsForScene(prompt.sceneName());
+                clearLastSelectedSceneReferences(prompt.sceneName());
+            }
+        } else if (prompt.type() == MainMenuPromptType.DUPLICATE) {
+            sceneManager.duplicateScene(prompt.sceneName(), message);
+        }
+        mainMenuPrompts.remove(player.getUniqueId());
+        openMainMenu(player);
+        return true;
+    }
+
+    private void createSceneFromMainMenu(Player player) {
+        int idx = 1;
+        String name;
+        do {
+            name = "scene_" + idx++;
+        } while (sceneManager.sceneExists(name));
+        Scene scene = sceneManager.createScene(name, 200);
+        sceneManager.markDirty(scene);
+        openMainMenu(player);
+    }
+
+    private void beginMainMenuPrompt(Player player, MainMenuPromptType type, String sceneName) {
+        mainMenuPrompts.put(player.getUniqueId(), new MainMenuPrompt(type, sceneName));
+        if (type == MainMenuPromptType.FILTER) {
+            player.sendMessage(ChatColor.AQUA + "Enter search text (or 'clear'). Type cancel to abort.");
+        } else if (type == MainMenuPromptType.RENAME) {
+            player.sendMessage(ChatColor.AQUA + "Enter new scene name for '" + sceneName + "'. Type cancel to abort.");
+        } else if (type == MainMenuPromptType.DUPLICATE) {
+            player.sendMessage(ChatColor.AQUA + "Enter duplicate name for '" + sceneName + "'. Type cancel to abort.");
+        }
+    }
+
+    private Inventory buildMainMenuInventory(MainMenuState state) {
+        java.util.List<String> scenes = filteredSceneNames(state.filter());
+        int totalPages = Math.max(1, (int) Math.ceil(scenes.size() / 36.0));
+        int page = Math.min(state.page(), totalPages - 1);
+        state.setPage(page);
+        Inventory inventory = GuiUtils.createInventory(54, "Scenes • Page " + (page + 1) + "/" + totalPages);
+        for (int i = 0; i < 54; i++) {
+            inventory.setItem(i, null);
+        }
+        int start = page * 36;
+        for (int i = 0; i < 36 && start + i < scenes.size(); i++) {
+            String name = scenes.get(start + i);
+            Scene scene = sceneManager.loadScene(name);
+            if (scene == null) {
+                continue;
+            }
+            boolean hasCam = !scene.getTrack(SceneTrackType.CAMERA).getKeyframes().isEmpty();
+            boolean hasActors = !scene.getActorTemplates().isEmpty();
+            boolean hasCmd = !scene.getTrack(SceneTrackType.COMMAND).getKeyframes().isEmpty();
+            boolean hasBar = !scene.getTrack(SceneTrackType.ACTIONBAR).getKeyframes().isEmpty();
+            java.util.List<String> lore = java.util.List.of(
+                    "Duration: " + scene.getDurationTicks() + " ticks",
+                    "Last modified: " + GuiUtils.formatLastSaved(sceneManager.getSceneLastModified(name)),
+                    "📷 Camera: " + (hasCam ? "Yes" : "No"),
+                    "🧍 Actors: " + (hasActors ? "Yes" : "No"),
+                    "⌨ Commands: " + (hasCmd ? "Yes" : "No"),
+                    "💬 Actionbars: " + (hasBar ? "Yes" : "No")
+            );
+            inventory.setItem(i, GuiUtils.makeItem(Material.BOOK, scene.getName(), lore));
+        }
+        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Prev", java.util.List.of("Previous page")));
+        inventory.setItem(46, modeItem(state, MainMenuAction.EDIT, "Edit"));
+        inventory.setItem(47, GuiUtils.makeItem(Material.LIME_DYE, "Create Scene", java.util.List.of("Create new scene")));
+        inventory.setItem(48, modeItem(state, MainMenuAction.DELETE, "Delete Scene"));
+        inventory.setItem(49, modeItem(state, MainMenuAction.RENAME, "Rename Scene"));
+        inventory.setItem(50, modeItem(state, MainMenuAction.DUPLICATE, "Duplicate Scene"));
+        inventory.setItem(51, GuiUtils.makeItem(Material.COMPASS, "Search/Filter", java.util.List.of("Current: " + (state.filter().isBlank() ? "none" : state.filter()))));
+        inventory.setItem(52, GuiUtils.makeItem(Material.REPEATER, "Reload", java.util.List.of("Reload config + scenes")));
+        inventory.setItem(53, GuiUtils.makeItem(Material.ARROW, "Next", java.util.List.of("Next page")));
+        return inventory;
+    }
+
+    private org.bukkit.inventory.ItemStack modeItem(MainMenuState state, MainMenuAction action, String name) {
+        Material mat = state.action() == action ? Material.LIME_CONCRETE : Material.GRAY_CONCRETE;
+        return GuiUtils.makeItem(mat, name, java.util.List.of("Select action mode."));
+    }
+
+    private java.util.List<String> filteredSceneNames(String filter) {
+        String f = filter == null ? "" : filter.toLowerCase(java.util.Locale.ROOT);
+        return sceneManager.listScenes().stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .filter(n -> f.isBlank() || n.toLowerCase(java.util.Locale.ROOT).contains(f))
+                .toList();
     }
 
     public EditorInputManager getInputManager() {
@@ -776,8 +1014,9 @@ public class SceneEditorEngine {
             String sceneName = session.getScene().getName();
             sceneManager.deleteScene(sceneName);
             clearLastSelectedScene(player.getUniqueId(), sceneName);
+            clearLastSelectedSceneReferences(sceneName);
             clearConfirm(session);
-            closeEditor(player, session);
+            forceCloseEditorsForScene(sceneName);
         }
     }
 
@@ -1011,6 +1250,14 @@ public class SceneEditorEngine {
         }
     }
 
+
+    public void clearLastSelectedSceneReferences(String sceneName) {
+        if (sceneName == null) {
+            return;
+        }
+        lastSelectedSceneByPlayer.entrySet().removeIf(e -> e.getValue() != null && e.getValue().equalsIgnoreCase(sceneName));
+    }
+
     public void forceCloseEditorsForScene(String sceneName) {
         for (var entry : new java.util.HashMap<>(editorSessionManager.getSessionsView()).entrySet()) {
             EditorSession session = entry.getValue();
@@ -1025,5 +1272,24 @@ public class SceneEditorEngine {
             }
         }
     }
+
+
+    private enum MainMenuAction { EDIT, CREATE, DELETE, RENAME, DUPLICATE }
+
+    private enum MainMenuPromptType { FILTER, RENAME, DUPLICATE }
+
+    private static final class MainMenuState {
+        private int page;
+        private String filter = "";
+        private MainMenuAction action = MainMenuAction.EDIT;
+        public int page() { return page; }
+        public void setPage(int page) { this.page = Math.max(0, page); }
+        public String filter() { return filter == null ? "" : filter; }
+        public void setFilter(String filter) { this.filter = filter == null ? "" : filter; }
+        public MainMenuAction action() { return action; }
+        public void setAction(MainMenuAction action) { this.action = action == null ? MainMenuAction.EDIT : action; }
+    }
+
+    private record MainMenuPrompt(MainMenuPromptType type, String sceneName) {}
 
 }

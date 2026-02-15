@@ -23,7 +23,9 @@ public class GroupGridGui implements EditorGui {
         int endTick = Math.min(startTick + GROUP_SIZE - 1, scene.getDurationTicks());
         Inventory inventory = GuiUtils.createInventory(54,
                 session.getSceneName() + " • Group " + group + " (" + startTick + "-" + endTick + ")");
-        GuiUtils.fillInventory(inventory);
+        for (int i = 0; i < inventory.getSize(); i++) {
+            inventory.setItem(i, null);
+        }
 
         inventory.setItem(4, GuiUtils.makeItem(Material.MAP, "Tick Group " + group,
                 List.of("Ticks " + startTick + " - " + endTick, "Top row = ticks", "Rows below = actions")));
@@ -69,7 +71,7 @@ public class GroupGridGui implements EditorGui {
 
     private org.bukkit.inventory.ItemStack buildSubItem(boolean present, Material presentIcon, String label) {
         if (!present) {
-            return GuiUtils.makeItem(Material.GRAY_STAINED_GLASS_PANE, label, List.of("Not set"));
+            return null;
         }
         return GuiUtils.makeItem(presentIcon, label, List.of("Configured"));
     }

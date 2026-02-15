@@ -83,7 +83,7 @@ public class GroupSelectGui implements EditorGui {
         int maxPage = Math.max(0, totalPages - 1);
         int currentPage = Math.min(session.getGroupPage(), maxPage);
         if (slot == 45) {
-            editorEngine.navigateBack(player, session);
+            editorEngine.openDashboard(player, session, false);
             return;
         }
         if (slot == 46 && totalPages > 1) {

@@ -28,6 +28,14 @@ public class SceneEditorListener implements Listener {
         if (event.getRawSlot() >= event.getView().getTopInventory().getSize()) {
             return;
         }
+        if (editorEngine.isMainMenuTitle(title)) {
+            editorEngine.handleMainMenuClick(player, event.getRawSlot());
+            return;
+        }
+        if (editorEngine.isMainMenuDeleteConfirmTitle(title)) {
+            editorEngine.handleMainMenuDeleteConfirmClick(player, event.getRawSlot());
+            return;
+        }
         EditorSession session = editorSessionManager.getSession(player.getUniqueId());
         if (session == null) {
             return;

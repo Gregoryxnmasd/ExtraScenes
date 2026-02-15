@@ -164,6 +164,71 @@ public class SceneManager {
         return !file.exists() || file.delete();
     }
 
+
+    public boolean renameScene(String oldName, String newName) {
+        if (oldName == null || newName == null || newName.isBlank()) {
+            return false;
+        }
+        if (sceneExists(newName)) {
+            return false;
+        }
+        Scene source = loadScene(oldName);
+        if (source == null) {
+            return false;
+        }
+        Scene clone = deepCloneScene(source, newName);
+        if (clone == null) {
+            return false;
+        }
+        try {
+            saveScene(clone);
+        } catch (IOException ex) {
+            return false;
+        }
+        cache.put(newName.toLowerCase(), clone);
+        deleteScene(oldName);
+        return true;
+    }
+
+    public boolean duplicateScene(String sourceName, String targetName) {
+        if (sourceName == null || targetName == null || targetName.isBlank() || sceneExists(targetName)) {
+            return false;
+        }
+        Scene source = loadScene(sourceName);
+        if (source == null) {
+            return false;
+        }
+        Scene clone = deepCloneScene(source, targetName);
+        if (clone == null) {
+            return false;
+        }
+        try {
+            saveScene(clone);
+        } catch (IOException ex) {
+            return false;
+        }
+        cache.put(targetName.toLowerCase(), clone);
+        return true;
+    }
+
+    private Scene deepCloneScene(Scene source, String newName) {
+        try {
+            Path temp = java.nio.file.Files.createTempFile("extrascenes-clone", ".json");
+            serializer.write(source, temp);
+            Scene cloned = deserializer.read(temp);
+            java.nio.file.Files.deleteIfExists(temp);
+            if (cloned == null) {
+                return null;
+            }
+            cloned.setName(newName);
+            ensureTracks(cloned);
+            cloned.setDirty(true);
+            return cloned;
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
     public boolean exportScene(String name) throws IOException {
         File source = new File(scenesFolder, name + ".json");
         if (!source.exists()) {

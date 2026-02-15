@@ -48,16 +48,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                List<String> scenes = sceneManager.listScenes();
-                if (scenes.isEmpty()) {
-                    sender.sendMessage(ChatColor.YELLOW + "No scenes yet. Create one with /scene create <name>.");
-                } else {
-                    String first = scenes.get(0);
-                    Scene scene = sceneManager.loadScene(first);
-                    if (scene != null) {
-                        editorEngine.openEditor(player, scene);
-                    }
-                }
+                editorEngine.openMainMenu(player);
             } else {
                 sendHelp(sender);
             }
@@ -99,6 +90,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.AQUA + "/scene list");
         sender.sendMessage(ChatColor.AQUA + "/scene create <name> [duration]");
         sender.sendMessage(ChatColor.AQUA + "/scene delete <name>");
+        sender.sendMessage(ChatColor.AQUA + "/scene rename <old> <new>");
+        sender.sendMessage(ChatColor.AQUA + "/scene duplicate <source> <target>");
         sender.sendMessage(ChatColor.AQUA + "/scene group <number>");
         sender.sendMessage(ChatColor.AQUA + "/scene tick <tick>");
         sender.sendMessage(ChatColor.AQUA + "/scene cancel");
@@ -387,32 +380,32 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         boolean deleted = sceneManager.deleteScene(name);
         if (deleted) {
             editorEngine.forceCloseEditorsForScene(name);
+            editorEngine.clearLastSelectedSceneReferences(name);
         }
         sender.sendMessage(deleted ? ChatColor.GREEN + "Scene deleted." : ChatColor.RED + "Scene not found.");
     }
 
 
     private void handleRename(CommandSender sender, String[] args) {
-        sender.sendMessage(ChatColor.YELLOW + "Use GUI rename for scenes (coming soon).");
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene rename <old> <new>");
+            return;
+        }
+        boolean renamed = sceneManager.renameScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
+        if (renamed) {
+            editorEngine.forceCloseEditorsForScene(args[1]);
+            editorEngine.clearLastSelectedSceneReferences(args[1]);
+        }
+        sender.sendMessage(renamed ? ChatColor.GREEN + "Scene renamed." : ChatColor.RED + "Rename failed.");
     }
 
     private void handleDuplicate(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene duplicate <name>");
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene duplicate <source> <target>");
             return;
         }
-        Scene scene = sceneManager.loadScene(args[1].toLowerCase(Locale.ROOT));
-        if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
-            return;
-        }
-        Scene copy = sceneManager.createScene(scene.getName() + "_copy", scene.getDurationTicks());
-        copy.getTracks().clear();
-        copy.getTracks().putAll(scene.getTracks());
-        copy.getActorTemplates().clear();
-        copy.getActorTemplates().putAll(scene.getActorTemplates());
-        sceneManager.markDirty(copy);
-        sender.sendMessage(ChatColor.GREEN + "Duplicated to " + copy.getName());
+        boolean duplicated = sceneManager.duplicateScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
+        sender.sendMessage(duplicated ? ChatColor.GREEN + "Scene duplicated." : ChatColor.RED + "Duplicate failed.");
     }
 
     private void handleDebugCamera(CommandSender sender, String[] args) {
@@ -695,6 +688,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (List.of("stop", "pause", "resume", "debugcamera").contains(sub)) {
                 return filterPrefix(onlinePlayerNames(), args[1]);
             }
+        }
+        if ((sub.equals("rename") || sub.equals("duplicate")) && args.length == 3) {
+            return List.of();
         }
         if (sub.equals("play")) {
             if (args.length == 3) {
