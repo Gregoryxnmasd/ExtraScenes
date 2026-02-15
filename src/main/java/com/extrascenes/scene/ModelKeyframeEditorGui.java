@@ -1,5 +1,7 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
+
 import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -103,7 +105,7 @@ public class ModelKeyframeEditorGui implements EditorGui {
             }
             String nextEntry = editorEngine.nextModelEntry(session.getScene(), keyframe.getModelEntry());
             if (nextEntry == null) {
-                player.sendMessage(org.bukkit.ChatColor.RED + "No model entries available.");
+                Text.send(player, "&c" + "No model entries available.");
                 return;
             }
             keyframe.setModelEntry(nextEntry);

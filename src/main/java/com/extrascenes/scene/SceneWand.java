@@ -1,13 +1,13 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
 import java.util.List;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class SceneWand {
-    public static final String WAND_NAME = ChatColor.AQUA + "Scene Wand";
+    public static final String WAND_NAME = Text.legacy("&bScene Wand");
 
     private SceneWand() {
     }
@@ -17,7 +17,7 @@ public final class SceneWand {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(WAND_NAME);
-            meta.setLore(List.of(ChatColor.GRAY + "Left click: set camera point", ChatColor.GRAY + "Right click: cancel"));
+            meta.setLore(List.of(Text.legacy("&7Left click: set camera point"), Text.legacy("&7Right click: cancel")));
             item.setItemMeta(meta);
         }
         return item;

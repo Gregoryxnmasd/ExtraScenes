@@ -1,12 +1,13 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
+
 import com.extrascenes.ExtraScenesPlugin;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -228,11 +229,11 @@ public class SceneEditorEngine {
     private void beginMainMenuPrompt(Player player, MainMenuPromptType type, String sceneName) {
         mainMenuPrompts.put(player.getUniqueId(), new MainMenuPrompt(type, sceneName));
         if (type == MainMenuPromptType.FILTER) {
-            player.sendMessage(ChatColor.AQUA + "Enter search text (or 'clear'). Type cancel to abort.");
+            Text.send(player, "&b" + "Enter search text (or 'clear'). Type cancel to abort.");
         } else if (type == MainMenuPromptType.RENAME) {
-            player.sendMessage(ChatColor.AQUA + "Enter new scene name for '" + sceneName + "'. Type cancel to abort.");
+            Text.send(player, "&b" + "Enter new scene name for '" + sceneName + "'. Type cancel to abort.");
         } else if (type == MainMenuPromptType.DUPLICATE) {
-            player.sendMessage(ChatColor.AQUA + "Enter duplicate name for '" + sceneName + "'. Type cancel to abort.");
+            Text.send(player, "&b" + "Enter duplicate name for '" + sceneName + "'. Type cancel to abort.");
         }
     }
 
@@ -305,7 +306,7 @@ public class SceneEditorEngine {
         }
         Scene cached = sceneManager.loadScene(scene.getName());
         if (cached == null) {
-            player.sendMessage(ChatColor.RED + "Scene file is missing; cannot open editor.");
+            Text.send(player, "&c" + "Scene file is missing; cannot open editor.");
             return;
         }
         sceneManager.cacheScene(cached);
@@ -415,12 +416,12 @@ public class SceneEditorEngine {
     public void snapActorScaleFromPlayer(Player player, Scene scene, SceneActorTemplate actor) {
         org.bukkit.attribute.Attribute attribute = com.extrascenes.ScaleAttributeResolver.resolveScaleAttribute();
         if (attribute == null || player.getAttribute(attribute) == null) {
-            player.sendMessage(ChatColor.RED + "Scale attribute not available on this server build.");
+            Text.send(player, "&c" + "Scale attribute not available on this server build.");
             return;
         }
         actor.setScale(player.getAttribute(attribute).getValue());
         markDirty(scene);
-        player.sendMessage(ChatColor.GREEN + "Actor scale snapped from player.");
+        Text.send(player, "&a" + "Actor scale snapped from player.");
     }
 
     public void openConfirm(Player player, EditorSession session, ConfirmAction action, SceneTrackType track, UUID keyframeId) {
@@ -510,14 +511,14 @@ public class SceneEditorEngine {
             session.setWandBackup(player.getInventory().getItem(session.getWandSlot()));
             player.getInventory().setItem(session.getWandSlot(), SceneWand.create());
         }
-        player.sendMessage(ChatColor.AQUA + "Placement mode armed for tick " + tick
+        Text.send(player, "&b" + "Placement mode armed for tick " + tick
                 + ". Move and confirm with /scene here or left-click with the wand. Use /scene cancel to abort.");
     }
 
     public void confirmCameraPlacement(Player player, EditorSession session) {
         Integer tick = session.getArmedTick();
         if (tick == null) {
-            player.sendMessage(ChatColor.RED + "No tick is armed for placement.");
+            Text.send(player, "&c" + "No tick is armed for placement.");
             return;
         }
         CameraKeyframe keyframe = getOrCreateCameraKeyframe(session, tick);
@@ -528,18 +529,18 @@ public class SceneEditorEngine {
         session.setCurrentTick(tick);
         session.setCurrentGroup(session.getArmedGroup());
         openGroupGrid(player, session, false);
-        player.sendMessage(ChatColor.GREEN + "Camera position set for tick " + tick + ".");
+        Text.send(player, "&a" + "Camera position set for tick " + tick + ".");
     }
 
     public void cancelCameraPlacement(Player player, EditorSession session) {
         if (session.getArmedTick() == null) {
-            player.sendMessage(ChatColor.YELLOW + "No placement in progress.");
+            Text.send(player, "&e" + "No placement in progress.");
             return;
         }
         session.setArmedTick(null);
         restoreWand(player, session);
         openGroupGrid(player, session, false);
-        player.sendMessage(ChatColor.YELLOW + "Placement cancelled.");
+        Text.send(player, "&e" + "Placement cancelled.");
     }
 
     public void cancelCameraPlacementSilent(Player player, EditorSession session) {
@@ -558,7 +559,7 @@ public class SceneEditorEngine {
             session.setWandBackup(player.getInventory().getItem(session.getWandSlot()));
             player.getInventory().setItem(session.getWandSlot(), SceneWand.create());
         }
-        player.sendMessage(ChatColor.AQUA + "Placement mode armed for model entry " + entryName
+        Text.send(player, "&b" + "Placement mode armed for model entry " + entryName
                 + ". Move and confirm with /scene here or left-click with the wand. Use /scene cancel to abort.");
     }
 
@@ -573,7 +574,7 @@ public class SceneEditorEngine {
             session.setWandBackup(player.getInventory().getItem(session.getWandSlot()));
             player.getInventory().setItem(session.getWandSlot(), SceneWand.create());
         }
-        player.sendMessage(ChatColor.AQUA + "Placement mode armed for model spawn. Move and confirm with /scene here or"
+        Text.send(player, "&b" + "Placement mode armed for model spawn. Move and confirm with /scene here or"
                 + " left-click with the wand. Use /scene cancel to abort.");
     }
 
@@ -583,7 +584,7 @@ public class SceneEditorEngine {
             if (entry != null) {
                 entry.setSpawnTransform(Transform.fromLocation(player.getLocation()));
                 sceneManager.markDirty(session.getScene());
-                player.sendMessage(ChatColor.GREEN + "Model entry spawn location updated.");
+                Text.send(player, "&a" + "Model entry spawn location updated.");
             }
             GuiType returnGui = session.getArmedReturnGui();
             clearModelPlacement(session);
@@ -602,7 +603,7 @@ public class SceneEditorEngine {
                 if (keyframe != null) {
                     keyframe.setSpawnTransform(Transform.fromLocation(player.getLocation()));
                     sceneManager.markDirty(session.getScene());
-                    player.sendMessage(ChatColor.GREEN + "Model spawn override set.");
+                    Text.send(player, "&a" + "Model spawn override set.");
                 }
             }
             GuiType returnGui = session.getArmedReturnGui();
@@ -615,12 +616,12 @@ public class SceneEditorEngine {
             }
             return;
         }
-        player.sendMessage(ChatColor.RED + "No placement in progress.");
+        Text.send(player, "&c" + "No placement in progress.");
     }
 
     public void cancelModelPlacement(Player player, EditorSession session) {
         if (session.getArmedModelEntryName() == null && session.getArmedModelKeyframeId() == null) {
-            player.sendMessage(ChatColor.YELLOW + "No placement in progress.");
+            Text.send(player, "&e" + "No placement in progress.");
             return;
         }
         GuiType returnGui = session.getArmedReturnGui();
@@ -631,7 +632,7 @@ public class SceneEditorEngine {
         } else {
             openGroupGrid(player, session, false);
         }
-        player.sendMessage(ChatColor.YELLOW + "Placement cancelled.");
+        Text.send(player, "&e" + "Placement cancelled.");
     }
 
     public void cancelModelPlacementSilent(Player player, EditorSession session) {
@@ -688,9 +689,9 @@ public class SceneEditorEngine {
         try {
             sceneManager.saveScene(session.getScene());
             session.setLastSavedAt(System.currentTimeMillis());
-            player.sendMessage(ChatColor.GREEN + "Scene saved.");
+            Text.send(player, "&a" + "Scene saved.");
         } catch (IOException ex) {
-            player.sendMessage(ChatColor.RED + "Failed to save scene.");
+            Text.send(player, "&c" + "Failed to save scene.");
         }
     }
 
@@ -1265,7 +1266,7 @@ public class SceneEditorEngine {
                 Player player = org.bukkit.Bukkit.getPlayer(entry.getKey());
                 if (player != null) {
                     closeEditor(player, session);
-                    player.sendMessage(ChatColor.RED + "Scene was deleted; editor closed.");
+                    Text.send(player, "&c" + "Scene was deleted; editor closed.");
                 }
                 editorSessionManager.removeSession(entry.getKey());
                 clearLastSelectedScene(entry.getKey(), sceneName);

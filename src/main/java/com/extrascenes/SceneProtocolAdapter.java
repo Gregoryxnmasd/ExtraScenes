@@ -19,12 +19,12 @@ public class SceneProtocolAdapter {
     private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
-    private final Key cutsceneSpeedLockKey;
+    private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
 
     public SceneProtocolAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.protocolLibAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib");
-        this.cutsceneSpeedLockKey = KeyConversionUtil.toAdventureKey(new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock"));
+        this.cutsceneSpeedLockKey = new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock");
     }
 
     public boolean isProtocolLibAvailable() {
@@ -88,7 +88,7 @@ public class SceneProtocolAdapter {
         boolean hasCorrectModifier = false;
         if (existingModifiers != null && !existingModifiers.isEmpty()) {
             for (AttributeModifier modifier : new ArrayList<>(existingModifiers)) {
-                if (!cutsceneSpeedLockKey.equals(modifier.getKey())) {
+                if (!AttributeModifiers.hasKey(modifier, cutsceneSpeedLockKey)) {
                     continue;
                 }
                 if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
@@ -101,7 +101,7 @@ public class SceneProtocolAdapter {
             }
         }
         if (!hasCorrectModifier) {
-            AttributeModifier modifier = new AttributeModifier(
+            AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
                     PUMPKIN_MOVEMENT_LOCK_AMOUNT,
                     AttributeModifier.Operation.ADD_SCALAR,

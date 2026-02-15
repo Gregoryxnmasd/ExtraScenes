@@ -1,5 +1,7 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
+
 import com.extrascenes.CitizensAdapter;
 import com.extrascenes.ExtraScenesPlugin;
 import com.extrascenes.ScaleAttributeResolver;
@@ -11,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -608,7 +609,7 @@ public class SceneRuntimeEngine {
     private void handleModelKeyframe(Player player, SceneSession session, ModelKeyframe keyframe) {
         SceneModelTrackAdapter adapter = plugin.getModelTrackAdapter();
         if (adapter == null || !adapter.isModelEngineAvailable()) {
-            player.sendMessage(ChatColor.RED + "ModelEngine not installed; model keyframe skipped.");
+            Text.send(player, "&c" + "ModelEngine not installed; model keyframe skipped.");
             return;
         }
         SceneModelEntry entry = session.getScene().getModelEntry(keyframe.getModelEntry());
@@ -627,7 +628,7 @@ public class SceneRuntimeEngine {
                     transform.applyTo(location);
                 }
                 if (modelId == null || modelId.isBlank()) {
-                    player.sendMessage(ChatColor.RED + "Model entry missing modelId; spawn skipped.");
+                    Text.send(player, "&c" + "Model entry missing modelId; spawn skipped.");
                     return;
                 }
                 Entity base = adapter.spawnModelBase(player, location);
