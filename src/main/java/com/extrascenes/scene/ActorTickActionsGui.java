@@ -60,7 +60,10 @@ public class ActorTickActionsGui implements EditorGui {
         } else if (ctx.getSlot() == 13) {
             action.setAnimation(ctx.isRightClick() ? null : "idle");
         } else if (ctx.getSlot() == 14) {
-            action.setLookAtTarget(new LookAtTarget(LookAtTarget.Mode.POSITION, null, Transform.fromLocation(player.getLocation())));
+            action.setLookAtTarget(new LookAtTarget(
+                    LookAtTarget.Mode.POSITION,
+                    Transform.fromLocation(player.getLocation()),
+                    null));
         } else if (ctx.getSlot() == 15) {
             action.setCommand(ctx.isRightClick() ? null : "say actor " + actor.getActorId() + " tick " + session.getCurrentTick());
         } else if (ctx.getSlot() == 22) {
