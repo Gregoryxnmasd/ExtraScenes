@@ -207,12 +207,18 @@ public class SceneEditorEngine {
     }
 
     public void navigateBack(Player player, EditorSession session) {
-        GuiType previous = session.popHistory();
+        EditorSession.NavigationState previous = session.popHistory();
         if (previous == null) {
             openDashboard(player, session, false);
             return;
         }
-        openGui(player, session, previous, false);
+        session.setKeyframePage(previous.keyframePage());
+        session.setGroupPage(previous.groupPage());
+        session.setCurrentGroup(previous.currentGroup());
+        session.setCurrentTick(previous.currentTick());
+        session.setActorsPage(previous.actorsPage());
+        session.setSelectedActorId(previous.selectedActorId());
+        openGui(player, session, previous.guiType(), false);
     }
 
     public void closeEditor(Player player, EditorSession session) {
@@ -223,6 +229,7 @@ public class SceneEditorEngine {
         }
         editorSessionManager.removeSession(player.getUniqueId());
         session.clearHistory();
+        lastSelectedSceneByPlayer.remove(player.getUniqueId());
         inputManager.clearPrompt(player.getUniqueId());
     }
 
@@ -754,8 +761,21 @@ public class SceneEditorEngine {
             openGroupSelect(player, session, false);
             return;
         }
+        if (action == ConfirmAction.DELETE_ACTOR) {
+            String actorId = session.getSelectedActorId();
+            if (actorId != null) {
+                session.getScene().removeActorTemplate(actorId);
+                session.setSelectedActorId(null);
+                sceneManager.markDirty(session.getScene());
+            }
+            clearConfirm(session);
+            openActorsList(player, session, false);
+            return;
+        }
         if (action == ConfirmAction.DELETE_SCENE) {
-            sceneManager.deleteScene(session.getScene().getName());
+            String sceneName = session.getScene().getName();
+            sceneManager.deleteScene(sceneName);
+            clearLastSelectedScene(player.getUniqueId(), sceneName);
             clearConfirm(session);
             closeEditor(player, session);
         }

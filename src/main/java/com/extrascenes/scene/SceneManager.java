@@ -82,7 +82,7 @@ public class SceneManager {
         }
         String key = name.toLowerCase();
         if (cache.containsKey(key)) {
-            File cachedFile = new File(scenesFolder, name + ".json");
+            File cachedFile = new File(scenesFolder, cache.get(key).getName() + ".json");
             if (!cachedFile.exists()) {
                 cache.remove(key);
                 return null;
@@ -184,6 +184,21 @@ public class SceneManager {
         return true;
     }
 
+
+    public long getSceneLastModified(String name) {
+        if (name == null) {
+            return 0L;
+        }
+        File file = new File(scenesFolder, name + ".json");
+        return file.exists() ? file.lastModified() : 0L;
+    }
+
+    public boolean sceneExists(String name) {
+        if (name == null) {
+            return false;
+        }
+        return new File(scenesFolder, name + ".json").exists();
+    }
     public List<String> listScenes() {
         File[] files = scenesFolder.listFiles((dir, fileName) -> fileName.endsWith(".json"));
         if (files == null) {

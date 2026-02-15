@@ -42,11 +42,7 @@ public class ActorRecordingService {
         }
         plugin.getRuntimeEngine().clearRecordingPreview(player);
         if (markDirty) {
-            recording.scene.setDirty(true);
-            try {
-                plugin.getSceneManager().saveScene(recording.scene);
-            } catch (Exception ignored) {
-            }
+            plugin.getSceneManager().markDirty(recording.scene);
         }
         return true;
     }
@@ -80,11 +76,7 @@ public class ActorRecordingService {
             }
             plugin.getRuntimeEngine().clearRecordingPreview(player);
         if (markDirty) {
-                recording.scene.setDirty(true);
-                try {
-                    plugin.getSceneManager().saveScene(recording.scene);
-                } catch (Exception ignored) {
-                }
+                plugin.getSceneManager().markDirty(recording.scene);
             }
         }
     }

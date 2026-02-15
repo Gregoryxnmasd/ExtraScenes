@@ -54,7 +54,7 @@ public class ActorDetailGui implements EditorGui {
         inventory.setItem(13, GuiUtils.makeItem(Material.PLAYER_HEAD, "Skin",
                 List.of("L-Click: set skin name", "R-Click: load first from skin library", "Shift+Click: copy selected Citizens NPC")));
         inventory.setItem(14, GuiUtils.makeItem(Material.SLIME_BALL, "Scale: Snap from Player", List.of("Current: " + String.format(Locale.ROOT, "%.3f", actor.getScale()))));
-        inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Delete", List.of("Remove this actor template.")));
+        inventory.setItem(15, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Delete Actor", List.of("Requires confirmation.")));
         inventory.setItem(16, GuiUtils.makeItem(Material.CLOCK, "Timeline Window",
                 List.of("Cursor tick: " + session.getCurrentTick(), "Window: " + groupStart + "-" + (groupStart + 8),
                         "Recorded: " + (ticks.isEmpty() ? "none" : ticks.stream().map(String::valueOf).collect(Collectors.joining(", "))),
@@ -140,9 +140,8 @@ public class ActorDetailGui implements EditorGui {
             }
             session.setActorRecordingStartTick(Math.max(1, Math.min(scene.getDurationTicks(), value)));
         } else if (ctx.getSlot() == 15) {
-            scene.removeActorTemplate(actor.getActorId());
-            editorEngine.markDirty(scene);
-            editorEngine.openActorsList(player, session, false);
+            session.setConfirmAction(ConfirmAction.DELETE_ACTOR);
+            editorEngine.openConfirm(player, session, ConfirmAction.DELETE_ACTOR, null, null);
             return;
         } else if (ctx.getSlot() == 22) {
             editorEngine.navigateBack(player, session);

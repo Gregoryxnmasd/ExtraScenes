@@ -22,77 +22,56 @@ public class GroupGridGui implements EditorGui {
         int startTick = (group - 1) * GROUP_SIZE + 1;
         int endTick = Math.min(startTick + GROUP_SIZE - 1, scene.getDurationTicks());
         Inventory inventory = GuiUtils.createInventory(54,
-                session.getSceneName() + " • Group " + group + " (ticks " + startTick + "–" + endTick + ")");
+                session.getSceneName() + " • Group " + group + " (" + startTick + "-" + endTick + ")");
+        GuiUtils.fillInventory(inventory);
 
-        inventory.setItem(4, GuiUtils.makeItem(Material.MAP, "Group " + group,
-                List.of("Ticks " + startTick + " - " + (startTick + GROUP_SIZE - 1))));
+        inventory.setItem(4, GuiUtils.makeItem(Material.MAP, "Tick Group " + group,
+                List.of("Ticks " + startTick + " - " + endTick, "Top row = ticks", "Rows below = actions")));
+        inventory.setItem(0, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to groups.")));
+        inventory.setItem(1, GuiUtils.makeItem(Material.ARROW, "Prev Group", List.of("Open previous group.")));
+        inventory.setItem(7, GuiUtils.makeItem(Material.ARROW, "Next Group", List.of("Open next group.")));
+        inventory.setItem(8, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
 
-        for (int i = 0; i < GROUP_SIZE; i++) {
-            int tick = startTick + i;
-            if (tick <= scene.getDurationTicks()) {
-                inventory.setItem(i, buildTickItem(scene, tick));
+        for (int col = 0; col < GROUP_SIZE; col++) {
+            int tick = startTick + col;
+            if (tick > scene.getDurationTicks()) {
+                continue;
             }
-        }
+            boolean hasCamera = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.CAMERA), tick) != null;
+            boolean hasActors = hasActorAction(scene, tick);
+            boolean hasCommand = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.COMMAND), tick) != null;
+            boolean hasActionbar = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick) != null;
+            boolean edited = hasCamera || hasActors || hasCommand || hasActionbar
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.MODEL), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.PARTICLE), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.SOUND), tick).isEmpty()
+                    || !TickUtils.getKeyframesAtTick(scene.getTrack(SceneTrackType.BLOCK_ILLUSION), tick).isEmpty();
 
-        inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to group select.")));
-        inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
-        inventory.setItem(47, GuiUtils.makeItem(Material.ARROW, "Prev Group", List.of("Open previous group.")));
-        inventory.setItem(51, GuiUtils.makeItem(Material.ARROW, "Next Group", List.of("Open next group.")));
-        inventory.setItem(53, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Shift Range",
-                List.of("Shift ticks via chat input.")));
+            inventory.setItem(9 + col, GuiUtils.makeItem(edited ? Material.LIME_WOOL : Material.RED_WOOL,
+                    "Tick " + tick, List.of("Click to open tick editor.")));
+            inventory.setItem(18 + col, buildSubItem(hasCamera, Material.ENDER_PEARL, "Camera action"));
+            inventory.setItem(27 + col, buildSubItem(hasActors, Material.PLAYER_HEAD, "Actor action"));
+            inventory.setItem(36 + col, buildSubItem(hasCommand, Material.COMMAND_BLOCK, "Command action"));
+            inventory.setItem(45 + col, buildSubItem(hasActionbar, Material.PAPER, "Actionbar action"));
+        }
 
         return inventory;
     }
 
-    private org.bukkit.inventory.ItemStack buildTickItem(Scene scene, int tick) {
-        List<String> lore = new ArrayList<>();
-        lore.add("Tick " + tick);
-        Track<CameraKeyframe> cameraTrack = scene.getTrack(SceneTrackType.CAMERA);
-        Track<CommandKeyframe> commandTrack = scene.getTrack(SceneTrackType.COMMAND);
-        Track<ModelKeyframe> modelTrack = scene.getTrack(SceneTrackType.MODEL);
-        Track<ParticleKeyframe> particleTrack = scene.getTrack(SceneTrackType.PARTICLE);
-        Track<SoundKeyframe> soundTrack = scene.getTrack(SceneTrackType.SOUND);
-        Track<BlockIllusionKeyframe> blockTrack = scene.getTrack(SceneTrackType.BLOCK_ILLUSION);
-
-        CameraKeyframe camera = TickUtils.getFirstKeyframeAtTick(cameraTrack, tick);
-        CommandKeyframe command = TickUtils.getFirstKeyframeAtTick(commandTrack, tick);
-        List<ModelKeyframe> models = TickUtils.getKeyframesAtTick(modelTrack, tick);
-        List<ParticleKeyframe> particles = TickUtils.getKeyframesAtTick(particleTrack, tick);
-        List<SoundKeyframe> sounds = TickUtils.getKeyframesAtTick(soundTrack, tick);
-        List<BlockIllusionKeyframe> blocks = TickUtils.getKeyframesAtTick(blockTrack, tick);
-
-        ActionBarKeyframe actionbar = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick);
-        List<String> tags = buildTags(camera, models, command, actionbar);
-        lore.add("Tags: " + (tags.isEmpty() ? "-" : String.join(" ", tags)));
-        lore.add("Cam: " + (camera == null ? "No" : "Yes"));
-        lore.add("Model: " + models.size());
-        lore.add("Cmd: " + (command == null ? 0 : command.getCommands().size()));
-        lore.add("Bar: " + (actionbar == null ? "No" : "Yes"));
-        lore.add("Click: edit");
-        lore.add("Shift-click: move tick");
-
-        boolean edited = camera != null || command != null || actionbar != null || !models.isEmpty()
-                || !particles.isEmpty() || !sounds.isEmpty() || !blocks.isEmpty();
-        Material material = edited ? Material.LIME_WOOL : Material.RED_WOOL;
-        return GuiUtils.makeItem(material, "Tick " + tick, lore);
+    private boolean hasActorAction(Scene scene, int tick) {
+        for (SceneActorTemplate actor : scene.getActorTemplates().values()) {
+            if (actor.getTransformTick(tick) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    private List<String> buildTags(CameraKeyframe camera, List<ModelKeyframe> models,
-                                   CommandKeyframe command, ActionBarKeyframe actionbar) {
-        List<String> tags = new ArrayList<>();
-        if (camera != null) {
-            tags.add("Cam");
+    private org.bukkit.inventory.ItemStack buildSubItem(boolean present, Material presentIcon, String label) {
+        if (!present) {
+            return GuiUtils.makeItem(Material.GRAY_STAINED_GLASS_PANE, label, List.of("Not set"));
         }
-        if (models != null && !models.isEmpty()) {
-            tags.add("Model");
-        }
-        if (command != null && !command.getCommands().isEmpty()) {
-            tags.add("Cmd");
-        }
-        if (actionbar != null) {
-            tags.add("Bar");
-        }
-        return tags;
+        return GuiUtils.makeItem(presentIcon, label, List.of("Configured"));
     }
 
     @Override
@@ -102,40 +81,29 @@ public class GroupGridGui implements EditorGui {
             return;
         }
         int slot = ctx.getSlot();
-        if (slot == 45) {
+        if (slot == 0) {
             editorEngine.openGroupSelect(player, session, true);
             return;
         }
-        if (slot == 49) {
+        if (slot == 8) {
             editorEngine.closeEditor(player, session);
             return;
         }
-        if (slot == 47) {
+        if (slot == 1) {
             session.setCurrentGroup(Math.max(1, session.getCurrentGroup() - 1));
             refresh(session);
             return;
         }
-        if (slot == 51) {
+        if (slot == 7) {
             int maxGroups = (int) Math.ceil(Math.max(session.getScene().getDurationTicks(), GROUP_SIZE) / (double) GROUP_SIZE);
             session.setCurrentGroup(Math.min(maxGroups, session.getCurrentGroup() + 1));
             refresh(session);
             return;
         }
-        if (slot == 53) {
-            player.closeInventory();
-            editorEngine.getInputManager().beginShiftRangeInput(player, session.getScene(), session, GuiType.GROUP_GRID);
-            return;
-        }
-        if (slot >= 0 && slot < GROUP_SIZE) {
-            int tick = (session.getCurrentGroup() - 1) * GROUP_SIZE + 1 + slot;
-            if (ctx.isShiftClick()) {
-                player.closeInventory();
-                editorEngine.getInputManager().beginMoveTickInput(player, session.getScene(), session, tick,
-                        GuiType.GROUP_GRID);
-            } else {
-                session.setCurrentTick(tick);
-                editorEngine.openTickActionMenu(player, session, true);
-            }
+        if (slot >= 9 && slot <= 17) {
+            int tick = (session.getCurrentGroup() - 1) * GROUP_SIZE + 1 + (slot - 9);
+            session.setCurrentTick(tick);
+            editorEngine.openTickActionMenu(player, session, true);
         }
     }
 

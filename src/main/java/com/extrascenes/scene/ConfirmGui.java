@@ -20,7 +20,7 @@ public class ConfirmGui implements EditorGui {
 
         inventory.setItem(4, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Confirm Action",
                 List.of(buildConfirmMessage(session))));
-        inventory.setItem(13, GuiUtils.makeItem(Material.LAVA_BUCKET, "Confirm", List.of("Perform this action.")));
+        inventory.setItem(13, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Confirm", List.of("Perform this action.")));
         inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Cancel", List.of("Return without changes.")));
 
         inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to previous menu.")));
@@ -63,6 +63,7 @@ public class ConfirmGui implements EditorGui {
             case CLEAR_ALL -> "Clear every tick in the scene?";
             case CLEAR_EFFECTS -> "Clear all effects at this tick?";
             case TRIM_DURATION -> "Trim scene duration by 9 ticks?";
+            case DELETE_ACTOR -> "Delete selected actor?";
         };
     }
 

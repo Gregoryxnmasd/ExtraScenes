@@ -1,6 +1,7 @@
 package com.extrascenes.scene;
 
 public enum GuiType {
+    MAIN_MENU,
     SCENE_DASHBOARD,
     GROUP_SELECT,
     GROUP_GRID,
@@ -23,5 +24,6 @@ public enum GuiType {
     ACTOR_DETAIL,
     ACTOR_TIMELINE,
     ACTOR_TICK_ACTIONS,
+    TICK_DETAILS,
     CONFIRM
 }
