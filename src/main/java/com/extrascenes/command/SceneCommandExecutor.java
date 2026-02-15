@@ -417,6 +417,16 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&e" + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
     }
 
+    private void handleDebugActors(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /scene debugactors <on|off>");
+            return;
+        }
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
+        sender.sendMessage(ChatColor.YELLOW + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
+    }
+
     private void handleDebugCamera(CommandSender sender, String[] args) {
         if (args.length < 2) {
             Text.send(sender, "&c" + "Usage: /scene debugcamera <player>");
