@@ -309,12 +309,12 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        AttributeModifier existing = attribute.getModifier(movementLockKey);
+        AttributeModifier existing = com.extrascenes.AttributeModifiers.findModifier(attribute, movementLockKey);
         if (existing != null) {
             return;
         }
-        AttributeModifier modifier = new AttributeModifier(movementLockKey, -10.0,
-                AttributeModifier.Operation.ADD_NUMBER);
+        AttributeModifier modifier = com.extrascenes.AttributeModifiers.newModifier(movementLockKey, -10.0,
+                AttributeModifier.Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.ANY);
         attribute.addModifier(modifier);
     }
 
@@ -327,9 +327,7 @@ public class SceneSessionManager {
         if (attribute == null) {
             return;
         }
-        if (attribute.getModifier(movementLockKey) != null) {
-            attribute.removeModifier(movementLockKey);
-        }
+        com.extrascenes.AttributeModifiers.removeModifier(attribute, movementLockKey);
     }
 
 }

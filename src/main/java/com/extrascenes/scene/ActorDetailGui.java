@@ -1,5 +1,7 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
+
 import com.extrascenes.ExtraScenesPlugin;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -78,18 +79,18 @@ public class ActorDetailGui implements EditorGui {
         boolean recording = editorEngine.getPlugin().getActorRecordingService().isRecordingActor(player, actor.getActorId());
         if (ctx.getSlot() == 10) {
             if (recording) {
-                player.sendMessage(ChatColor.RED + "Already recording this actor.");
+                Text.send(player, "&c" + "Already recording this actor.");
                 return;
             }
             editorEngine.getPlugin().getActorRecordingService().startRecording(player, scene, actor, session.getActorRecordingStartTick(), session.isPreviewOtherActors());
-            player.sendMessage(ChatColor.GREEN + "Recording actor " + actor.getActorId() + " from tick " + session.getActorRecordingStartTick());
+            Text.send(player, "&a" + "Recording actor " + actor.getActorId() + " from tick " + session.getActorRecordingStartTick());
         } else if (ctx.getSlot() == 11) {
             if (!recording) {
-                player.sendMessage(ChatColor.RED + "No active recording.");
+                Text.send(player, "&c" + "No active recording.");
                 return;
             }
             boolean stopped = editorEngine.getPlugin().getActorRecordingService().stopRecording(player, true);
-            player.sendMessage(stopped ? ChatColor.GREEN + "Recording stopped." : ChatColor.RED + "No active recording.");
+            Text.send(player, stopped ? "&a" + "Recording stopped." : "&c" + "No active recording.");
         } else if (ctx.getSlot() == 12) {
             actor.setPreviewEnabled(!actor.isPreviewEnabled());
             editorEngine.markDirty(scene);
@@ -97,22 +98,22 @@ public class ActorDetailGui implements EditorGui {
             if (ctx.isShiftClick()) {
                 Integer selected = editorEngine.getPlugin().getCitizensAdapter().resolveSelectedNpcId(player);
                 if (selected == null || !editorEngine.getPlugin().getCitizensAdapter().copySkinFromNpc(actor, selected)) {
-                    player.sendMessage(ChatColor.RED + "No selected Citizens NPC or skin unavailable.");
+                    Text.send(player, "&c" + "No selected Citizens NPC or skin unavailable.");
                 } else {
                     editorEngine.markDirty(scene);
-                    player.sendMessage(ChatColor.GREEN + "Skin copied from selected Citizens NPC.");
+                    Text.send(player, "&a" + "Skin copied from selected Citizens NPC.");
                 }
             } else if (ctx.isRightClick()) {
                 var entry = editorEngine.getPlugin().getSkinLibrary().firstEntry();
                 if (entry == null) {
-                    player.sendMessage(ChatColor.RED + "Skin library is empty.");
+                    Text.send(player, "&c" + "Skin library is empty.");
                 } else {
                     actor.setSkinCacheKey(entry.cacheKey());
                     actor.setSkinName(entry.name());
                     actor.setSkinSignature(entry.signature());
                     actor.setSkinTexture(entry.texture());
                     editorEngine.markDirty(scene);
-                    player.sendMessage(ChatColor.GREEN + "Skin loaded: " + entry.name());
+                    Text.send(player, "&a" + "Skin loaded: " + entry.name());
                 }
             } else {
                 actor.setSkinName(player.getName());
@@ -120,7 +121,7 @@ public class ActorDetailGui implements EditorGui {
                 actor.setSkinSignature(null);
                 actor.setSkinTexture(null);
                 editorEngine.markDirty(scene);
-                player.sendMessage(ChatColor.YELLOW + "Skin name set to your username.");
+                Text.send(player, "&e" + "Skin name set to your username.");
             }
         } else if (ctx.getSlot() == 14) {
             editorEngine.snapActorScaleFromPlayer(player, scene, actor);

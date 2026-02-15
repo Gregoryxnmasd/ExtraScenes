@@ -2,7 +2,6 @@ package com.extrascenes;
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
@@ -19,12 +18,12 @@ public class SceneProtocolAdapter {
     private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
-    private final NamespacedKey cutsceneSpeedLockKey;
+    private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
 
     public SceneProtocolAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.protocolLibAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib");
-        this.cutsceneSpeedLockKey = new NamespacedKey(plugin, "cutscene_speed_lock");
+        this.cutsceneSpeedLockKey = new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock");
     }
 
     public boolean isProtocolLibAvailable() {
@@ -88,13 +87,12 @@ public class SceneProtocolAdapter {
         boolean hasCorrectModifier = false;
         if (existingModifiers != null && !existingModifiers.isEmpty()) {
             for (AttributeModifier modifier : new ArrayList<>(existingModifiers)) {
-                if (!cutsceneSpeedLockKey.equals(modifier.getKey())) {
+                if (!AttributeModifiers.hasKey(modifier, cutsceneSpeedLockKey)) {
                     continue;
                 }
                 if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
                         && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
-                        && (modifier.getSlot() == EquipmentSlot.HEAD
-                        || modifier.getSlotGroup() == EquipmentSlotGroup.HEAD)) {
+                        && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
                 } else {
                     meta.removeAttributeModifier(attribute, modifier);
@@ -102,7 +100,7 @@ public class SceneProtocolAdapter {
             }
         }
         if (!hasCorrectModifier) {
-            AttributeModifier modifier = new AttributeModifier(
+            AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
                     PUMPKIN_MOVEMENT_LOCK_AMOUNT,
                     AttributeModifier.Operation.ADD_SCALAR,

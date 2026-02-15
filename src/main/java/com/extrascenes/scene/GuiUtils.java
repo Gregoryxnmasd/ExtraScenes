@@ -1,5 +1,6 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -8,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class GuiUtils {
-    public static final String TITLE_PREFIX = ChatColor.DARK_GRAY.toString();
+    public static final String TITLE_PREFIX = Text.legacy("&8");
     public static final Material FRAME_GLASS = Material.GRAY_STAINED_GLASS_PANE;
     public static final DecimalFormat SECONDS_FORMAT = new DecimalFormat("0.00");
     public static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -27,17 +27,17 @@ public final class GuiUtils {
     }
 
     public static Inventory createInventory(int size, String title) {
-        return Bukkit.createInventory(null, size, TITLE_PREFIX + title);
+        return Bukkit.createInventory(null, size, TITLE_PREFIX + Text.legacy(title));
     }
 
     public static ItemStack makeItem(Material material, String name, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.AQUA + name);
+            meta.setDisplayName(Text.legacy("&b" + name));
             List<String> formatted = new ArrayList<>();
             for (String line : lore) {
-                formatted.add(ChatColor.GRAY + line);
+                formatted.add(Text.legacy("&7" + line));
             }
             meta.setLore(formatted);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -50,7 +50,7 @@ public final class GuiUtils {
         ItemStack glass = new ItemStack(FRAME_GLASS);
         ItemMeta meta = glass.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.DARK_GRAY + " ");
+            meta.setDisplayName(Text.legacy("&8 "));
             glass.setItemMeta(meta);
         }
         return glass;

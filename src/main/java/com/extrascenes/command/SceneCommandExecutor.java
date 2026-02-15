@@ -1,5 +1,7 @@
 package com.extrascenes.command;
 
+import com.extrascenes.Text;
+
 import com.extrascenes.ExtraScenesPlugin;
 import com.extrascenes.scene.ActorRecordingService;
 import com.extrascenes.scene.EditorSession;
@@ -16,7 +18,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -25,8 +26,8 @@ import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
-            "edit", "stop", "reload", "list",
-            "create", "delete", "group", "tick", "cancel", "here", "setend", "debugcamera", "debugactors", "actor"
+            "edit", "play", "stop", "pause", "resume", "reload", "list",
+            "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend", "debugcamera", "debugactors", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -47,11 +48,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            if (sender instanceof Player player) {
-                editorEngine.openMainMenu(player);
-            } else {
-                sendHelp(sender);
-            }
+            sendHelp(sender);
             return true;
         }
 
@@ -64,51 +61,59 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "cancel" -> handleCancel(sender);
             case "here" -> handleHere(sender);
             case "setend" -> handleSetEnd(sender, args);
+            case "play" -> handlePlay(sender, args);
             case "stop" -> handleStop(sender, args);
+            case "pause" -> handlePause(sender, args);
+            case "resume" -> handleResume(sender, args);
             case "reload" -> handleReload(sender);
             case "list" -> handleList(sender);
             case "delete" -> handleDelete(sender, args);
+            case "rename" -> handleRename(sender, args);
+            case "duplicate" -> handleDuplicate(sender, args);
+            case "debugcamera" -> handleDebugCamera(sender, args);
             case "debugactors" -> handleDebugActors(sender, args);
-        sender.sendMessage(ChatColor.AQUA + "/scene debugactors <on|off>");
             case "actor" -> handleActor(sender, args);
-            default -> sender.sendMessage(ChatColor.RED + "Unknown scene subcommand.");
+            default -> Text.send(sender, "&c" + "Unknown scene subcommand.");
         }
         return true;
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(ChatColor.AQUA + "/scene edit <name>");
-        sender.sendMessage(ChatColor.AQUA + "/scene play <name> [player] [startTick] [endTick]");
-        sender.sendMessage(ChatColor.AQUA + "/scene stop [player]");
-        sender.sendMessage(ChatColor.AQUA + "/scene pause [player]");
-        sender.sendMessage(ChatColor.AQUA + "/scene resume [player]");
-        sender.sendMessage(ChatColor.AQUA + "/scene reload");
-        sender.sendMessage(ChatColor.AQUA + "/scene list");
-        sender.sendMessage(ChatColor.AQUA + "/scene create <name> [duration]");
-        sender.sendMessage(ChatColor.AQUA + "/scene delete <name>");
-        sender.sendMessage(ChatColor.AQUA + "/scene rename <old> <new>");
-        sender.sendMessage(ChatColor.AQUA + "/scene duplicate <source> <target>");
-        sender.sendMessage(ChatColor.AQUA + "/scene group <number>");
-        sender.sendMessage(ChatColor.AQUA + "/scene tick <tick>");
-        sender.sendMessage(ChatColor.AQUA + "/scene cancel");
-        sender.sendMessage(ChatColor.AQUA + "/scene here");
-        sender.sendMessage(ChatColor.AQUA + "/scene setend <here|x y z yaw pitch>");
-        sender.sendMessage(ChatColor.AQUA + "/scene debugcamera <player>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor add <scene> <actorId>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor skin <scene> <actorId> <skin>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor playback <scene> <actorId> <exact|walk>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor scale <scene> <actorId> <value|snap>");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor record start <scene> <actorId> [startTick]");
-        sender.sendMessage(ChatColor.AQUA + "/scene actor record stop");
+        Text.send(sender, "&b" + "/scene edit <name>");
+        Text.send(sender, "&b" + "/scene play <name> [player] [startTick] [endTick]");
+        Text.send(sender, "&b" + "/scene stop [player]");
+        Text.send(sender, "&b" + "/scene pause [player]");
+        Text.send(sender, "&b" + "/scene resume [player]");
+        Text.send(sender, "&b" + "/scene reload");
+        Text.send(sender, "&b" + "/scene list");
+        Text.send(sender, "&b" + "/scene create <name> [duration]");
+        Text.send(sender, "&b" + "/scene delete <name>");
+        Text.send(sender, "&b" + "/scene rename <old> <new>");
+        Text.send(sender, "&b" + "/scene duplicate <source> <target>");
+        Text.send(sender, "&b" + "/scene group <number>");
+        Text.send(sender, "&b" + "/scene tick <tick>");
+        Text.send(sender, "&b" + "/scene cancel");
+        Text.send(sender, "&b" + "/scene here");
+        Text.send(sender, "&b" + "/scene setend <here|x y z yaw pitch>");
+        Text.send(sender, "&b" + "/scene debugcamera <player>");
+        Text.send(sender, "&b" + "/scene debugactors <on|off>");
+        Text.send(sender, "&b" + "/scene actor add <scene> <actorId>");
+        Text.send(sender, "&b" + "/scene actor rename <scene> <oldId> <newId>");
+        Text.send(sender, "&b" + "/scene actor delete <scene> <actorId> confirm");
+        Text.send(sender, "&b" + "/scene actor skin <scene> <actorId> <skin>");
+        Text.send(sender, "&b" + "/scene actor playback <scene> <actorId> <exact|walk>");
+        Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
+        Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick]");
+        Text.send(sender, "&b" + "/scene actor record stop");
     }
 
     private void handleCreate(CommandSender sender, String[] args) {
         if (!sender.hasPermission("scenes.edit")) {
-            sender.sendMessage(ChatColor.RED + "You lack permission to create scenes.");
+            Text.send(sender, "&c" + "You lack permission to create scenes.");
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene create <name> [duration]");
+            Text.send(sender, "&c" + "Usage: /scene create <name> [duration]");
             return;
         }
         String name = args[1].toLowerCase(Locale.ROOT);
@@ -117,29 +122,29 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 duration = Integer.parseInt(args[2]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid duration; using 200 ticks.");
+                Text.send(sender, "&c" + "Invalid duration; using 200 ticks.");
             }
         }
         Scene scene = sceneManager.createScene(name, duration);
         try {
             sceneManager.saveScene(scene);
-            sender.sendMessage(ChatColor.GREEN + "Scene created: " + name);
+            Text.send(sender, "&a" + "Scene created: " + name);
         } catch (Exception ex) {
-            sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+            Text.send(sender, "&c" + "Failed to save scene.");
         }
     }
 
     private void handleEdit(CommandSender sender, String[] args) {
         if (!sender.hasPermission("scenes.edit")) {
-            sender.sendMessage(ChatColor.RED + "You lack permission to edit scenes.");
+            Text.send(sender, "&c" + "You lack permission to edit scenes.");
             return;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can edit scenes.");
+            Text.send(sender, "&c" + "Only players can edit scenes.");
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene edit <name>");
+            Text.send(sender, "&c" + "Usage: /scene edit <name>");
             return;
         }
         String name = args[1].toLowerCase(Locale.ROOT);
@@ -153,7 +158,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
     private void handleGroup(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use editor commands.");
+            Text.send(sender, "&c" + "Only players can use editor commands.");
             return;
         }
         EditorSession session = editorEngine.getEditorSessionManager().getSession(player.getUniqueId());
@@ -168,7 +173,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         if (args.length >= 3) {
             Scene scene = sceneManager.loadScene(args[1].toLowerCase(Locale.ROOT));
             if (scene == null) {
-                sender.sendMessage(ChatColor.RED + "Scene not found.");
+                Text.send(sender, "&c" + "Scene not found.");
                 return;
             }
             session = editorEngine.getEditorSessionManager().createSession(player.getUniqueId(), scene);
@@ -176,11 +181,11 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 groupIndex = Integer.parseInt(args[2]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid group number.");
+                Text.send(sender, "&c" + "Invalid group number.");
                 return;
             }
         } else if (session == null) {
-            sender.sendMessage(ChatColor.RED + "No active editor session.");
+            Text.send(sender, "&c" + "No active editor session.");
             return;
         }
         session.setCurrentGroup(groupIndex);
@@ -194,7 +199,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene tick <tick>");
+            Text.send(sender, "&c" + "Usage: /scene tick <tick>");
             return;
         }
         try {
@@ -204,7 +209,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             session.clearHistory();
             editorEngine.openTickActionMenu((Player) sender, session, false);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "Invalid tick number.");
+            Text.send(sender, "&c" + "Invalid tick number.");
         }
     }
 
@@ -230,20 +235,64 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can set end locations.");
+            Text.send(sender, "&c" + "Only players can set end locations.");
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene setend <here|x y z yaw pitch>");
+            Text.send(sender, "&c" + "Usage: /scene setend <here|x y z yaw pitch>");
             return;
         }
-        sender.sendMessage(ChatColor.YELLOW + "Scene playback command is temporarily disabled until stabilized.");
+        if (args[1].equalsIgnoreCase("here")) {
+            session.getScene().setEndLocation(SceneLocation.fromLocation(player.getLocation()));
+            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
+            editorEngine.markDirty(session.getScene());
+            Text.send(sender, "&a" + "Scene end location set to your current position.");
+            return;
+        }
+        if (args.length < 6) {
+            Text.send(sender, "&c" + "Usage: /scene setend <here|x y z yaw pitch>");
+            return;
+        }
+        try {
+            double x = Double.parseDouble(args[1]);
+            double y = Double.parseDouble(args[2]);
+            double z = Double.parseDouble(args[3]);
+            float yaw = Float.parseFloat(args[4]);
+            float pitch = Float.parseFloat(args[5]);
+            SceneLocation location = new SceneLocation(player.getWorld().getName(), x, y, z, yaw, pitch);
+            session.getScene().setEndLocation(location);
+            session.getScene().setEndTeleportMode(com.extrascenes.scene.EndTeleportMode.TELEPORT_TO_END);
+            editorEngine.markDirty(session.getScene());
+            Text.send(sender, "&a" + "Scene end location updated.");
+        } catch (NumberFormatException ex) {
+            Text.send(sender, "&c" + "Invalid coordinates.");
+        }
+    }
+
+    private void handlePlay(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("scenes.play")) {
+            Text.send(sender, "&c" + "You lack permission to play scenes.");
+            return;
+        }
+        if (args.length < 2) {
+            Text.send(sender, "&c" + "Usage: /scene play <name> [player] [startTick] [endTick]");
+            return;
+        }
+        String name = args[1].toLowerCase(Locale.ROOT);
+        Scene scene = sceneManager.loadScene(name);
+        if (scene == null) {
+            Text.send(sender, "&c" + "Scene not found.");
+            return;
+        }
+        Player target = sender instanceof Player player ? player : null;
+        if (args.length >= 3) {
+            Player specified = Bukkit.getPlayer(args[2]);
             if (specified != null) {
                 target = specified;
             }
         }
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            Text.send(sender, "&c" + "Player not found.");
             return;
         }
         int startTick = 0;
@@ -252,7 +301,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 startTick = Integer.parseInt(args[3]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid start tick.");
+                Text.send(sender, "&c" + "Invalid start tick.");
                 return;
             }
         }
@@ -260,97 +309,85 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 endTick = Integer.parseInt(args[4]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid end tick.");
+                Text.send(sender, "&c" + "Invalid end tick.");
                 return;
             }
         }
         sessionManager.startScene(target, scene, false, startTick, endTick);
-        sender.sendMessage(ChatColor.GREEN + "Scene playing for " + target.getName());
+        Text.send(sender, "&a" + "Scene playing for " + target.getName());
     }
 
     private void handleStop(CommandSender sender, String[] args) {
         Player target = resolveTarget(sender, args);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            Text.send(sender, "&c" + "Player not found.");
             return;
         }
         sessionManager.stopScene(target, "command_stop");
-        sender.sendMessage(ChatColor.GREEN + "Scene stopped for " + target.getName());
+        Text.send(sender, "&a" + "Scene stopped for " + target.getName());
     }
 
     private void handlePause(CommandSender sender, String[] args) {
         Player target = resolveTarget(sender, args);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            Text.send(sender, "&c" + "Player not found.");
             return;
         }
         SceneSession session = sessionManager.getSession(target.getUniqueId());
         if (session != null) {
             session.setState(com.extrascenes.scene.SceneState.PAUSED);
-            sender.sendMessage(ChatColor.YELLOW + "Scene paused for " + target.getName());
+            Text.send(sender, "&e" + "Scene paused for " + target.getName());
         }
     }
 
     private void handleResume(CommandSender sender, String[] args) {
         Player target = resolveTarget(sender, args);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            Text.send(sender, "&c" + "Player not found.");
             return;
         }
         SceneSession session = sessionManager.getSession(target.getUniqueId());
         if (session != null) {
             session.setState(com.extrascenes.scene.SceneState.PLAYING);
-            sender.sendMessage(ChatColor.YELLOW + "Scene resumed for " + target.getName());
+            Text.send(sender, "&e" + "Scene resumed for " + target.getName());
         }
     }
 
     private void handleReload(CommandSender sender) {
         plugin.reloadConfig();
         sceneManager.reloadAll();
-    private void handleDebugActors(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene debugactors <on|off>");
-            return;
-        }
-        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
-        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
-        sender.sendMessage(ChatColor.YELLOW + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
-    }
-
-        sender.sendMessage(ChatColor.GREEN + "Scenes reloaded.");
+        Text.send(sender, "&a" + "Scenes reloaded.");
     }
 
     private void handleList(CommandSender sender) {
         List<String> scenes = sceneManager.listScenes();
-        sender.sendMessage(ChatColor.AQUA + "Scenes: " + (scenes.isEmpty() ? "(none)" : String.join(", ", scenes)));
+        Text.send(sender, "&b" + "Scenes: " + (scenes.isEmpty() ? "(none)" : String.join(", ", scenes)));
     }
 
     private void handleDelete(CommandSender sender, String[] args) {
         if (!sender.hasPermission("scenes.edit")) {
-            sender.sendMessage(ChatColor.RED + "You lack permission to delete scenes.");
+            Text.send(sender, "&c" + "You lack permission to delete scenes.");
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene delete <name>");
+            Text.send(sender, "&c" + "Usage: /scene delete <name>");
             return;
         }
         String name = args[1].toLowerCase(Locale.ROOT);
         if (args.length < 3 || !args[2].equalsIgnoreCase("confirm")) {
-            sender.sendMessage(ChatColor.YELLOW + "Confirm deletion with: /scene delete " + name + " confirm");
+            Text.send(sender, "&e" + "Confirm deletion with: /scene delete " + name + " confirm");
             return;
         }
         boolean deleted = sceneManager.deleteScene(name);
         if (deleted) {
             editorEngine.forceCloseEditorsForScene(name);
-            editorEngine.clearLastSelectedSceneReferences(name);
         }
-        sender.sendMessage(deleted ? ChatColor.GREEN + "Scene deleted." : ChatColor.RED + "Scene not found.");
+        Text.send(sender, deleted ? "&a" + "Scene deleted." : "&c" + "Scene not found.");
     }
-
 
     private void handleRename(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene rename <old> <new>");
+            Text.send(sender, "&c" + "Usage: /scene rename <old> <new>");
             return;
         }
         boolean renamed = sceneManager.renameScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
@@ -358,26 +395,36 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             editorEngine.forceCloseEditorsForScene(args[1]);
             editorEngine.clearLastSelectedSceneReferences(args[1]);
         }
-        sender.sendMessage(renamed ? ChatColor.GREEN + "Scene renamed." : ChatColor.RED + "Rename failed.");
+        Text.send(sender, renamed ? "&a" + "Scene renamed." : "&c" + "Rename failed.");
     }
 
     private void handleDuplicate(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene duplicate <source> <target>");
+            Text.send(sender, "&c" + "Usage: /scene duplicate <source> <target>");
             return;
         }
         boolean duplicated = sceneManager.duplicateScene(args[1].toLowerCase(Locale.ROOT), args[2].toLowerCase(Locale.ROOT));
-        sender.sendMessage(duplicated ? ChatColor.GREEN + "Scene duplicated." : ChatColor.RED + "Duplicate failed.");
+        Text.send(sender, duplicated ? "&a" + "Scene duplicated." : "&c" + "Duplicate failed.");
+    }
+
+    private void handleDebugActors(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            Text.send(sender, "&c" + "Usage: /scene debugactors <on|off>");
+            return;
+        }
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
+        Text.send(sender, "&e" + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
     }
 
     private void handleDebugCamera(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene debugcamera <player>");
+            Text.send(sender, "&c" + "Usage: /scene debugcamera <player>");
             return;
         }
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            Text.send(sender, "&c" + "Player not found.");
             return;
         }
         SceneSession session = sessionManager.getSession(target.getUniqueId());
@@ -394,7 +441,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         int cooldownLeft = session != null
                 ? Math.max(0, session.getSpectatorRecoveryCooldownUntilTick() - session.getTimeTicks())
                 : 0;
-        sender.sendMessage(ChatColor.YELLOW + "gamemode=" + gamemode
+        Text.send(sender, "&e" + "gamemode=" + gamemode
                 + " spectatorTarget=" + spectatorTarget
                 + " rigUuid=" + rigUuid
                 + " match=" + match
@@ -403,12 +450,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
     private EditorSession requireEditorSession(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use editor commands.");
+            Text.send(sender, "&c" + "Only players can use editor commands.");
             return null;
         }
         EditorSession session = editorEngine.getEditorSessionManager().getSession(player.getUniqueId());
         if (session == null) {
-            sender.sendMessage(ChatColor.RED + "No active editor session.");
+            Text.send(sender, "&c" + "No active editor session.");
         }
         return session;
     }
@@ -425,23 +472,23 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
     private void handleActor(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can manage actors.");
+            Text.send(sender, "&c" + "Only players can manage actors.");
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor <add|rename|delete|skin|playback|scale|record> ...");
+            Text.send(sender, "&c" + "Usage: /scene actor <add|rename|delete|skin|playback|scale|record> ...");
             return;
         }
         String mode = args[1].toLowerCase(Locale.ROOT);
         switch (mode) {
             case "add" -> {
                 if (args.length < 4) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor add <scene> <actorId>");
+                    Text.send(sender, "&c" + "Usage: /scene actor add <scene> <actorId>");
                     return;
                 }
                 Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
                 if (scene == null) {
-                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
                 SceneActorTemplate template = new SceneActorTemplate(args[3]);
@@ -450,24 +497,24 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 scene.setDirty(true);
                 try {
                     sceneManager.saveScene(scene);
-                    sender.sendMessage(ChatColor.GREEN + "Actor template created: " + args[3]);
+                    Text.send(sender, "&a" + "Actor template created: " + args[3]);
                 } catch (Exception ex) {
-                    sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+                    Text.send(sender, "&c" + "Failed to save scene.");
                 }
             }
             case "rename" -> {
                 if (args.length < 5) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor rename <scene> <oldId> <newId>");
+                    Text.send(sender, "&c" + "Usage: /scene actor rename <scene> <oldId> <newId>");
                     return;
                 }
                 Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
                 if (scene == null) {
-                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
                 SceneActorTemplate template = scene.getActorTemplate(args[3]);
                 if (template == null) {
-                    sender.sendMessage(ChatColor.RED + "Actor not found.");
+                    Text.send(sender, "&c" + "Actor not found.");
                     return;
                 }
                 scene.removeActorTemplate(args[3]);
@@ -485,93 +532,101 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 renamed.getTickActions().putAll(template.getTickActions());
                 scene.putActorTemplate(renamed);
                 sceneManager.markDirty(scene);
-                sender.sendMessage(ChatColor.GREEN + "Actor renamed.");
+                Text.send(sender, "&a" + "Actor renamed.");
             }
             case "delete" -> {
                 if (args.length < 5 || !"confirm".equalsIgnoreCase(args[4])) {
-                    sender.sendMessage(ChatColor.YELLOW + "Usage: /scene actor delete <scene> <actorId> confirm");
+                    Text.send(sender, "&e" + "Usage: /scene actor delete <scene> <actorId> confirm");
                     return;
                 }
                 Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
                 if (scene == null) {
-                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
                 scene.removeActorTemplate(args[3]);
                 sceneManager.markDirty(scene);
-                sender.sendMessage(ChatColor.GREEN + "Actor deleted.");
+                Text.send(sender, "&a" + "Actor deleted.");
             }
             case "skin" -> {
                 if (args.length < 5) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /scene actor skin <scene> <actorId> <skin>");
+                    Text.send(sender, "&c" + "Usage: /scene actor skin <scene> <actorId> <skin>");
                     return;
                 }
                 Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
                 if (scene == null) {
-                    sender.sendMessage(ChatColor.RED + "Scene not found.");
+                    Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
                 SceneActorTemplate template = scene.getActorTemplate(args[3]);
                 if (template == null) {
-                    sender.sendMessage(ChatColor.RED + "Actor not found.");
+                    Text.send(sender, "&c" + "Actor not found.");
                     return;
                 }
                 template.setSkinName(args[4]);
                 scene.setDirty(true);
                 try {
                     sceneManager.saveScene(scene);
-                    sender.sendMessage(ChatColor.GREEN + "Actor skin updated.");
+                    Text.send(sender, "&a" + "Actor skin updated.");
                 } catch (Exception ex) {
-                    sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+                    Text.send(sender, "&c" + "Failed to save scene.");
                 }
             }
             case "playback" -> handleActorPlayback(sender, args);
             case "scale" -> handleActorScale(sender, player, args);
             case "record" -> handleActorRecord(sender, player, args);
-            default -> sender.sendMessage(ChatColor.RED + "Unknown actor subcommand.");
+            default -> Text.send(sender, "&c" + "Unknown actor subcommand.");
         }
     }
 
 
     private void handleActorPlayback(CommandSender sender, String[] args) {
         if (args.length < 5) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor playback <scene> <actorId> <exact|walk>");
+            Text.send(sender, "&c" + "Usage: /scene actor playback <scene> <actorId> <exact|walk>");
             return;
         }
         Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
         if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            Text.send(sender, "&c" + "Scene not found.");
             return;
         }
-            if (List.of("edit", "delete", "group").contains(sub)) {
-            if (List.of("stop", "debugcamera").contains(sub)) {
-                if (sub.equals("debugactors") && args.length == 2) {
-            return filterPrefix(List.of("on", "off"), args[1]);
-            sender.sendMessage(ChatColor.RED + "Playback mode must be exact or walk.");
+        SceneActorTemplate template = scene.getActorTemplate(args[3]);
+        if (template == null) {
+            Text.send(sender, "&c" + "Actor not found.");
+            return;
+        }
+        String mode = args[4].toUpperCase(Locale.ROOT);
+        try {
+            template.setPlaybackMode(com.extrascenes.scene.ActorPlaybackMode.valueOf(mode));
+            scene.setDirty(true);
+            sceneManager.saveScene(scene);
+            Text.send(sender, "&a" + "Actor playback mode updated to " + mode + ".");
+        } catch (IllegalArgumentException ex) {
+            Text.send(sender, "&c" + "Playback mode must be exact or walk.");
         } catch (Exception ex) {
-            sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+            Text.send(sender, "&c" + "Failed to save scene.");
         }
     }
 
     private void handleActorScale(CommandSender sender, Player player, String[] args) {
         if (args.length < 5) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor scale <scene> <actorId> <value|snap>");
+            Text.send(sender, "&c" + "Usage: /scene actor scale <scene> <actorId> <value|snap>");
             return;
         }
         Scene scene = sceneManager.loadScene(args[2].toLowerCase(Locale.ROOT));
         if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            Text.send(sender, "&c" + "Scene not found.");
             return;
         }
         SceneActorTemplate template = scene.getActorTemplate(args[3]);
         if (template == null) {
-            sender.sendMessage(ChatColor.RED + "Actor not found.");
+            Text.send(sender, "&c" + "Actor not found.");
             return;
         }
         if ("snap".equalsIgnoreCase(args[4])) {
             org.bukkit.attribute.Attribute attribute = com.extrascenes.ScaleAttributeResolver.resolveScaleAttribute();
             if (attribute == null || player.getAttribute(attribute) == null) {
-                sender.sendMessage(ChatColor.RED + "Scale attribute not available on this server build.");
+                Text.send(sender, "&c" + "Scale attribute not available on this server build.");
                 return;
             }
             template.setScale(player.getAttribute(attribute).getValue());
@@ -579,38 +634,38 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 template.setScale(Double.parseDouble(args[4]));
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid scale value.");
+                Text.send(sender, "&c" + "Invalid scale value.");
                 return;
             }
         }
         scene.setDirty(true);
         try {
             sceneManager.saveScene(scene);
-            sender.sendMessage(ChatColor.GREEN + "Actor scale updated to " + String.format(Locale.ROOT, "%.3f", template.getScale()) + ".");
+            Text.send(sender, "&a" + "Actor scale updated to " + String.format(Locale.ROOT, "%.3f", template.getScale()) + ".");
         } catch (Exception ex) {
-            sender.sendMessage(ChatColor.RED + "Failed to save scene.");
+            Text.send(sender, "&c" + "Failed to save scene.");
         }
     }
 
     private void handleActorRecord(CommandSender sender, Player player, String[] args) {
         if (args.length >= 3 && "stop".equalsIgnoreCase(args[2])) {
             boolean stopped = actorRecordingService.stopRecording(player, true);
-            sender.sendMessage(stopped ? ChatColor.GREEN + "Actor recording stopped and saved."
-                    : ChatColor.RED + "No active actor recording.");
+            Text.send(sender, stopped ? "&a" + "Actor recording stopped and saved."
+                    : "&c" + "No active actor recording.");
             return;
         }
         if (args.length < 5 || !"start".equalsIgnoreCase(args[2])) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene actor record start <scene> <actorId> [tick]");
+            Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick]");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
         if (scene == null) {
-            sender.sendMessage(ChatColor.RED + "Scene not found.");
+            Text.send(sender, "&c" + "Scene not found.");
             return;
         }
         SceneActorTemplate template = scene.getActorTemplate(args[4]);
         if (template == null) {
-            sender.sendMessage(ChatColor.RED + "Actor not found.");
+            Text.send(sender, "&c" + "Actor not found.");
             return;
         }
         int startTick = 0;
@@ -618,11 +673,11 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             try {
                 startTick = Integer.parseInt(args[5]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage(ChatColor.RED + "Invalid tick; using 0.");
+                Text.send(sender, "&c" + "Invalid tick; using 0.");
             }
         }
         actorRecordingService.startRecording(player, scene, template, startTick);
-        sender.sendMessage(ChatColor.GREEN + "Recording actor " + template.getActorId() + " from tick " + startTick + ".");
+        Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick + ".");
     }
 
 
@@ -641,6 +696,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             }
             if (List.of("stop", "pause", "resume", "debugcamera").contains(sub)) {
                 return filterPrefix(onlinePlayerNames(), args[1]);
+            }
+            if (sub.equals("debugactors")) {
+                return filterPrefix(List.of("on", "off"), args[1]);
             }
         }
         if ((sub.equals("rename") || sub.equals("duplicate")) && args.length == 3) {

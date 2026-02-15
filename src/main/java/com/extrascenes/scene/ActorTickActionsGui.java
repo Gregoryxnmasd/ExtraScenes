@@ -1,8 +1,9 @@
 package com.extrascenes.scene;
 
+import com.extrascenes.Text;
+
 import java.util.List;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -71,7 +72,7 @@ public class ActorTickActionsGui implements EditorGui {
             return;
         }
         editorEngine.markDirty(scene);
-        player.sendMessage(ChatColor.GREEN + "Actor tick action updated.");
+        Text.send(player, "&a" + "Actor tick action updated.");
         refresh(session);
     }
 

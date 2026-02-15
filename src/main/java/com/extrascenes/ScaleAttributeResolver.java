@@ -1,24 +1,33 @@
 package com.extrascenes;
 
-import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 
 public final class ScaleAttributeResolver {
+    private static Attribute cachedScale;
+    private static boolean scaleResolved;
+
     private ScaleAttributeResolver() {
     }
 
     public static Attribute resolveScaleAttribute() {
-        Attribute attribute = find("SCALE");
-        if (attribute != null) {
-            return attribute;
+        if (scaleResolved) {
+            return cachedScale;
         }
-        return find("GENERIC_SCALE");
+
+        Attribute attribute = resolveAttribute("SCALE");
+        if (attribute == null) {
+            attribute = resolveAttribute("GENERIC_SCALE");
+        }
+
+        cachedScale = attribute;
+        scaleResolved = true;
+        return cachedScale;
     }
 
-    private static Attribute find(String key) {
+    private static Attribute resolveAttribute(String name) {
         try {
-            return Registry.ATTRIBUTE.get(org.bukkit.NamespacedKey.minecraft(key.toLowerCase()));
-        } catch (Exception ex) {
+            return Attribute.valueOf(name);
+        } catch (IllegalArgumentException ex) {
             return null;
         }
     }
