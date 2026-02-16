@@ -56,6 +56,7 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
+        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_quit");
         if (editorSessionManager != null) {
             EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
@@ -72,11 +73,14 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerKick(PlayerKickEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
+        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_kick");
     }
 
     @EventHandler
     public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
+        actorRecordingService.stopRecording(event.getPlayer(), true);
         visibilityController.hideAllSceneEntities(event.getPlayer());
         SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session != null) {
@@ -155,9 +159,18 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+        if ((event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
+                && SceneWand.isRecordingWand(item)
+                && actorRecordingService.isRecording(player)) {
+            actorRecordingService.stopRecording(player, true);
+            player.getInventory().remove(item);
+            player.sendActionBar("§aRecording stopped");
+            event.setCancelled(true);
+            return;
+        }
         EditorSession editorSession = editorSessionManager.getSession(player.getUniqueId());
         if (editorSession != null && editorEngine.hasArmedPlacement(editorSession)) {
-            ItemStack item = event.getItem();
             if (SceneWand.isWand(item)) {
                 if (event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
                     editorEngine.confirmPlacement(player, editorSession);

@@ -48,7 +48,11 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sendHelp(sender);
+            if (sender instanceof Player player) {
+                editorEngine.openMainMenu(player);
+            } else {
+                sendHelp(sender);
+            }
             return true;
         }
 

@@ -43,10 +43,12 @@ public class ActorDetailGui implements EditorGui {
         }
 
         if (!recording) {
-            inventory.setItem(10, GuiUtils.makeItem(Material.LIME_DYE, "Record Start", List.of("Start at selected tick: " + session.getActorRecordingStartTick())));
+            inventory.setItem(10, GuiUtils.makeItem(Material.LIME_DYE, "Record Actor Movement",
+                    List.of("Start tick: " + session.getActorRecordingStartTick(), "Click to enter duration.")));
         }
         if (recording) {
-            inventory.setItem(11, GuiUtils.makeItem(Material.RED_DYE, "Record Stop", List.of("Stop active recording.")));
+            inventory.setItem(11, GuiUtils.makeItem(Material.RED_DYE, "Stop Recording",
+                    List.of("Stop active recording.", "You can also right-click Recording Wand.")));
         }
         inventory.setItem(12, GuiUtils.makeItem(actor.isPreviewEnabled() ? Material.ENDER_EYE : Material.ENDER_PEARL,
                 "Preview Toggle", List.of("Current: " + (actor.isPreviewEnabled() ? "ON" : "OFF"))));
@@ -82,8 +84,10 @@ public class ActorDetailGui implements EditorGui {
                 Text.send(player, "&c" + "Already recording this actor.");
                 return;
             }
-            editorEngine.getPlugin().getActorRecordingService().startRecording(player, scene, actor, session.getActorRecordingStartTick(), session.isPreviewOtherActors());
-            Text.send(player, "&a" + "Recording actor " + actor.getActorId() + " from tick " + session.getActorRecordingStartTick());
+            player.closeInventory();
+            player.getInventory().addItem(SceneWand.createRecordingWand());
+            editorEngine.getInputManager().beginActorRecordingDurationInput(player, scene, session, actor.getActorId(), GuiType.ACTOR_DETAIL);
+            Text.send(player, "&a" + "Enter duration in chat. Recording will start with a 3..2..1 countdown.");
         } else if (ctx.getSlot() == 11) {
             if (!recording) {
                 Text.send(player, "&c" + "No active recording.");

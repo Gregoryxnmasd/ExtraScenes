@@ -32,7 +32,8 @@ public class EditorInputManager {
         MODEL_ENTRY_CREATE_NAME,
         MODEL_ENTRY_CREATE_MODEL_ID,
         MODEL_ENTRY_MODEL_ID,
-        MODEL_ENTRY_ANIMATION_ID
+        MODEL_ENTRY_ANIMATION_ID,
+        ACTOR_RECORD_DURATION
     }
 
     public enum ModelField {
@@ -52,6 +53,7 @@ public class EditorInputManager {
         private GuiType returnGui;
         private SceneTrackType trackType;
         private UUID keyframeId;
+        private String actorId;
 
         public PromptState(UUID playerId, Scene scene, EditorSession editorSession, PromptType type) {
             this.playerId = playerId;
@@ -138,6 +140,14 @@ public class EditorInputManager {
 
         public void setKeyframeId(UUID keyframeId) {
             this.keyframeId = keyframeId;
+        }
+
+        public String getActorId() {
+            return actorId;
+        }
+
+        public void setActorId(String actorId) {
+            this.actorId = actorId;
         }
     }
 
@@ -306,6 +316,15 @@ public class EditorInputManager {
                 + " (or leave empty). Type 'cancel' to abort.");
     }
 
+    public void beginActorRecordingDurationInput(Player player, Scene scene, EditorSession session,
+                                                 String actorId, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_RECORD_DURATION);
+        state.setActorId(actorId);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Enter recording duration in seconds.");
+    }
+
     public boolean handleChat(Player player, String message) {
         PromptState state = prompts.get(player.getUniqueId());
         if (state == null) {
@@ -343,6 +362,7 @@ public class EditorInputManager {
             case MODEL_ENTRY_CREATE_MODEL_ID -> handleModelEntryCreateModelId(player, state, message);
             case MODEL_ENTRY_MODEL_ID -> handleModelEntryModelId(player, state, message);
             case MODEL_ENTRY_ANIMATION_ID -> handleModelEntryAnimation(player, state, message);
+            case ACTOR_RECORD_DURATION -> handleActorRecordDuration(player, state, message);
             default -> {
             }
         }
@@ -687,6 +707,29 @@ public class EditorInputManager {
         Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                 state.getReturnGui() == null ? GuiType.MODEL_ENTRY_EDITOR : state.getReturnGui()));
         Text.send(player, "&a" + "Default animation updated.");
+    }
+
+    private void handleActorRecordDuration(Player player, PromptState state, String message) {
+        try {
+            int seconds = Integer.parseInt(message);
+            if (seconds <= 0) {
+                Text.send(player, "&c" + "Duration must be at least 1 second.");
+                return;
+            }
+            SceneActorTemplate actor = state.getScene().getActorTemplate(state.getActorId());
+            if (actor == null) {
+                prompts.remove(player.getUniqueId());
+                Text.send(player, "&c" + "Actor no longer exists.");
+                return;
+            }
+            prompts.remove(player.getUniqueId());
+            plugin.getActorRecordingService().startRecordingWithCountdown(player, state.getScene(), actor,
+                    state.getEditorSession().getActorRecordingStartTick(), state.getEditorSession().isPreviewOtherActors(), seconds);
+            Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                    state.getReturnGui() == null ? GuiType.ACTOR_DETAIL : state.getReturnGui()));
+        } catch (NumberFormatException ex) {
+            Text.send(player, "&c" + "Invalid number. Enter duration in seconds.");
+        }
     }
 
     public void clearPrompt(UUID playerId) {

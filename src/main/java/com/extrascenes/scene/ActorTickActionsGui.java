@@ -52,27 +52,36 @@ public class ActorTickActionsGui implements EditorGui {
             return;
         }
         ActorTickAction action = actor.getOrCreateTickAction(session.getCurrentTick());
+        boolean changed = false;
         if (ctx.getSlot() == 10) {
             action.setSpawn(!action.isSpawn());
+            changed = true;
         } else if (ctx.getSlot() == 11) {
             action.setDespawn(!action.isDespawn());
+            changed = true;
         } else if (ctx.getSlot() == 12) {
             action.setManualTransform(!action.isManualTransform());
+            changed = true;
         } else if (ctx.getSlot() == 13) {
             action.setAnimation(ctx.isRightClick() ? null : "idle");
+            changed = true;
         } else if (ctx.getSlot() == 14) {
             action.setLookAtTarget(new LookAtTarget(
                     LookAtTarget.Mode.POSITION,
                     Transform.fromLocation(player.getLocation()),
                     null));
+            changed = true;
         } else if (ctx.getSlot() == 15) {
             action.setCommand(ctx.isRightClick() ? null : "say actor " + actor.getActorId() + " tick " + session.getCurrentTick());
+            changed = true;
         } else if (ctx.getSlot() == 22) {
             editorEngine.navigateBack(player, session);
             return;
         }
-        editorEngine.markDirty(scene);
-        Text.send(player, "&a" + "Actor tick action updated.");
+        if (changed) {
+            editorEngine.markDirty(scene);
+            Text.send(player, "&a" + "Actor tick action saved.");
+        }
         refresh(session);
     }
 

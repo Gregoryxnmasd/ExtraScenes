@@ -5,9 +5,13 @@ import com.extrascenes.ScaleAttributeResolver;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.kyori.adventure.title.Title;
+import net.kyori.adventure.text.Component;
+import java.time.Duration;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 public class ActorRecordingService {
@@ -23,13 +27,44 @@ public class ActorRecordingService {
     }
 
     public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers) {
+        return startRecording(player, scene, template, startTick, previewOthers, 0);
+    }
+
+    public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick,
+                                  boolean previewOthers, int durationSeconds) {
         stopRecording(player, false);
-        ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers);
+        ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers, durationSeconds);
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> capture(player, recording), 1L, 1L);
         recording.task = task;
         activeRecordings.put(player.getUniqueId(), recording);
         syncScale(player, template);
         return true;
+    }
+
+    public void startRecordingWithCountdown(Player player, Scene scene, SceneActorTemplate template,
+                                            int startTick, boolean previewOthers, int durationSeconds) {
+        int boundedDuration = Math.max(1, durationSeconds);
+        new BukkitRunnable() {
+            int countdown = 3;
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    cancel();
+                    return;
+                }
+                if (countdown > 0) {
+                    player.showTitle(Title.title(Component.text(String.valueOf(countdown)), Component.text("Recording starts"),
+                            Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
+                    player.sendActionBar("§eRecording starts in §f" + countdown + "§e...");
+                    countdown--;
+                    return;
+                }
+                startRecording(player, scene, template, startTick, previewOthers, boundedDuration);
+                player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + boundedDuration + "s"),
+                        Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
+                cancel();
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public boolean stopRecording(Player player, boolean markDirty) {
@@ -40,6 +75,7 @@ public class ActorRecordingService {
         if (recording.task != null) {
             recording.task.cancel();
         }
+        player.getInventory().removeItem(SceneWand.createRecordingWand());
         plugin.getRuntimeEngine().clearRecordingPreview(player);
         if (markDirty) {
             plugin.getSceneManager().markDirty(recording.scene);
@@ -100,7 +136,18 @@ public class ActorRecordingService {
         if (recording.previewOthers) {
             plugin.getRuntimeEngine().previewActorsAtTick(player, recording.scene, recording.template.getActorId(), tick);
         }
+        if (recording.durationSeconds > 0) {
+            int elapsedSeconds = Math.max(1, recording.relativeTick / 20 + 1);
+            player.sendActionBar("§cREC §7• §f" + elapsedSeconds + "/" + recording.durationSeconds + "s");
+            if (recording.relativeTick + 1 >= recording.durationSeconds * 20) {
+                stopRecording(player, true);
+            }
+        }
         recording.relativeTick++;
+    }
+
+    private String actorLabel(SceneActorTemplate template) {
+        return template == null ? "Actor" : template.getActorId();
     }
 
     private void syncScale(Player player, SceneActorTemplate template) {
@@ -118,12 +165,14 @@ public class ActorRecordingService {
         private int relativeTick;
         private BukkitTask task;
         private final boolean previewOthers;
+        private final int durationSeconds;
 
-        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers) {
+        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers, int durationSeconds) {
             this.scene = scene;
             this.template = template;
             this.startTick = Math.max(0, startTick);
             this.previewOthers = previewOthers;
+            this.durationSeconds = Math.max(0, durationSeconds);
         }
     }
 }

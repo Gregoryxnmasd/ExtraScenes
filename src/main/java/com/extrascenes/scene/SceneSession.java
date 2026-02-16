@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 public class SceneSession {
+    private final UUID sessionId;
     private final UUID playerId;
     private final Scene scene;
     private final PlayerStateSnapshot snapshot;
@@ -38,6 +39,7 @@ public class SceneSession {
     private final List<BukkitTask> ownedTasks = new ArrayList<>();
     private int spectatorRecoveryCooldownUntilTick;
     private org.bukkit.inventory.ItemStack originalHelmet;
+    private final SessionEntityTracker entityTracker = new SessionEntityTracker();
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -45,6 +47,7 @@ public class SceneSession {
 
     public SceneSession(Player player, Scene scene, boolean preview, int startTick, int endTick) {
         this.playerId = player.getUniqueId();
+        this.sessionId = UUID.randomUUID();
         this.scene = scene;
         this.snapshot = new PlayerStateSnapshot(player);
         this.state = SceneState.PLAYING;
@@ -57,6 +60,10 @@ public class SceneSession {
 
     public UUID getPlayerId() {
         return playerId;
+    }
+
+    public UUID getSessionId() {
+        return sessionId;
     }
 
     public Scene getScene() {
@@ -109,14 +116,21 @@ public class SceneSession {
 
     public void registerEntity(Entity entity) {
         sceneEntities.add(entity);
+        entityTracker.register(entity);
     }
 
     public void unregisterEntity(Entity entity) {
         sceneEntities.remove(entity);
+        entityTracker.unregister(entity);
     }
 
     public void clearSceneEntities() {
         sceneEntities.clear();
+        entityTracker.clear();
+    }
+
+    public SessionEntityTracker getEntityTracker() {
+        return entityTracker;
     }
 
     public Map<String, UUID> getModelRefs() {

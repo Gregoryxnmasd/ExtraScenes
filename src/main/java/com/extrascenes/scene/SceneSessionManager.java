@@ -259,6 +259,16 @@ public class SceneSessionManager {
                 entity.remove();
             }
         }
+        Player player = Bukkit.getPlayer(session.getPlayerId());
+        if (player != null) {
+            for (UUID entityId : session.getEntityTracker().getTrackedEntityIds()) {
+                Entity tracked = player.getWorld().getEntity(entityId);
+                if (tracked != null && tracked.isValid()) {
+                    unregisterSceneEntity(tracked);
+                    tracked.remove();
+                }
+            }
+        }
         session.clearActorHandles();
         session.clearSceneEntities();
     }
