@@ -35,6 +35,9 @@ public class CommandKeyframeEditorGui implements EditorGui {
                     List.of("Chat input (multi-line).", "Type 'done' to finish.")));
             inventory.setItem(24, GuiUtils.makeItem(Material.LEVER, "Executor: " + keyframe.getExecutorMode(),
                     List.of("Toggle executor.")));
+            inventory.setItem(25, GuiUtils.makeItem(keyframe.isAllowGlobal() ? Material.LIME_DYE : Material.GRAY_DYE,
+                    "Global Command Override: " + keyframe.isAllowGlobal(),
+                    List.of("Allows global: prefixed commands even when scene-level option is off.")));
 
             int slot = 36;
             int index = 0;
@@ -95,6 +98,12 @@ public class CommandKeyframeEditorGui implements EditorGui {
             keyframe.setExecutorMode(keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.PLAYER
                     ? CommandKeyframe.ExecutorMode.CONSOLE
                     : CommandKeyframe.ExecutorMode.PLAYER);
+            editorEngine.markDirty(session.getScene());
+            refresh(session);
+            return;
+        }
+        if (slot == 25) {
+            keyframe.setAllowGlobal(!keyframe.isAllowGlobal());
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
