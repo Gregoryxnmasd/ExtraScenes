@@ -75,7 +75,7 @@ public class ActorRecordingService {
                 pendingCountdowns.remove(player.getUniqueId());
                 startRecording(player, scene, template, startTick, previewOthers, boundedDurationTicks, boundedUnit);
                 int displayLimit = boundedUnit == RecordingDurationUnit.SECONDS
-                        ? Math.max(1, boundedDurationTicks / 20)
+                        ? Math.max(1, (boundedDurationTicks + 19) / 20)
                         : boundedDurationTicks;
                 player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + displayLimit + boundedUnit.suffix()),
                         Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
@@ -105,6 +105,7 @@ public class ActorRecordingService {
         }
         player.getInventory().removeItem(SceneWand.createRecordingWand());
         plugin.getRuntimeEngine().clearRecordingPreview(player);
+        player.sendActionBar("");
         plugin.getLogger().info("[actor-record] stop viewer=" + player.getName()
                 + " actor=" + recording.template.getActorId()
                 + " ticksCaptured=" + recording.relativeTick
@@ -223,7 +224,7 @@ public class ActorRecordingService {
 
         private String formatLimit() {
             if (durationUnit == RecordingDurationUnit.SECONDS) {
-                return Math.max(1, durationTicks / 20) + durationUnit.suffix();
+                return Math.max(1, (durationTicks + 19) / 20) + durationUnit.suffix();
             }
             return durationTicks + durationUnit.suffix();
         }
