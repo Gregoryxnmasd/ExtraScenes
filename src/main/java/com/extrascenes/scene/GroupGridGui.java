@@ -184,7 +184,7 @@ public class GroupGridGui implements EditorGui {
         }
         if (row == 3) {
             for (SceneActorTemplate actor : scene.getActorTemplates().values()) {
-                actor.removeTransformTick(tick);
+                actor.getTransformTicks().remove(tick);
             }
             return;
         }
