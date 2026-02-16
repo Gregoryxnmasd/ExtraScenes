@@ -216,7 +216,7 @@ public class ActorRecordingService {
 
         private String formatElapsed(int elapsedTicks) {
             if (durationUnit == RecordingDurationUnit.SECONDS) {
-                return String.valueOf(Math.max(1, elapsedTicks / 20));
+                return String.valueOf(Math.max(1, (elapsedTicks + 19) / 20));
             }
             return String.valueOf(elapsedTicks);
         }

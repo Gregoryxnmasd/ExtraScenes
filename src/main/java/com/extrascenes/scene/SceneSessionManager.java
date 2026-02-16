@@ -148,16 +148,18 @@ public class SceneSessionManager {
                 + " reason=" + reason
                 + " teleportOnEnd=" + teleportOnEnd
                 + " openPreviewDashboard=" + openPreviewDashboard);
-        pendingRestores.remove(playerId);
         plugin.getRuntimeEngine().stopSession(session);
 
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
+            pendingRestores.remove(playerId);
             restorePlayerState(player, session);
             if (teleportOnEnd) {
                 teleportOnEnd(player, session);
             }
             clearActionBar(player, session);
+        } else if (!session.isRestorePending()) {
+            pendingRestores.remove(playerId);
         }
 
         for (org.bukkit.scheduler.BukkitTask owned : session.getOwnedTasks()) {
@@ -230,12 +232,14 @@ public class SceneSessionManager {
         if (session == null) {
             return;
         }
+        session.setRestorePending(false);
         restorePlayerState(player, session);
     }
 
     public void markRestorePending(UUID playerId) {
         SceneSession session = sessions.get(playerId);
         if (session != null) {
+            session.setRestorePending(true);
             pendingRestores.put(playerId, session);
         }
     }

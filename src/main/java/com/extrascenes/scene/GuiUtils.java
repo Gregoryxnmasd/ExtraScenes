@@ -68,12 +68,7 @@ public final class GuiUtils {
         if (player == null) {
             return;
         }
-        Inventory top = player.getOpenInventory().getTopInventory();
-        if (top.getSize() != updated.getSize()) {
-            player.openInventory(updated);
-            return;
-        }
-        top.setContents(updated.getContents());
+        player.openInventory(updated);
     }
 
     public static ItemStack buildKeyframeItem(Keyframe keyframe, UUID selectedId) {
