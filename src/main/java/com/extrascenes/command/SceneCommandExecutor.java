@@ -28,7 +28,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
             "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
-            "debugcamera", "debugactors", "debugvisibility", "actor"
+            "debugcamera", "debugpreview", "debugactors", "debugvisibility", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -77,6 +77,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "rename" -> handleRename(sender, args);
             case "duplicate" -> handleDuplicate(sender, args);
             case "debugcamera" -> handleDebugCamera(sender, args);
+            case "debugpreview" -> handleDebugPreview(sender, args);
             case "debugactors" -> handleDebugActors(sender, args);
             case "debugvisibility" -> handleDebugVisibility(sender, args);
             case "actor" -> handleActor(sender, args);
@@ -103,7 +104,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene cancel");
         Text.send(sender, "&b" + "/scene here");
         Text.send(sender, "&b" + "/scene setend <here|x y z yaw pitch>");
-        Text.send(sender, "&b" + "/scene debugcamera <player>");
+        Text.send(sender, "&b" + "/scene debugcamera <on|off>");
+        Text.send(sender, "&b" + "/scene debugpreview <on|off>");
         Text.send(sender, "&b" + "/scene debugactors <on|off>");
         Text.send(sender, "&b" + "/scene debugvisibility <actorId>");
         Text.send(sender, "&b" + "/scene actor add <scene> <actorId>");
@@ -435,34 +437,31 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private void handleDebugCamera(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&c" + "Only players can toggle camera debug.");
+            return;
+        }
         if (args.length < 2) {
-            Text.send(sender, "&c" + "Usage: /scene debugcamera <player>");
+            Text.send(sender, "&c" + "Usage: /scene debugcamera <on|off>");
             return;
         }
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            Text.send(sender, "&c" + "Player not found.");
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setDebugCameraEnabled(player.getUniqueId(), enabled);
+        Text.send(sender, "&e" + "Camera debug " + (enabled ? "enabled" : "disabled") + ".");
+    }
+
+    private void handleDebugPreview(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&c" + "Only players can toggle preview debug.");
             return;
         }
-        SceneSession session = sessionManager.getSession(target.getUniqueId());
-        String gamemode = String.valueOf(target.getGameMode());
-        String spectatorTarget = target.getSpectatorTarget() != null
-                ? target.getSpectatorTarget().getUniqueId().toString()
-                : "null";
-        String rigUuid = session != null && session.getCameraRigId() != null
-                ? session.getCameraRigId().toString()
-                : "null";
-        boolean match = session != null && session.getCameraRigId() != null
-                && target.getSpectatorTarget() != null
-                && session.getCameraRigId().equals(target.getSpectatorTarget().getUniqueId());
-        int cooldownLeft = session != null
-                ? Math.max(0, session.getSpectatorRecoveryCooldownUntilTick() - session.getTimeTicks())
-                : 0;
-        Text.send(sender, "&e" + "gamemode=" + gamemode
-                + " spectatorTarget=" + spectatorTarget
-                + " rigUuid=" + rigUuid
-                + " match=" + match
-                + " recoveryCooldown=" + cooldownLeft);
+        if (args.length < 2) {
+            Text.send(sender, "&c" + "Usage: /scene debugpreview <on|off>");
+            return;
+        }
+        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
+        plugin.getRuntimeEngine().setDebugPreviewEnabled(player.getUniqueId(), enabled);
+        Text.send(sender, "&e" + "Preview debug " + (enabled ? "enabled" : "disabled") + ".");
     }
 
     private void handleDebugVisibility(CommandSender sender, String[] args) {
@@ -739,10 +738,10 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (sub.equals("tick")) {
                 return filterPrefix(validTickSuggestions(sender), args[1]);
             }
-            if (List.of("stop", "pause", "resume", "debugcamera").contains(sub)) {
+            if (List.of("stop", "pause", "resume").contains(sub)) {
                 return filterPrefix(onlinePlayerNames(), args[1]);
             }
-            if (sub.equals("debugactors")) {
+            if (List.of("debugcamera", "debugpreview", "debugactors").contains(sub)) {
                 return filterPrefix(List.of("on", "off"), args[1]);
             }
         }

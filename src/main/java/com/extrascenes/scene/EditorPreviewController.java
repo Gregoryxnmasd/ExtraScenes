@@ -2,6 +2,7 @@ package com.extrascenes.scene;
 
 import com.extrascenes.CitizensAdapter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,17 @@ public class EditorPreviewController {
             return null;
         }
         return handlesFor(viewer).get(actorId.toLowerCase(Locale.ROOT));
+    }
+
+    public List<SessionActorHandle> listHandles(UUID viewerId) {
+        if (viewerId == null) {
+            return List.of();
+        }
+        Map<String, SessionActorHandle> handles = handlesByViewer.get(viewerId);
+        if (handles == null || handles.isEmpty()) {
+            return List.of();
+        }
+        return List.copyOf(handles.values());
     }
 
     public void cleanup(Player viewer) {
