@@ -10,6 +10,7 @@ import com.extrascenes.scene.SceneEditorEngine;
 import com.extrascenes.scene.SceneLocation;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneSession;
+import com.extrascenes.scene.SceneSelfTestRunner;
 import com.extrascenes.scene.SceneSessionManager;
 import com.extrascenes.scene.SceneActorTemplate;
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
             "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
-            "debugcamera", "debugpreview", "debugactors", "debugvisibility", "actor"
+            "debugcamera", "debugpreview", "debugactors", "debugvisibility", "actor", "selftest"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -36,6 +37,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private final SceneSessionManager sessionManager;
     private final SceneEditorEngine editorEngine;
     private final ActorRecordingService actorRecordingService;
+    private final SceneSelfTestRunner selfTestRunner;
 
     public SceneCommandExecutor(ExtraScenesPlugin plugin, SceneManager sceneManager,
                                 SceneSessionManager sessionManager, SceneEditorEngine editorEngine) {
@@ -44,6 +46,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         this.sessionManager = sessionManager;
         this.editorEngine = editorEngine;
         this.actorRecordingService = plugin.getActorRecordingService();
+        this.selfTestRunner = new SceneSelfTestRunner(plugin, sessionManager);
     }
 
     @Override
@@ -81,6 +84,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "debugactors" -> handleDebugActors(sender, args);
             case "debugvisibility" -> handleDebugVisibility(sender, args);
             case "actor" -> handleActor(sender, args);
+            case "selftest" -> handleSelfTest(sender, args);
             default -> Text.send(sender, "&c" + "Unknown scene subcommand.");
         }
         return true;
@@ -116,6 +120,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
         Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick]");
         Text.send(sender, "&b" + "/scene actor record stop");
+        Text.send(sender, "&b" + "/scene selftest <name>");
     }
 
     private void handleMain(CommandSender sender) {
@@ -725,6 +730,25 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
 
+    private void handleSelfTest(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&c" + "Only players can run selftests.");
+            return;
+        }
+        if (args.length < 2) {
+            Text.send(sender, "&c" + "Usage: /scene selftest <name>");
+            return;
+        }
+        String name = args[1].toLowerCase(Locale.ROOT);
+        Scene scene = sceneManager.loadScene(name);
+        if (scene == null) {
+            Text.send(sender, "&c" + "Scene not found.");
+            return;
+        }
+        selfTestRunner.run(player, scene);
+    }
+
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
@@ -732,7 +756,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 2) {
-            if (List.of("edit", "play", "delete", "group", "rename", "duplicate").contains(sub)) {
+            if (List.of("edit", "play", "delete", "group", "rename", "duplicate", "selftest").contains(sub)) {
                 return filterPrefix(sceneManager.listScenes(), args[1]);
             }
             if (sub.equals("tick")) {

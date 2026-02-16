@@ -43,6 +43,9 @@ public class SceneSession {
     private int forcedChunkZ;
     private org.bukkit.inventory.ItemStack originalHelmet;
     private final SessionEntityTracker entityTracker = new SessionEntityTracker();
+    private int playbackTeleportCount;
+    private boolean spectatorHandshakeComplete;
+    private int spectatorHandshakeAttempts;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -59,6 +62,9 @@ public class SceneSession {
         this.timeTicks = this.startTick;
         this.preview = preview;
         this.spectatorRecoveryCooldownUntilTick = 0;
+        this.playbackTeleportCount = 0;
+        this.spectatorHandshakeComplete = false;
+        this.spectatorHandshakeAttempts = 0;
     }
 
     public UUID getPlayerId() {
@@ -309,5 +315,29 @@ public class SceneSession {
         this.forcedChunkWorld = worldName;
         this.forcedChunkX = chunkX;
         this.forcedChunkZ = chunkZ;
+    }
+
+    public int getPlaybackTeleportCount() {
+        return playbackTeleportCount;
+    }
+
+    public void incrementPlaybackTeleportCount() {
+        this.playbackTeleportCount++;
+    }
+
+    public boolean isSpectatorHandshakeComplete() {
+        return spectatorHandshakeComplete;
+    }
+
+    public void setSpectatorHandshakeComplete(boolean spectatorHandshakeComplete) {
+        this.spectatorHandshakeComplete = spectatorHandshakeComplete;
+    }
+
+    public int getSpectatorHandshakeAttempts() {
+        return spectatorHandshakeAttempts;
+    }
+
+    public void incrementSpectatorHandshakeAttempts() {
+        this.spectatorHandshakeAttempts++;
     }
 }
