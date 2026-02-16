@@ -28,6 +28,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorChatListener.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorGui.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorInputManager.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorPreviewController.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorSession.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EditorSessionManager.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\EffectsTickMenuGui.java
@@ -58,6 +59,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneManager.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneModelEntry.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneRuntimeEngine.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneSelfTestRunner.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneSerializer.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneSession.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneSessionManager.java
@@ -69,6 +71,7 @@ C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneTrackType.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SceneWand.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SessionActorHandle.java
+C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SessionEntityTracker.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SkinLibrary.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingMode.java
 C:\Users\savge\Documents\GitHub\ExtraScenes\src\main\java\com\extrascenes\scene\SmoothingQuality.java
