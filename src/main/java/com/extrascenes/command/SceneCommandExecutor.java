@@ -718,42 +718,66 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         int startTick = 1;
+        int durationTicks = 15 * 20;
+        com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+        int durationArgIndex = -1;
         if (args.length >= 6) {
-            try {
-                startTick = Integer.parseInt(args[5]);
-            } catch (NumberFormatException ex) {
-                Text.send(sender, "&c" + "Invalid tick; using 1.");
+            String candidate = args[5].toLowerCase(Locale.ROOT);
+            if (looksLikeDuration(candidate)) {
+                durationArgIndex = 5;
+            } else {
+                try {
+                    startTick = Integer.parseInt(args[5]);
+                } catch (NumberFormatException ex) {
+                    Text.send(sender, "&c" + "Invalid tick; using 1.");
+                }
+                if (args.length >= 7) {
+                    durationArgIndex = 6;
+                }
             }
         }
         startTick = Math.max(1, Math.min(scene.getDurationTicks(), startTick));
-        int durationTicks = 15 * 20;
-        com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-        if (args.length >= 7) {
-            String raw = args[6].toLowerCase(Locale.ROOT);
-            try {
-                if (raw.endsWith("t")) {
-                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.TICKS;
-                    durationTicks = Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)));
-                } else if (raw.endsWith("s")) {
-                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-                    durationTicks = Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)) * 20);
-                } else {
-                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-                    durationTicks = Math.max(1, Integer.parseInt(raw) * 20);
-                }
-            } catch (NumberFormatException ex) {
+        if (durationArgIndex != -1) {
+            String raw = args[durationArgIndex].toLowerCase(Locale.ROOT);
+            int[] parsed = parseDurationTicks(raw);
+            if (parsed == null) {
                 Text.send(sender, "&c" + "Invalid duration; using 15s.");
-                durationTicks = 15 * 20;
-                durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+            } else {
+                durationTicks = parsed[0];
+                durationUnit = parsed[1] == 1
+                        ? com.extrascenes.scene.RecordingDurationUnit.TICKS
+                        : com.extrascenes.scene.RecordingDurationUnit.SECONDS;
             }
         }
         player.getInventory().addItem(com.extrascenes.scene.SceneWand.createRecordingWand());
         actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick, true, durationTicks, durationUnit);
         int displayDuration = durationUnit == com.extrascenes.scene.RecordingDurationUnit.SECONDS
-                ? Math.max(1, durationTicks / 20)
+                ? Math.max(1, (durationTicks + 19) / 20)
                 : durationTicks;
         Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick
                 + " for " + displayDuration + durationUnit.suffix() + " (countdown 3..2..1).");
+    }
+
+    private boolean looksLikeDuration(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        char last = value.charAt(value.length() - 1);
+        return last == 's' || last == 't';
+    }
+
+    private int[] parseDurationTicks(String raw) {
+        try {
+            if (raw.endsWith("t")) {
+                return new int[]{Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1))), 1};
+            }
+            if (raw.endsWith("s")) {
+                return new int[]{Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)) * 20), 0};
+            }
+            return new int[]{Math.max(1, Integer.parseInt(raw) * 20), 0};
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
 
