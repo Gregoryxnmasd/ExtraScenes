@@ -742,10 +742,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         String name = args[1].toLowerCase(Locale.ROOT);
         Scene scene = sceneManager.loadScene(name);
         if (scene == null) {
-            Text.send(sender, "&c" + "Scene not found.");
-            return;
+            Text.send(sender, "&e" + "Scene not found; selftest will use a synthetic in-memory camera path.");
         }
-        selfTestRunner.run(player, scene);
+        selfTestRunner.run(player, name, scene);
     }
 
 

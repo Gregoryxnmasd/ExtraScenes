@@ -44,6 +44,7 @@ public class SceneSession {
     private org.bukkit.inventory.ItemStack originalHelmet;
     private final SessionEntityTracker entityTracker = new SessionEntityTracker();
     private int playbackTeleportCount;
+    private String lastPlaybackTeleportCaller;
     private boolean spectatorHandshakeComplete;
     private int spectatorHandshakeAttempts;
 
@@ -63,6 +64,7 @@ public class SceneSession {
         this.preview = preview;
         this.spectatorRecoveryCooldownUntilTick = 0;
         this.playbackTeleportCount = 0;
+        this.lastPlaybackTeleportCaller = null;
         this.spectatorHandshakeComplete = false;
         this.spectatorHandshakeAttempts = 0;
     }
@@ -323,6 +325,15 @@ public class SceneSession {
 
     public void incrementPlaybackTeleportCount() {
         this.playbackTeleportCount++;
+    }
+
+    public void incrementPlaybackTeleportCount(String caller) {
+        this.playbackTeleportCount++;
+        this.lastPlaybackTeleportCaller = caller;
+    }
+
+    public String getLastPlaybackTeleportCaller() {
+        return lastPlaybackTeleportCaller;
     }
 
     public boolean isSpectatorHandshakeComplete() {
