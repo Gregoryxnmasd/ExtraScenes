@@ -717,14 +717,15 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             Text.send(sender, "&c" + "Actor not found.");
             return;
         }
-        int startTick = 0;
+        int startTick = 1;
         if (args.length >= 6) {
             try {
                 startTick = Integer.parseInt(args[5]);
             } catch (NumberFormatException ex) {
-                Text.send(sender, "&c" + "Invalid tick; using 0.");
+                Text.send(sender, "&c" + "Invalid tick; using 1.");
             }
         }
+        startTick = Math.max(1, Math.min(scene.getDurationTicks(), startTick));
         int durationTicks = 15 * 20;
         com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
         if (args.length >= 7) {
