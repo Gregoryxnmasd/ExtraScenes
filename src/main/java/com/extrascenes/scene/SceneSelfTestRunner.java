@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -124,7 +125,9 @@ public class SceneSelfTestRunner {
 
                 boolean worldMatches = rig.getWorld() != null && rig.getWorld().equals(player.getWorld());
                 rigWorldMatch &= worldMatches;
-                rigMarkerFalse &= !rig.isMarker();
+                if (rig instanceof ArmorStand armorStand) {
+                    rigMarkerFalse &= !armorStand.isMarker();
+                }
 
                 World forcedWorld = forcedChunkWorld == null ? null : Bukkit.getWorld(forcedChunkWorld);
                 if (forcedWorld == null || !forcedWorld.isChunkForceLoaded(forcedChunkX, forcedChunkZ)) {
