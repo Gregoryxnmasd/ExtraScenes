@@ -17,7 +17,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import net.kyori.adventure.key.Key;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -35,7 +34,7 @@ public class SceneSessionManager {
     private final Map<UUID, SceneSession> sessions = new HashMap<>();
     private final Map<UUID, UUID> sceneEntityToPlayer = new HashMap<>();
     private final Map<UUID, SceneSession> pendingRestores = new HashMap<>();
-    private final Key movementLockKey;
+    private final NamespacedKey movementLockKey;
 
     public SceneSessionManager(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController,
                                SceneProtocolAdapter protocolAdapter) {
@@ -43,7 +42,7 @@ public class SceneSessionManager {
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
         this.citizensAdapter = plugin.getCitizensAdapter();
-        this.movementLockKey = com.extrascenes.KeyConversionUtil.toAdventureKey(new NamespacedKey(plugin, "cutscene_movement_lock"));
+        this.movementLockKey = new NamespacedKey(plugin, "cutscene_movement_lock");
     }
 
     public SceneSession startScene(Player player, Scene scene) {
