@@ -268,6 +268,13 @@ public class SceneSession {
         return actorHandles.get(actorId.toLowerCase());
     }
 
+    public void unregisterActorHandle(String actorId) {
+        if (actorId == null) {
+            return;
+        }
+        actorHandles.remove(actorId.toLowerCase());
+    }
+
     public void clearActorHandles() {
         actorHandles.clear();
     }

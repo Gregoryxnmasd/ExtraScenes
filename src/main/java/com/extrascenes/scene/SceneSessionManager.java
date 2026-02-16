@@ -85,7 +85,8 @@ public class SceneSessionManager {
         }
         ArmorStand rig = (ArmorStand) rigStartLocation.getWorld().spawnEntity(rigStartLocation, EntityType.ARMOR_STAND);
         rig.setInvisible(true);
-        rig.setMarker(true);
+        // Marker=false keeps a stable spectator target hitbox across server variants.
+        rig.setMarker(false);
         rig.setGravity(false);
         rig.setSilent(true);
         rig.setInvulnerable(true);
