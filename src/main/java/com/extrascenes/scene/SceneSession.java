@@ -30,6 +30,7 @@ public class SceneSession {
     private boolean restorePending;
     private Location lastCameraLocation;
     private UUID cameraRigId;
+    private String cameraRigWorld;
     private boolean preview;
     private Location startLocation;
     private int actionBarUntilTick;
@@ -188,6 +189,14 @@ public class SceneSession {
 
     public void setCameraRigId(UUID cameraRigId) {
         this.cameraRigId = cameraRigId;
+    }
+
+    public String getCameraRigWorld() {
+        return cameraRigWorld;
+    }
+
+    public void setCameraRigWorld(String cameraRigWorld) {
+        this.cameraRigWorld = cameraRigWorld;
     }
 
     public boolean isPreview() {
