@@ -57,6 +57,17 @@ public class SceneEditorListener implements Listener {
         EditorSession session = editorSessionManager.getSession(player.getUniqueId());
         if (session != null) {
             session.clearHistory();
+            editorEngine.getPlugin().getServer().getScheduler().runTask(editorEngine.getPlugin(), () -> {
+                if (player.getOpenInventory() == null
+                        || !player.getOpenInventory().getTitle().startsWith(GuiUtils.TITLE_PREFIX)) {
+                    editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(player);
+                    editorEngine.getPlugin().getActorRecordingService().stopRecording(player, true);
+                    if (session.isPreviewPlaying()) {
+                        editorEngine.getPlugin().getSessionManager().stopScene(player, "editor_inventory_close");
+                        session.setPreviewPlaying(false);
+                    }
+                }
+            });
         }
     }
 }

@@ -8,6 +8,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public final class SceneWand {
     public static final String WAND_NAME = Text.legacy("&bScene Wand");
+    public static final String RECORDING_WAND_NAME = Text.legacy("&cRecording Wand");
 
     private SceneWand() {
     }
@@ -29,5 +30,24 @@ public final class SceneWand {
         }
         ItemMeta meta = item.getItemMeta();
         return meta != null && WAND_NAME.equals(meta.getDisplayName());
+    }
+
+    public static ItemStack createRecordingWand() {
+        ItemStack item = new ItemStack(Material.BLAZE_ROD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(RECORDING_WAND_NAME);
+            meta.setLore(List.of(Text.legacy("&7Right click: stop actor recording")));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isRecordingWand(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && RECORDING_WAND_NAME.equals(meta.getDisplayName());
     }
 }

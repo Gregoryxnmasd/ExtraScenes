@@ -461,6 +461,12 @@ public class SceneEditorEngine {
     }
 
     public void closeEditor(Player player, EditorSession session) {
+        plugin.getRuntimeEngine().cleanupEditorPreview(player);
+        plugin.getActorRecordingService().stopRecording(player, true);
+        if (session.isPreviewPlaying()) {
+            plugin.getSessionManager().stopScene(player, "editor_close");
+            session.setPreviewPlaying(false);
+        }
         player.closeInventory();
         sceneManager.saveSceneImmediate(session.getScene());
         if (hasArmedPlacement(session)) {
@@ -698,6 +704,7 @@ public class SceneEditorEngine {
     public void togglePreview(Player player, EditorSession session) {
         if (session.isPreviewPlaying()) {
             plugin.getSessionManager().stopScene(player, "preview_stop");
+            plugin.getRuntimeEngine().cleanupEditorPreview(player);
             session.setPreviewPlaying(false);
         } else {
             plugin.getSessionManager().startScene(player, session.getScene(), true);

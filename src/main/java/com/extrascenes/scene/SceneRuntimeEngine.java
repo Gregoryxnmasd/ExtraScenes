@@ -8,7 +8,6 @@ import com.extrascenes.ScaleAttributeResolver;
 import com.extrascenes.SceneModelTrackAdapter;
 import com.extrascenes.SceneProtocolAdapter;
 import com.extrascenes.visibility.SceneVisibilityController;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,7 +30,7 @@ public class SceneRuntimeEngine {
     private final SceneProtocolAdapter protocolAdapter;
     private final CitizensAdapter citizensAdapter;
     private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
-    private final Map<UUID, Map<String, SessionActorHandle>> recordingPreviewHandles = new HashMap<>();
+    private final EditorPreviewController editorPreviewController;
     private volatile boolean actorDebugEnabled = false;
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
@@ -42,6 +41,7 @@ public class SceneRuntimeEngine {
         this.visibilityController = visibilityController;
         this.protocolAdapter = protocolAdapter;
         this.citizensAdapter = plugin.getCitizensAdapter();
+        this.editorPreviewController = new EditorPreviewController(this.citizensAdapter);
     }
 
 
@@ -59,6 +59,7 @@ public class SceneRuntimeEngine {
     }
 
     public void stop() {
+        editorPreviewController.cleanupAll();
         for (SceneSession session : sessionManager.getActiveSessions()) {
             stopSession(session);
         }
@@ -161,9 +162,16 @@ public class SceneRuntimeEngine {
             if (session.isPreview() && !template.isPreviewEnabled()) {
                 continue;
             }
+            if (session.isPreview() && template.getTransformTicks().isEmpty() && template.getTickActions().isEmpty()) {
+                continue;
+            }
             SessionActorHandle handle = session.getActorHandle(template.getActorId());
             if (handle == null || handle.getEntity() == null || !handle.getEntity().isValid()) {
-                continue;
+                spawnSessionActor(viewer, session, template);
+                handle = session.getActorHandle(template.getActorId());
+                if (handle == null || handle.getEntity() == null || !handle.getEntity().isValid()) {
+                    continue;
+                }
             }
             ActorTickAction action = template.getTickAction(tick);
             if (action != null && action.isSpawn()) {
@@ -195,6 +203,7 @@ public class SceneRuntimeEngine {
             if (transformTick != null && handle.getEntity() instanceof LivingEntity living) {
                 living.setGliding(transformTick.isGliding());
             }
+            applyScale(handle.getEntity(), template.getScale());
             maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, false);
             if (action != null && action.getCommand() != null && !action.getCommand().isBlank()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), action.getCommand().replace("{player}", viewer.getName()));
@@ -204,9 +213,14 @@ public class SceneRuntimeEngine {
 
     private void spawnSessionActors(Player viewer, SceneSession session) {
         for (SceneActorTemplate template : session.getScene().getActorTemplates().values()) {
-            Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
+            spawnSessionActor(viewer, session, template);
+        }
+    }
+
+    private void spawnSessionActor(Player viewer, SceneSession session, SceneActorTemplate template) {
+        Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
             if (npc == null) {
-                continue;
+                return;
             }
             citizensAdapter.applySkinPersistent(npc, template);
             boolean playerFilterApplied = citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
@@ -219,12 +233,12 @@ public class SceneRuntimeEngine {
             }
             if (!citizensAdapter.spawn(npc, spawnLocation)) {
                 citizensAdapter.destroy(npc);
-                continue;
+                return;
             }
             Entity entity = citizensAdapter.getEntity(npc);
             if (entity == null) {
                 citizensAdapter.destroy(npc);
-                continue;
+                return;
             }
             entity.setSilent(true);
             entity.setInvulnerable(true);
@@ -252,7 +266,6 @@ public class SceneRuntimeEngine {
                 visibilityController.hideEntityFromAllExcept(entity, viewer);
             }
             visibilityController.showEntityToPlayer(entity, viewer);
-        }
     }
 
     private ActorTransformTick resolveTransformTick(SceneActorTemplate template, int tick) {
@@ -274,22 +287,18 @@ public class SceneRuntimeEngine {
         if (player == null) {
             return;
         }
-        Map<String, SessionActorHandle> handles = recordingPreviewHandles.remove(player.getUniqueId());
-        if (handles == null) {
-            return;
-        }
-        for (SessionActorHandle handle : handles.values()) {
-            citizensAdapter.destroy(handle.getCitizensNpc());
-        }
+        editorPreviewController.cleanup(player);
     }
 
     public void previewActorsAtTick(Player viewer, Scene scene, String recordingActorId, int tick) {
         if (viewer == null || scene == null || !citizensAdapter.isAvailable()) {
             return;
         }
-        Map<String, SessionActorHandle> handles = recordingPreviewHandles.computeIfAbsent(viewer.getUniqueId(), key -> new HashMap<>());
+        Map<String, SessionActorHandle> handles = editorPreviewController.handlesFor(viewer);
         for (SceneActorTemplate template : scene.getActorTemplates().values()) {
-            if (template.getActorId().equalsIgnoreCase(recordingActorId) || !template.isPreviewEnabled()) {
+            if (template.getActorId().equalsIgnoreCase(recordingActorId)
+                    || !template.isPreviewEnabled()
+                    || template.getTransformTicks().isEmpty()) {
                 continue;
             }
             SessionActorHandle handle = handles.get(template.getActorId().toLowerCase());
@@ -307,7 +316,7 @@ public class SceneRuntimeEngine {
                 entity.setInvisible(true);
                 citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
-                handles.put(template.getActorId().toLowerCase(), handle);
+                editorPreviewController.register(viewer, handle);
             }
             ActorTransformTick transformTick = resolveTransformTick(template, tick);
             Transform transform = transformTick != null ? transformTick.getTransform() : handle.getLastTransform();
@@ -316,10 +325,15 @@ public class SceneRuntimeEngine {
                 transform.applyTo(loc);
                 handle.getEntity().teleport(loc);
                 handle.getEntity().setInvisible(false);
+                applyScale(handle.getEntity(), template.getScale());
                 handle.setLastTransform(transform);
                 maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true);
             }
         }
+    }
+
+    public void cleanupEditorPreview(Player viewer) {
+        editorPreviewController.cleanup(viewer);
     }
 
     private void applyScale(Entity entity, double scale) {
@@ -381,6 +395,7 @@ public class SceneRuntimeEngine {
         Location location = cameraRig.getLocation().clone();
         transform.applyTo(location);
         cameraRig.teleport(location);
+        protocolAdapter.applySpectatorCamera(player, cameraRig);
         session.setLastCameraLocation(location);
     }
 
@@ -468,9 +483,7 @@ public class SceneRuntimeEngine {
         return switch (mode) {
             case INSTANT -> 0.0f;
             case LINEAR -> t;
-            case SMOOTH -> t < 0.5f
-                    ? 16.0f * t * t * t * t * t
-                    : 1.0f - (float) Math.pow(-2.0f * t + 2.0f, 5) / 2.0f;
+            case SMOOTH -> t * t * (3.0f - 2.0f * t);
         };
     }
 
@@ -588,17 +601,10 @@ public class SceneRuntimeEngine {
 
     private void executeCommands(Player player, SceneSession session, CommandKeyframe keyframe, int durationTicks) {
         List<String> commands = keyframe.getCommands();
-        boolean allowGlobalDefault = session.getScene().isAllowGlobalCommands();
         for (String command : commands) {
             String resolved = SceneTextFormatter.replacePlaceholders(plugin, player, session, command, durationTicks);
             if (keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.CONSOLE) {
-                boolean allowConsole = keyframe.isAllowGlobal() || allowGlobalDefault;
-                if (session.isPreview() && !keyframe.isAllowGlobal()) {
-                    continue;
-                }
-                if (allowConsole) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), resolved.replaceFirst("^console:", "").trim());
-                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), resolved.replaceFirst("^console:", "").trim());
             } else {
                 String sanitized = resolved.replaceFirst("^player:", "").trim();
                 Bukkit.dispatchCommand(player, sanitized);

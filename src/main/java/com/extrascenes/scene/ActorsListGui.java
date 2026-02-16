@@ -25,7 +25,7 @@ public class ActorsListGui implements EditorGui {
         session.setActorsPage(page);
 
         Inventory inventory = GuiUtils.createInventory(54,
-                session.getSceneName() + " • Actors " + (page + 1) + "/" + totalPages);
+                session.getSceneName() + " • Actors • Page " + (page + 1) + "/" + totalPages);
         GuiUtils.fillInventory(inventory);
 
         int start = page * PAGE_SIZE;

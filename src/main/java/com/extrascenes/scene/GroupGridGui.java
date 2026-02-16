@@ -51,10 +51,10 @@ public class GroupGridGui implements EditorGui {
 
             inventory.setItem(9 + col, GuiUtils.makeItem(edited ? Material.LIME_WOOL : Material.RED_WOOL,
                     "Tick " + tick, List.of("Click to open tick editor.")));
-            inventory.setItem(18 + col, buildSubItem(hasCamera, Material.ENDER_PEARL, "Camera action"));
-            inventory.setItem(27 + col, buildSubItem(hasActors, Material.PLAYER_HEAD, "Actor action"));
-            inventory.setItem(36 + col, buildSubItem(hasCommand, Material.COMMAND_BLOCK, "Command action"));
-            inventory.setItem(45 + col, buildSubItem(hasActionbar, Material.PAPER, "Actionbar action"));
+            inventory.setItem(18 + col, buildCameraItem(scene, tick));
+            inventory.setItem(27 + col, buildActorItem(scene, tick));
+            inventory.setItem(36 + col, buildCommandItem(scene, tick));
+            inventory.setItem(45 + col, buildActionBarItem(scene, tick));
         }
 
         return inventory;
@@ -69,11 +69,45 @@ public class GroupGridGui implements EditorGui {
         return false;
     }
 
-    private org.bukkit.inventory.ItemStack buildSubItem(boolean present, Material presentIcon, String label) {
-        if (!present) {
+    private org.bukkit.inventory.ItemStack buildCameraItem(Scene scene, int tick) {
+        CameraKeyframe camera = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.CAMERA), tick);
+        if (camera == null) {
             return null;
         }
-        return GuiUtils.makeItem(presentIcon, label, List.of("Configured"));
+        return GuiUtils.makeItem(Material.ENDER_PEARL, "Camera",
+                List.of("Configured", "Smooth: " + camera.getSmoothingMode(), "L-click edit", "R-click clear"));
+    }
+
+    private org.bukkit.inventory.ItemStack buildActorItem(Scene scene, int tick) {
+        int count = 0;
+        for (SceneActorTemplate actor : scene.getActorTemplates().values()) {
+            if (actor.getTransformTick(tick) != null) {
+                count++;
+            }
+        }
+        if (count == 0) {
+            return null;
+        }
+        return GuiUtils.makeItem(Material.PLAYER_HEAD, "Actors",
+                List.of("Tracks: " + count, "L-click edit tick", "R-click clear transforms"));
+    }
+
+    private org.bukkit.inventory.ItemStack buildCommandItem(Scene scene, int tick) {
+        CommandKeyframe cmd = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.COMMAND), tick);
+        if (cmd == null) {
+            return null;
+        }
+        return GuiUtils.makeItem(Material.COMMAND_BLOCK, "Commands",
+                List.of("Cmd: " + cmd.getCommands().size(), "L-click edit", "R-click clear"));
+    }
+
+    private org.bukkit.inventory.ItemStack buildActionBarItem(Scene scene, int tick) {
+        ActionBarKeyframe bar = TickUtils.getFirstKeyframeAtTick(scene.getTrack(SceneTrackType.ACTIONBAR), tick);
+        if (bar == null) {
+            return null;
+        }
+        return GuiUtils.makeItem(Material.PAPER, "Actionbar",
+                List.of("Bar: \"" + bar.getText() + "\"", "L-click edit", "R-click clear"));
     }
 
     @Override
@@ -106,6 +140,51 @@ public class GroupGridGui implements EditorGui {
             int tick = (session.getCurrentGroup() - 1) * GROUP_SIZE + 1 + (slot - 9);
             session.setCurrentTick(tick);
             editorEngine.openTickActionMenu(player, session, true);
+            return;
+        }
+        if (slot >= 18 && slot <= 53) {
+            int col = slot % 9;
+            int tick = (session.getCurrentGroup() - 1) * GROUP_SIZE + 1 + col;
+            session.setCurrentTick(tick);
+            if (ctx.isRightClick()) {
+                clearByRow(session.getScene(), slot / 9, tick);
+                editorEngine.markDirty(session.getScene());
+                refresh(session);
+                return;
+            }
+            editorEngine.openTickActionMenu(player, session, true);
+        }
+    }
+
+    private void clearByRow(Scene scene, int row, int tick) {
+        if (row == 2) {
+            Track<CameraKeyframe> track = scene.getTrack(SceneTrackType.CAMERA);
+            CameraKeyframe frame = TickUtils.getFirstKeyframeAtTick(track, tick);
+            if (frame != null) {
+                track.removeKeyframe(frame.getId());
+            }
+            return;
+        }
+        if (row == 3) {
+            for (SceneActorTemplate actor : scene.getActorTemplates().values()) {
+                actor.removeTransformTick(tick);
+            }
+            return;
+        }
+        if (row == 4) {
+            Track<CommandKeyframe> track = scene.getTrack(SceneTrackType.COMMAND);
+            CommandKeyframe frame = TickUtils.getFirstKeyframeAtTick(track, tick);
+            if (frame != null) {
+                track.removeKeyframe(frame.getId());
+            }
+            return;
+        }
+        if (row == 5) {
+            Track<ActionBarKeyframe> track = scene.getTrack(SceneTrackType.ACTIONBAR);
+            ActionBarKeyframe frame = TickUtils.getFirstKeyframeAtTick(track, tick);
+            if (frame != null) {
+                track.removeKeyframe(frame.getId());
+            }
         }
     }
 
