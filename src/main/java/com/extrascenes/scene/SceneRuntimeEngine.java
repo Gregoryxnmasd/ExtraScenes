@@ -515,6 +515,14 @@ public class SceneRuntimeEngine {
                 }
                 visibilityController.showEntityToPlayer(entity, viewer);
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
+                Integer firstSpawnTick = template.getTickActions().values().stream()
+                        .filter(ActorTickAction::isSpawn)
+                        .map(ActorTickAction::getTick)
+                        .min(Integer::compareTo)
+                        .orElse(0);
+                if (firstSpawnTick > 0) {
+                    handle.setSpawned(false);
+                }
                 editorPreviewController.register(viewer, handle);
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
@@ -1115,29 +1123,14 @@ public class SceneRuntimeEngine {
     }
 
     private Entity getCameraRig(SceneSession session, Player player) {
-        if (session.getCameraRigId() == null) {
+        if (session.getCameraRigId() == null || player == null) {
             return null;
         }
-        Entity rig = Bukkit.getEntity(session.getCameraRigId());
-        if (rig != null && rig.isValid()) {
-            return rig;
+        Location fallback = session.getLastCameraLocation();
+        if (fallback == null) {
+            fallback = player.getLocation();
         }
-        if (session.getCameraRigWorld() != null) {
-            org.bukkit.World world = Bukkit.getWorld(session.getCameraRigWorld());
-            if (world != null) {
-                Entity worldRig = world.getEntity(session.getCameraRigId());
-                if (worldRig != null && worldRig.isValid()) {
-                    return worldRig;
-                }
-            }
-        }
-        if (player != null && player.getWorld() != null) {
-            Entity playerWorldRig = player.getWorld().getEntity(session.getCameraRigId());
-            if (playerWorldRig != null && playerWorldRig.isValid()) {
-                return playerWorldRig;
-            }
-        }
-        return null;
+        return sessionManager.ensureCameraRig(session, player, fallback);
     }
 
     private String resolveHandle(SceneSession session, ModelKeyframe keyframe) {

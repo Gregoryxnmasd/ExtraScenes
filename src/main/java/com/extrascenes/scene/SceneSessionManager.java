@@ -83,24 +83,18 @@ public class SceneSessionManager {
             rigStartLocation.setWorld(player.getWorld());
             plugin.getLogger().warning("Camera rig world mismatch corrected for " + player.getName());
         }
-        ArmorStand rig = (ArmorStand) rigStartLocation.getWorld().spawnEntity(rigStartLocation, EntityType.ARMOR_STAND);
-        rig.setInvisible(true);
-        // Marker=false keeps a stable spectator target hitbox across server variants.
-        rig.setMarker(false);
-        rig.setGravity(false);
-        rig.setSilent(true);
-        rig.setInvulnerable(true);
-        rig.setCollidable(false);
-        rig.setSmall(true);
-        session.registerEntity(rig);
-        registerSceneEntity(session, rig);
+        Entity rig = ensureCameraRig(session, player, rigStartLocation);
+        if (!(rig instanceof ArmorStand armorStand)) {
+            sessions.remove(player.getUniqueId());
+            plugin.getLogger().severe("Unable to spawn camera rig for " + player.getName()
+                    + " at " + rigStartLocation + "; aborting scene start.");
+            return null;
+        }
         forceLoadRigChunk(session, rigStartLocation);
-        visibilityController.hideEntityFromAllExcept(rig, player);
-        visibilityController.showEntityToPlayer(rig, player);
-        session.setCameraRigId(rig.getUniqueId());
-        session.setCameraRigWorld(rig.getWorld().getName());
-        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
-                + " marker=" + rig.isMarker());
+        visibilityController.hideEntityFromAllExcept(armorStand, player);
+        visibilityController.showEntityToPlayer(armorStand, player);
+        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + armorStand.getUniqueId()
+                + " marker=" + armorStand.isMarker());
 
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
@@ -111,8 +105,8 @@ public class SceneSessionManager {
 
         teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
-        protocolAdapter.applySpectatorCamera(player, rig);
-        startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
+        protocolAdapter.applySpectatorCamera(player, armorStand);
+        startSpectatorHandshake(session, player.getUniqueId(), armorStand.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -215,6 +209,85 @@ public class SceneSessionManager {
     public void unregisterSceneEntity(Entity entity) {
         sceneEntityToPlayer.remove(entity.getUniqueId());
         visibilityController.clearEntity(entity.getUniqueId());
+    }
+
+    public Entity ensureCameraRig(SceneSession session, Player viewer, Location preferredLocation) {
+        if (session == null || viewer == null || !viewer.isOnline()) {
+            return null;
+        }
+        Entity existing = resolveCameraRigEntity(session, viewer);
+        if (existing != null && existing.isValid()) {
+            return existing;
+        }
+        Location spawnLocation = preferredLocation == null ? viewer.getLocation().clone() : preferredLocation.clone();
+        if (spawnLocation.getWorld() == null) {
+            spawnLocation.setWorld(viewer.getWorld());
+        }
+        if (spawnLocation.getWorld() == null) {
+            return null;
+        }
+        ArmorStand rig = spawnCameraRig(spawnLocation);
+        if (rig == null) {
+            return null;
+        }
+        session.registerEntity(rig);
+        registerSceneEntity(session, rig);
+        session.setCameraRigId(rig.getUniqueId());
+        session.setCameraRigWorld(rig.getWorld().getName());
+        visibilityController.hideEntityFromAllExcept(rig, viewer);
+        visibilityController.showEntityToPlayer(rig, viewer);
+        plugin.getLogger().warning("Recreated missing camera rig for " + viewer.getName()
+                + " session=" + session.getSessionId()
+                + " rig=" + rig.getUniqueId());
+        return rig;
+    }
+
+    private Entity resolveCameraRigEntity(SceneSession session, Player viewer) {
+        UUID rigId = session.getCameraRigId();
+        if (rigId == null) {
+            return null;
+        }
+        Entity direct = Bukkit.getEntity(rigId);
+        if (direct != null && direct.isValid()) {
+            return direct;
+        }
+        if (session.getCameraRigWorld() != null) {
+            World world = Bukkit.getWorld(session.getCameraRigWorld());
+            if (world != null) {
+                Entity byWorld = world.getEntity(rigId);
+                if (byWorld != null && byWorld.isValid()) {
+                    return byWorld;
+                }
+            }
+        }
+        if (viewer.getWorld() != null) {
+            Entity byViewerWorld = viewer.getWorld().getEntity(rigId);
+            if (byViewerWorld != null && byViewerWorld.isValid()) {
+                return byViewerWorld;
+            }
+        }
+        return null;
+    }
+
+    private ArmorStand spawnCameraRig(Location location) {
+        Entity raw = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        if (!(raw instanceof ArmorStand rig)) {
+            if (raw != null && raw.isValid()) {
+                raw.remove();
+            }
+            return null;
+        }
+        rig.setInvisible(true);
+        // Marker=false keeps a stable spectator target hitbox across server variants.
+        rig.setMarker(false);
+        rig.setGravity(false);
+        rig.setSilent(true);
+        rig.setInvulnerable(true);
+        rig.setCollidable(false);
+        rig.setSmall(true);
+        rig.setPersistent(false);
+        rig.setBasePlate(false);
+        return rig;
     }
 
     public void reapplyVisibility(Player player) {
