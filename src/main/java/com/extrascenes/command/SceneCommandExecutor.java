@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
