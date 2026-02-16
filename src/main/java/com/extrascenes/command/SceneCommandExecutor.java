@@ -118,7 +118,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor skin <scene> <actorId> <skin>");
         Text.send(sender, "&b" + "/scene actor playback <scene> <actorId> <exact|walk>");
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
-        Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick]");
+        Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick] [duration:10s|200t]");
         Text.send(sender, "&b" + "/scene actor record stop");
         Text.send(sender, "&b" + "/scene selftest <name>");
     }
@@ -704,7 +704,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 5 || !"start".equalsIgnoreCase(args[2])) {
-            Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick]");
+            Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick] [duration:10s|200t]");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
@@ -725,8 +725,34 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 Text.send(sender, "&c" + "Invalid tick; using 0.");
             }
         }
-        actorRecordingService.startRecording(player, scene, template, startTick);
-        Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick + ".");
+        int durationTicks = 15 * 20;
+        com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+        if (args.length >= 7) {
+            String raw = args[6].toLowerCase(Locale.ROOT);
+            try {
+                if (raw.endsWith("t")) {
+                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.TICKS;
+                    durationTicks = Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)));
+                } else if (raw.endsWith("s")) {
+                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+                    durationTicks = Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)) * 20);
+                } else {
+                    durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+                    durationTicks = Math.max(1, Integer.parseInt(raw) * 20);
+                }
+            } catch (NumberFormatException ex) {
+                Text.send(sender, "&c" + "Invalid duration; using 15s.");
+                durationTicks = 15 * 20;
+                durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+            }
+        }
+        player.getInventory().addItem(com.extrascenes.scene.SceneWand.createRecordingWand());
+        actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick, true, durationTicks, durationUnit);
+        int displayDuration = durationUnit == com.extrascenes.scene.RecordingDurationUnit.SECONDS
+                ? Math.max(1, durationTicks / 20)
+                : durationTicks;
+        Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick
+                + " for " + displayDuration + durationUnit.suffix() + " (countdown 3..2..1).");
     }
 
 

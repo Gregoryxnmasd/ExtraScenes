@@ -322,7 +322,7 @@ public class EditorInputManager {
         state.setActorId(actorId);
         state.setReturnGui(returnGui);
         prompts.put(player.getUniqueId(), state);
-        Text.send(player, "&b" + "Enter recording duration in seconds.");
+        Text.send(player, "&b" + "Enter recording duration (examples: 12s, 240t).");
     }
 
     public boolean handleChat(Player player, String message) {
@@ -711,9 +711,21 @@ public class EditorInputManager {
 
     private void handleActorRecordDuration(Player player, PromptState state, String message) {
         try {
-            int seconds = Integer.parseInt(message);
-            if (seconds <= 0) {
-                Text.send(player, "&c" + "Duration must be at least 1 second.");
+            String raw = message.toLowerCase(java.util.Locale.ROOT);
+            RecordingDurationUnit unit = RecordingDurationUnit.SECONDS;
+            int durationTicks;
+            if (raw.endsWith("t")) {
+                unit = RecordingDurationUnit.TICKS;
+                durationTicks = Integer.parseInt(raw.substring(0, raw.length() - 1));
+            } else if (raw.endsWith("s")) {
+                unit = RecordingDurationUnit.SECONDS;
+                durationTicks = Integer.parseInt(raw.substring(0, raw.length() - 1)) * 20;
+            } else {
+                unit = RecordingDurationUnit.SECONDS;
+                durationTicks = Integer.parseInt(raw) * 20;
+            }
+            if (durationTicks <= 0) {
+                Text.send(player, "&c" + "Duration must be at least 1.");
                 return;
             }
             SceneActorTemplate actor = state.getScene().getActorTemplate(state.getActorId());
@@ -722,13 +734,17 @@ public class EditorInputManager {
                 Text.send(player, "&c" + "Actor no longer exists.");
                 return;
             }
+            state.getEditorSession().setActorRecordingDurationUnit(unit);
+            state.getEditorSession().setActorRecordingDurationValue(unit == RecordingDurationUnit.SECONDS
+                    ? Math.max(1, durationTicks / 20)
+                    : durationTicks);
             prompts.remove(player.getUniqueId());
             plugin.getActorRecordingService().startRecordingWithCountdown(player, state.getScene(), actor,
-                    state.getEditorSession().getActorRecordingStartTick(), state.getEditorSession().isPreviewOtherActors(), seconds);
+                    state.getEditorSession().getActorRecordingStartTick(), state.getEditorSession().isPreviewOtherActors(), durationTicks, unit);
             Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
                     state.getReturnGui() == null ? GuiType.ACTOR_DETAIL : state.getReturnGui()));
         } catch (NumberFormatException ex) {
-            Text.send(player, "&c" + "Invalid number. Enter duration in seconds.");
+            Text.send(player, "&c" + "Invalid duration. Use formats like 12s or 240t.");
         }
     }
 

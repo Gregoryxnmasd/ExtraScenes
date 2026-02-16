@@ -44,7 +44,9 @@ public class ActorDetailGui implements EditorGui {
 
         if (!recording) {
             inventory.setItem(10, GuiUtils.makeItem(Material.LIME_DYE, "Record Actor Movement",
-                    List.of("Start tick: " + session.getActorRecordingStartTick(), "Click to enter duration.")));
+                    List.of("Start tick: " + session.getActorRecordingStartTick(),
+                            "Duration: " + session.getActorRecordingDurationValue() + session.getActorRecordingDurationUnit().suffix(),
+                            "Click: start with countdown")));
         }
         if (recording) {
             inventory.setItem(11, GuiUtils.makeItem(Material.RED_DYE, "Stop Recording",
@@ -62,6 +64,11 @@ public class ActorDetailGui implements EditorGui {
                 List.of("Cursor tick: " + session.getCurrentTick(), "Window: " + groupStart + "-" + (groupStart + 8),
                         "Recorded: " + (ticks.isEmpty() ? "none" : ticks.stream().map(String::valueOf).collect(Collectors.joining(", "))),
                         "Click: actors timeline")));
+        inventory.setItem(18, GuiUtils.makeItem(Material.COMPARATOR, "Duration Unit: " + session.getActorRecordingDurationUnit(),
+                List.of("Click to toggle between seconds/ticks.")));
+        inventory.setItem(19, GuiUtils.makeItem(Material.CLOCK, "Duration Value",
+                List.of("Current: " + session.getActorRecordingDurationValue() + session.getActorRecordingDurationUnit().suffix(),
+                        "Left: -1", "Right: +1", "Shift: +/-20")));
         inventory.setItem(21, GuiUtils.makeItem(Material.REPEATER, "Set Start Tick",
                 List.of("Current: " + session.getActorRecordingStartTick(), "Left: -9", "Right: +9", "Shift: sync with cursor")));
         inventory.setItem(22, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to actors.")));
@@ -86,8 +93,11 @@ public class ActorDetailGui implements EditorGui {
             }
             player.closeInventory();
             player.getInventory().addItem(SceneWand.createRecordingWand());
-            editorEngine.getInputManager().beginActorRecordingDurationInput(player, scene, session, actor.getActorId(), GuiType.ACTOR_DETAIL);
-            Text.send(player, "&a" + "Enter duration in chat. Recording will start with a 3..2..1 countdown.");
+            int durationTicks = session.getActorRecordingDurationUnit().toTicks(session.getActorRecordingDurationValue());
+            editorEngine.getPlugin().getActorRecordingService().startRecordingWithCountdown(player, scene, actor,
+                    session.getActorRecordingStartTick(), session.isPreviewOtherActors(), durationTicks,
+                    session.getActorRecordingDurationUnit());
+            Text.send(player, "&a" + "Recording will start with a 3..2..1 countdown.");
         } else if (ctx.getSlot() == 11) {
             if (!recording) {
                 Text.send(player, "&c" + "No active recording.");
@@ -134,6 +144,19 @@ public class ActorDetailGui implements EditorGui {
             return;
         } else if (ctx.getSlot() == 17) {
             session.setPreviewOtherActors(!session.isPreviewOtherActors());
+        } else if (ctx.getSlot() == 18) {
+            session.setActorRecordingDurationUnit(session.getActorRecordingDurationUnit() == RecordingDurationUnit.SECONDS
+                    ? RecordingDurationUnit.TICKS
+                    : RecordingDurationUnit.SECONDS);
+        } else if (ctx.getSlot() == 19) {
+            int delta = ctx.isShiftClick() ? 20 : 1;
+            int value = session.getActorRecordingDurationValue();
+            if (ctx.isRightClick()) {
+                value += delta;
+            } else {
+                value -= delta;
+            }
+            session.setActorRecordingDurationValue(Math.max(1, value));
         } else if (ctx.getSlot() == 21) {
             int value = session.getActorRecordingStartTick();
             if (ctx.isShiftClick()) {

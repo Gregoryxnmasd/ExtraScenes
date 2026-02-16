@@ -26,6 +26,8 @@ public class EditorSession {
     private String selectedActorId;
     private boolean previewOtherActors;
     private int actorRecordingStartTick;
+    private RecordingDurationUnit actorRecordingDurationUnit;
+    private int actorRecordingDurationValue;
     private int actorsPage;
     private String armedModelEntryName;
     private UUID armedModelKeyframeId;
@@ -56,6 +58,8 @@ public class EditorSession {
         this.currentGui = GuiType.SCENE_DASHBOARD;
         this.previewOtherActors = true;
         this.actorRecordingStartTick = 1;
+        this.actorRecordingDurationUnit = RecordingDurationUnit.SECONDS;
+        this.actorRecordingDurationValue = 15;
         this.actorsPage = 0;
     }
 
@@ -211,6 +215,24 @@ public class EditorSession {
 
     public void setActorsPage(int actorsPage) {
         this.actorsPage = Math.max(0, actorsPage);
+    }
+
+    public RecordingDurationUnit getActorRecordingDurationUnit() {
+        return actorRecordingDurationUnit;
+    }
+
+    public void setActorRecordingDurationUnit(RecordingDurationUnit actorRecordingDurationUnit) {
+        this.actorRecordingDurationUnit = actorRecordingDurationUnit == null
+                ? RecordingDurationUnit.SECONDS
+                : actorRecordingDurationUnit;
+    }
+
+    public int getActorRecordingDurationValue() {
+        return actorRecordingDurationValue;
+    }
+
+    public void setActorRecordingDurationValue(int actorRecordingDurationValue) {
+        this.actorRecordingDurationValue = Math.max(1, actorRecordingDurationValue);
     }
 
     public String getSelectedModelEntryName() {

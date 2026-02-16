@@ -27,17 +27,17 @@ public class ActorRecordingService {
     }
 
     public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers) {
-        return startRecording(player, scene, template, startTick, previewOthers, 0);
+        return startRecording(player, scene, template, startTick, previewOthers, 0, RecordingDurationUnit.SECONDS);
     }
 
     public boolean startRecording(Player player, Scene scene, SceneActorTemplate template, int startTick,
-                                  boolean previewOthers, int durationSeconds) {
+                                  boolean previewOthers, int durationTicks, RecordingDurationUnit durationUnit) {
         stopRecording(player, false);
-        ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers, durationSeconds);
+        ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers, durationTicks, durationUnit);
         plugin.getLogger().info("[actor-record] start viewer=" + player.getName()
                 + " actor=" + template.getActorId()
                 + " startTick=" + startTick
-                + " durationSeconds=" + durationSeconds
+                + " durationTicks=" + durationTicks
                 + " previewOthers=" + previewOthers);
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> capture(player, recording), 1L, 1L);
         recording.task = task;
@@ -47,8 +47,10 @@ public class ActorRecordingService {
     }
 
     public void startRecordingWithCountdown(Player player, Scene scene, SceneActorTemplate template,
-                                            int startTick, boolean previewOthers, int durationSeconds) {
-        int boundedDuration = Math.max(1, durationSeconds);
+                                            int startTick, boolean previewOthers, int durationTicks,
+                                            RecordingDurationUnit durationUnit) {
+        int boundedDurationTicks = Math.max(1, durationTicks);
+        RecordingDurationUnit boundedUnit = durationUnit == null ? RecordingDurationUnit.SECONDS : durationUnit;
         new BukkitRunnable() {
             int countdown = 3;
             @Override
@@ -67,8 +69,11 @@ public class ActorRecordingService {
                     countdown--;
                     return;
                 }
-                startRecording(player, scene, template, startTick, previewOthers, boundedDuration);
-                player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + boundedDuration + "s"),
+                startRecording(player, scene, template, startTick, previewOthers, boundedDurationTicks, boundedUnit);
+                int displayLimit = boundedUnit == RecordingDurationUnit.SECONDS
+                        ? Math.max(1, boundedDurationTicks / 20)
+                        : boundedDurationTicks;
+                player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + displayLimit + boundedUnit.suffix()),
                         Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
                 cancel();
             }
@@ -144,17 +149,17 @@ public class ActorRecordingService {
                 player.isSprinting(),
                 player.isSwimming(),
                 player.isGliding()));
-        int elapsedSeconds = Math.max(1, recording.relativeTick / 20 + 1);
-        String durationText = recording.durationSeconds > 0
-                ? elapsedSeconds + "/" + recording.durationSeconds + "s"
-                : (elapsedSeconds + "s");
+        int elapsedTicks = recording.relativeTick + 1;
+        String durationText = recording.durationTicks > 0
+                ? recording.formatElapsed(elapsedTicks) + "/" + recording.formatLimit()
+                : recording.formatElapsed(elapsedTicks);
         player.sendActionBar("§cREC §7• §f" + recording.template.getActorId()
                 + " §7• §fTick " + String.format("%04d", tick)
                 + " §7• §f" + durationText);
         if (recording.previewOthers) {
             plugin.getRuntimeEngine().previewActorsAtTick(player, recording.scene, recording.template.getActorId(), tick);
         }
-        if (recording.durationSeconds > 0 && recording.relativeTick + 1 >= recording.durationSeconds * 20) {
+        if (recording.durationTicks > 0 && recording.relativeTick + 1 >= recording.durationTicks) {
             stopRecording(player, true);
         }
         recording.relativeTick++;
@@ -179,14 +184,30 @@ public class ActorRecordingService {
         private int relativeTick;
         private BukkitTask task;
         private final boolean previewOthers;
-        private final int durationSeconds;
+        private final int durationTicks;
+        private final RecordingDurationUnit durationUnit;
 
-        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers, int durationSeconds) {
+        private ActiveRecording(Scene scene, SceneActorTemplate template, int startTick, boolean previewOthers, int durationTicks, RecordingDurationUnit durationUnit) {
             this.scene = scene;
             this.template = template;
             this.startTick = Math.max(0, startTick);
             this.previewOthers = previewOthers;
-            this.durationSeconds = Math.max(0, durationSeconds);
+            this.durationTicks = Math.max(0, durationTicks);
+            this.durationUnit = durationUnit == null ? RecordingDurationUnit.SECONDS : durationUnit;
+        }
+
+        private String formatElapsed(int elapsedTicks) {
+            if (durationUnit == RecordingDurationUnit.SECONDS) {
+                return String.valueOf(Math.max(1, elapsedTicks / 20));
+            }
+            return String.valueOf(elapsedTicks);
+        }
+
+        private String formatLimit() {
+            if (durationUnit == RecordingDurationUnit.SECONDS) {
+                return Math.max(1, durationTicks / 20) + durationUnit.suffix();
+            }
+            return durationTicks + durationUnit.suffix();
         }
     }
 }
