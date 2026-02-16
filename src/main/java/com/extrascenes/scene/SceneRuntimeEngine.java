@@ -590,6 +590,10 @@ public class SceneRuntimeEngine {
                     + " current=" + (current == null ? "null" : current.getUniqueId())
                     + " expected=" + cameraRig.getUniqueId());
         }
+        plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
+                + " session=" + session.getSessionId()
+                + " current=" + (current == null ? "null" : current.getUniqueId())
+                + " expected=" + cameraRig.getUniqueId());
         protocolAdapter.applySpectatorCamera(player, cameraRig);
     }
 
