@@ -30,6 +30,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 public class SceneRuntimeEngine {
+    private static final double MAX_CAMERA_STEP_DISTANCE = 1.75D;
     private final ExtraScenesPlugin plugin;
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
@@ -280,6 +281,7 @@ public class SceneRuntimeEngine {
                     continue;
                 }
             }
+            clearNameplate(handle.getEntity(), handle.getCitizensNpc());
             ActorTickAction action = template.getTickAction(tick);
             if (action != null && action.isSpawn()) {
                 handle.getEntity().setInvisible(false);
@@ -326,6 +328,21 @@ public class SceneRuntimeEngine {
     }
 
     private void spawnSessionActor(Player viewer, SceneSession session, SceneActorTemplate template) {
+        SessionActorHandle existing = session.getActorHandle(template.getActorId());
+        if (existing != null) {
+            if (existing.getCitizensNpc() != null) {
+                citizensAdapter.destroy(existing.getCitizensNpc());
+            }
+            Entity previousEntity = existing.getEntity();
+            if (previousEntity != null) {
+                session.unregisterEntity(previousEntity);
+                sessionManager.unregisterSceneEntity(previousEntity);
+                if (previousEntity.isValid()) {
+                    previousEntity.remove();
+                }
+            }
+            session.unregisterActorHandle(template.getActorId());
+        }
         Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
             if (npc == null) {
                 return;
@@ -671,6 +688,7 @@ public class SceneRuntimeEngine {
         Location from = cameraRig.getLocation().clone();
         Location location = from.clone();
         transform.applyTo(location);
+        clampCameraDelta(from, location, session, timeTicks);
         cameraRig.teleport(location);
         if (isDebugCameraEnabled(player.getUniqueId()) && timeTicks % 20 == 0) {
             plugin.getLogger().info(String.format(java.util.Locale.ROOT,
@@ -680,6 +698,26 @@ public class SceneRuntimeEngine {
                     location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()));
         }
         session.setLastCameraLocation(from);
+    }
+
+    private void clampCameraDelta(Location from, Location to, SceneSession session, int tick) {
+        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
+                || !from.getWorld().equals(to.getWorld())) {
+            return;
+        }
+        double distance = from.distance(to);
+        if (distance <= MAX_CAMERA_STEP_DISTANCE || distance <= 0.0D) {
+            return;
+        }
+        double ratio = MAX_CAMERA_STEP_DISTANCE / distance;
+        to.setX(from.getX() + (to.getX() - from.getX()) * ratio);
+        to.setY(from.getY() + (to.getY() - from.getY()) * ratio);
+        to.setZ(from.getZ() + (to.getZ() - from.getZ()) * ratio);
+        if (tick % 20 == 0) {
+            plugin.getLogger().warning(String.format(java.util.Locale.ROOT,
+                    "[camera-clamp] session=%s tick=%d delta=%.3f clampedTo=%.3f",
+                    session.getSessionId(), tick, distance, MAX_CAMERA_STEP_DISTANCE));
+        }
     }
 
     private Transform interpolateCamera(Player player, SceneSession session, List<CameraKeyframe> keyframes, int timeTicks) {
@@ -909,10 +947,18 @@ public class SceneRuntimeEngine {
         List<String> commands = keyframe.getCommands();
         for (String command : commands) {
             String resolved = SceneTextFormatter.replacePlaceholders(plugin, player, session, command, durationTicks);
+            boolean globalRequested = resolved.startsWith("global:");
+            String normalized = globalRequested ? resolved.substring("global:".length()).trim() : resolved;
+            if (globalRequested && !session.getScene().isAllowGlobalCommands() && !keyframe.isAllowGlobal()) {
+                plugin.getLogger().warning("[scene-command] blocked global command because scene/keyframe policy denied it"
+                        + " viewer=" + player.getName() + " session=" + session.getSessionId()
+                        + " tick=" + session.getTimeTicks() + " command=" + normalized);
+                continue;
+            }
             if (keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.CONSOLE) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), resolved.replaceFirst("^console:", "").trim());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), normalized.replaceFirst("^console:", "").trim());
             } else {
-                String sanitized = resolved.replaceFirst("^player:", "").trim();
+                String sanitized = normalized.replaceFirst("^player:", "").trim();
                 Bukkit.dispatchCommand(player, sanitized);
             }
         }

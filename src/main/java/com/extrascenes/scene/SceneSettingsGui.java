@@ -29,8 +29,8 @@ public class SceneSettingsGui implements EditorGui {
         inventory.setItem(14, GuiUtils.makeItem(Material.ICE, "Freeze Player: " + scene.isFreezePlayer(),
                 List.of("Toggle player freeze.")));
         inventory.setItem(16, GuiUtils.makeItem(Material.COMMAND_BLOCK,
-                "Allow Global Commands: " + scene.isAllowGlobalCommands(),
-                List.of("Toggle global command execution.")));
+                "Allow Unrestricted Command Keyframes: " + scene.isAllowGlobalCommands(),
+                List.of("When disabled, only non-global command keyframes run.", "Prefix with global: to require this option.")));
 
         inventory.setItem(20, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));

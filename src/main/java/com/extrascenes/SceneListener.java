@@ -57,6 +57,7 @@ public class SceneListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
         editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_quit");
+        sessionManager.markRestorePending(event.getPlayer().getUniqueId());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_quit");
         if (editorSessionManager != null) {
             EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
@@ -74,6 +75,7 @@ public class SceneListener implements Listener {
     public void onPlayerKick(PlayerKickEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
         editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_kick");
+        sessionManager.markRestorePending(event.getPlayer().getUniqueId());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_kick");
     }
 
