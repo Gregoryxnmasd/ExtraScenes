@@ -47,7 +47,12 @@ public class ActorsListGui implements EditorGui {
 
         inventory.setItem(45, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to dashboard.")));
         inventory.setItem(48, GuiUtils.makeItem(Material.NAME_TAG, "Create Actor", List.of("Creates actor_<n>.")));
-        inventory.setItem(50, GuiUtils.makeItem(Material.ANVIL, "Rename Actor", List.of("Use /scene actor rename <scene> <old> <new>.")));
+        inventory.setItem(50, GuiUtils.makeItem(Material.ANVIL, "Rename Actor", List.of(
+                "Chat input guided rename.",
+                "Format 1: <oldId> <newId>",
+                "Format 2: <newId> (uses selected actor)",
+                "The menu will close automatically."
+        )));
         inventory.setItem(49, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
         if (totalPages > 1) {
             inventory.setItem(46, GuiUtils.makeItem(Material.ARROW, "Prev", List.of("Page " + (page + 1) + "/" + totalPages)));
@@ -96,6 +101,12 @@ public class ActorsListGui implements EditorGui {
             session.setSelectedActorId(created.getActorId());
             editorEngine.markDirty(session.getScene());
             editorEngine.openActorDetail(player, session, true);
+            return;
+        }
+        if (ctx.getSlot() == 50) {
+            player.closeInventory();
+            editorEngine.getInputManager().beginActorRenameInput(player, session.getScene(), session,
+                    GuiType.ACTORS_LIST);
             return;
         }
 
