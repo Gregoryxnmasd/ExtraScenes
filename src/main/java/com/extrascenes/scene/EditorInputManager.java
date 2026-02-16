@@ -33,7 +33,11 @@ public class EditorInputManager {
         MODEL_ENTRY_CREATE_MODEL_ID,
         MODEL_ENTRY_MODEL_ID,
         MODEL_ENTRY_ANIMATION_ID,
-        ACTOR_RECORD_DURATION
+        ACTOR_RECORD_DURATION,
+        ACTOR_TICK_ANIMATION,
+        ACTOR_TICK_COMMAND,
+        ACTOR_TICK_SCALE,
+        ACTOR_TICK_SKIN
     }
 
     public enum ModelField {
@@ -54,6 +58,7 @@ public class EditorInputManager {
         private SceneTrackType trackType;
         private UUID keyframeId;
         private String actorId;
+        private int actorTick;
 
         public PromptState(UUID playerId, Scene scene, EditorSession editorSession, PromptType type) {
             this.playerId = playerId;
@@ -148,6 +153,14 @@ public class EditorInputManager {
 
         public void setActorId(String actorId) {
             this.actorId = actorId;
+        }
+
+        public int getActorTick() {
+            return actorTick;
+        }
+
+        public void setActorTick(int actorTick) {
+            this.actorTick = actorTick;
         }
     }
 
@@ -325,6 +338,46 @@ public class EditorInputManager {
         Text.send(player, "&b" + "Enter recording duration (examples: 12s, 240t).");
     }
 
+    public void beginActorTickAnimationInput(Player player, Scene scene, EditorSession session,
+                                             String actorId, int tick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_TICK_ANIMATION);
+        state.setActorId(actorId);
+        state.setActorTick(tick);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Enter animation id (example: walk). Type 'clear' to remove.");
+    }
+
+    public void beginActorTickCommandInput(Player player, Scene scene, EditorSession session,
+                                           String actorId, int tick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_TICK_COMMAND);
+        state.setActorId(actorId);
+        state.setActorTick(tick);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Enter command for this tick. Type 'clear' to remove.");
+    }
+
+    public void beginActorTickScaleInput(Player player, Scene scene, EditorSession session,
+                                         String actorId, int tick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_TICK_SCALE);
+        state.setActorId(actorId);
+        state.setActorTick(tick);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Enter actor scale (example: 1.35). Type 'clear' to remove.");
+    }
+
+    public void beginActorTickSkinInput(Player player, Scene scene, EditorSession session,
+                                        String actorId, int tick, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_TICK_SKIN);
+        state.setActorId(actorId);
+        state.setActorTick(tick);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Enter skin name for this tick. Type 'clear' to remove.");
+    }
+
     public boolean handleChat(Player player, String message) {
         PromptState state = prompts.get(player.getUniqueId());
         if (state == null) {
@@ -363,6 +416,10 @@ public class EditorInputManager {
             case MODEL_ENTRY_MODEL_ID -> handleModelEntryModelId(player, state, message);
             case MODEL_ENTRY_ANIMATION_ID -> handleModelEntryAnimation(player, state, message);
             case ACTOR_RECORD_DURATION -> handleActorRecordDuration(player, state, message);
+            case ACTOR_TICK_ANIMATION -> handleActorTickAnimation(player, state, message);
+            case ACTOR_TICK_COMMAND -> handleActorTickCommand(player, state, message);
+            case ACTOR_TICK_SCALE -> handleActorTickScale(player, state, message);
+            case ACTOR_TICK_SKIN -> handleActorTickSkin(player, state, message);
             default -> {
             }
         }
@@ -746,6 +803,84 @@ public class EditorInputManager {
         } catch (NumberFormatException ex) {
             Text.send(player, "&c" + "Invalid duration. Use formats like 12s or 240t.");
         }
+    }
+
+    private ActorTickAction resolveActorTickAction(PromptState state) {
+        if (state == null || state.getActorId() == null) {
+            return null;
+        }
+        SceneActorTemplate actor = state.getScene().getActorTemplate(state.getActorId());
+        if (actor == null) {
+            return null;
+        }
+        return actor.getOrCreateTickAction(state.getActorTick());
+    }
+
+    private void closeActorTickPrompt(Player player, PromptState state) {
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, state.getEditorSession(),
+                state.getReturnGui() == null ? GuiType.ACTOR_TICK_ACTIONS : state.getReturnGui()));
+    }
+
+    private void handleActorTickAnimation(Player player, PromptState state, String message) {
+        ActorTickAction action = resolveActorTickAction(state);
+        if (action == null) {
+            closeActorTickPrompt(player, state);
+            Text.send(player, "&c" + "Actor no longer exists.");
+            return;
+        }
+        action.setAnimation(message.equalsIgnoreCase("clear") || message.isBlank() ? null : message);
+        editorEngine.markDirty(state.getScene());
+        closeActorTickPrompt(player, state);
+        Text.send(player, "&a" + "Actor animation action updated.");
+    }
+
+    private void handleActorTickCommand(Player player, PromptState state, String message) {
+        ActorTickAction action = resolveActorTickAction(state);
+        if (action == null) {
+            closeActorTickPrompt(player, state);
+            Text.send(player, "&c" + "Actor no longer exists.");
+            return;
+        }
+        action.setCommand(message.equalsIgnoreCase("clear") || message.isBlank() ? null : message);
+        editorEngine.markDirty(state.getScene());
+        closeActorTickPrompt(player, state);
+        Text.send(player, "&a" + "Actor command action updated.");
+    }
+
+    private void handleActorTickScale(Player player, PromptState state, String message) {
+        ActorTickAction action = resolveActorTickAction(state);
+        if (action == null) {
+            closeActorTickPrompt(player, state);
+            Text.send(player, "&c" + "Actor no longer exists.");
+            return;
+        }
+        if (message.equalsIgnoreCase("clear") || message.isBlank()) {
+            action.setScale(null);
+        } else {
+            try {
+                action.setScale(Double.parseDouble(message));
+            } catch (NumberFormatException ex) {
+                Text.send(player, "&c" + "Invalid scale. Example: 1.25 or 'clear'.");
+                return;
+            }
+        }
+        editorEngine.markDirty(state.getScene());
+        closeActorTickPrompt(player, state);
+        Text.send(player, "&a" + "Actor scale action updated.");
+    }
+
+    private void handleActorTickSkin(Player player, PromptState state, String message) {
+        ActorTickAction action = resolveActorTickAction(state);
+        if (action == null) {
+            closeActorTickPrompt(player, state);
+            Text.send(player, "&c" + "Actor no longer exists.");
+            return;
+        }
+        action.setSkinName(message.equalsIgnoreCase("clear") || message.isBlank() ? null : message);
+        editorEngine.markDirty(state.getScene());
+        closeActorTickPrompt(player, state);
+        Text.send(player, "&a" + "Actor skin action updated.");
     }
 
     public void clearPrompt(UUID playerId) {
