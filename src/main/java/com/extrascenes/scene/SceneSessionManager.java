@@ -183,6 +183,7 @@ public class SceneSessionManager {
 
     public void unregisterSceneEntity(Entity entity) {
         sceneEntityToPlayer.remove(entity.getUniqueId());
+        visibilityController.clearEntity(entity.getUniqueId());
     }
 
     public void reapplyVisibility(Player player) {

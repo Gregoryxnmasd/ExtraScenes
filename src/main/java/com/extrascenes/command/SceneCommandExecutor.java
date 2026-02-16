@@ -26,8 +26,9 @@ import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
-            "edit", "play", "stop", "pause", "resume", "reload", "list",
-            "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend", "debugcamera", "debugactors", "actor"
+            "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
+            "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
+            "debugcamera", "debugactors", "debugvisibility", "actor"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -58,6 +59,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
+            case "main" -> handleMain(sender);
             case "create" -> handleCreate(sender, args);
             case "edit" -> handleEdit(sender, args);
             case "group" -> handleGroup(sender, args);
@@ -76,6 +78,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "duplicate" -> handleDuplicate(sender, args);
             case "debugcamera" -> handleDebugCamera(sender, args);
             case "debugactors" -> handleDebugActors(sender, args);
+            case "debugvisibility" -> handleDebugVisibility(sender, args);
             case "actor" -> handleActor(sender, args);
             default -> Text.send(sender, "&c" + "Unknown scene subcommand.");
         }
@@ -83,6 +86,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(CommandSender sender) {
+        Text.send(sender, "&b" + "/scene main");
         Text.send(sender, "&b" + "/scene edit <name>");
         Text.send(sender, "&b" + "/scene play <name> [player] [startTick] [endTick]");
         Text.send(sender, "&b" + "/scene stop [player]");
@@ -101,6 +105,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene setend <here|x y z yaw pitch>");
         Text.send(sender, "&b" + "/scene debugcamera <player>");
         Text.send(sender, "&b" + "/scene debugactors <on|off>");
+        Text.send(sender, "&b" + "/scene debugvisibility <actorId>");
         Text.send(sender, "&b" + "/scene actor add <scene> <actorId>");
         Text.send(sender, "&b" + "/scene actor rename <scene> <oldId> <newId>");
         Text.send(sender, "&b" + "/scene actor delete <scene> <actorId> confirm");
@@ -109,6 +114,14 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
         Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick]");
         Text.send(sender, "&b" + "/scene actor record stop");
+    }
+
+    private void handleMain(CommandSender sender) {
+        if (sender instanceof Player player) {
+            editorEngine.openMainMenu(player);
+            return;
+        }
+        sendHelp(sender);
     }
 
     private void handleCreate(CommandSender sender, String[] args) {
@@ -450,6 +463,34 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 + " rigUuid=" + rigUuid
                 + " match=" + match
                 + " recoveryCooldown=" + cooldownLeft);
+    }
+
+    private void handleDebugVisibility(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&cOnly players can inspect visibility.");
+            return;
+        }
+        if (args.length < 2) {
+            Text.send(sender, "&cUsage: /scene debugvisibility <actorId>");
+            return;
+        }
+        com.extrascenes.scene.SessionActorHandle handle = plugin.getRuntimeEngine().findViewerActorHandle(player, args[1]);
+        if (handle == null || handle.getEntity() == null) {
+            Text.send(sender, "&cNo actor handle found for viewer/session.");
+            return;
+        }
+        java.util.UUID entityId = handle.getEntity().getUniqueId();
+        Text.send(sender, "&eviewer UUID: &f" + player.getUniqueId());
+        Text.send(sender, "&eactor entity UUID: &f" + entityId);
+        java.util.Set<java.util.UUID> hidden = plugin.getVisibilityController().getHiddenPlayers(entityId);
+        java.util.Set<java.util.UUID> shown = plugin.getVisibilityController().getShownPlayers(entityId);
+        StringBuilder lines = new StringBuilder();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            String state = shown.contains(online.getUniqueId()) ? "shown"
+                    : hidden.contains(online.getUniqueId()) ? "hidden" : "unknown";
+            lines.append(online.getName()).append("(").append(online.getUniqueId()).append(")=").append(state).append(" ");
+        }
+        Text.send(sender, "&eplayers: &f" + lines.toString().trim());
     }
 
     private EditorSession requireEditorSession(CommandSender sender) {
