@@ -18,7 +18,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -416,16 +415,6 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
         plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
         Text.send(sender, "&e" + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
-    }
-
-    private void handleDebugActors(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /scene debugactors <on|off>");
-            return;
-        }
-        boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
-        plugin.getRuntimeEngine().setActorDebugEnabled(enabled);
-        sender.sendMessage(ChatColor.YELLOW + "Actor transform debug " + (enabled ? "enabled" : "disabled") + ".");
     }
 
     private void handleDebugCamera(CommandSender sender, String[] args) {
