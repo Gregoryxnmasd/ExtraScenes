@@ -26,6 +26,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
@@ -90,6 +92,7 @@ public class SceneSessionManager {
         visibilityController.hideEntityFromAllExcept(rig, player);
         visibilityController.showEntityToPlayer(rig, player);
         session.setCameraRigId(rig.getUniqueId());
+        session.setCameraRigWorld(rig.getWorld().getName());
         plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
                 + " marker=" + rig.isMarker());
 
@@ -98,9 +101,11 @@ public class SceneSessionManager {
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
         player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         applyMovementLock(player);
+        applyPlaybackZoomEffect(player);
 
         teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
+        protocolAdapter.applySpectatorCamera(player, rig);
         startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
@@ -150,6 +155,13 @@ public class SceneSessionManager {
         session.clearOwnedTasks();
         releaseForcedChunk(session);
         cleanupSessionEntities(session);
+
+        if (session.getPlaybackTeleportCount() > 0) {
+            plugin.getLogger().severe("Playback teleports detected for session=" + session.getSessionId()
+                    + " viewer=" + session.getPlayerId()
+                    + " count=" + session.getPlaybackTeleportCount()
+                    + " lastCaller=" + session.getLastPlaybackTeleportCaller());
+        }
 
         if (player != null) {
             Bukkit.getPluginManager().callEvent(new SceneEndEvent(player, session.getScene(), reason));
@@ -221,6 +233,7 @@ public class SceneSessionManager {
         protocolAdapter.clearSpectatorCamera(player);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
+        clearPlaybackZoomEffect(player);
         player.getInventory().setHelmet(session.getOriginalHelmet());
 
         if (session.getScene().isFreezePlayer()) {
@@ -256,6 +269,10 @@ public class SceneSessionManager {
         int chunkZ = location.getBlockZ() >> 4;
         location.getWorld().setChunkForceLoaded(chunkX, chunkZ, true);
         session.setForcedChunk(location.getWorld().getName(), chunkX, chunkZ);
+        plugin.getLogger().info("Camera rig chunk force-loaded for session=" + session.getSessionId()
+                + " world=" + session.getForcedChunkWorld()
+                + " chunkX=" + chunkX
+                + " chunkZ=" + chunkZ);
     }
 
     private void releaseForcedChunk(SceneSession session) {
@@ -265,6 +282,10 @@ public class SceneSessionManager {
         World world = Bukkit.getWorld(session.getForcedChunkWorld());
         if (world != null) {
             world.setChunkForceLoaded(session.getForcedChunkX(), session.getForcedChunkZ(), false);
+            plugin.getLogger().info("Camera rig chunk force-load released for session=" + session.getSessionId()
+                    + " world=" + session.getForcedChunkWorld()
+                    + " chunkX=" + session.getForcedChunkX()
+                    + " chunkZ=" + session.getForcedChunkZ());
         }
     }
 
@@ -274,12 +295,15 @@ public class SceneSessionManager {
         }
         SceneSession session = sessions.get(player.getUniqueId());
         String caller = resolveTeleportCaller();
+        int tick = session != null ? session.getTimeTicks() : -1;
         if (session != null && session.getState() == SceneState.PLAYING
                 && !reason.startsWith("start_scene")
                 && !reason.startsWith("scene_end")) {
             session.incrementPlaybackTeleportCount(caller);
         }
-        plugin.getLogger().info("[scene-teleport] player=" + player.getUniqueId()
+        plugin.getLogger().info("[scene-teleport] viewer=" + player.getName()
+                + " player=" + player.getUniqueId()
+                + " tick=" + tick
                 + " reason=" + reason
                 + " caller=" + caller);
         player.teleport(target);
@@ -334,11 +358,9 @@ public class SceneSessionManager {
     private void startSpectatorHandshake(SceneSession ownerSession, UUID playerId, UUID rigId) {
         org.bukkit.scheduler.BukkitTask task = new org.bukkit.scheduler.BukkitRunnable() {
             private int tick = 0;
-            private int retries = 0;
 
             @Override
             public void run() {
-                tick++;
                 SceneSession session = sessions.get(playerId);
                 if (session == null) {
                     cancel();
@@ -356,13 +378,15 @@ public class SceneSessionManager {
                     return;
                 }
 
-                if (tick == 1) {
+                if (tick == 0) {
                     player.setGameMode(GameMode.SPECTATOR);
+                    tick++;
                     return;
                 }
-                if (tick == 2) {
+                if (tick == 1) {
                     protocolAdapter.applySpectatorCamera(player, rig);
                     session.incrementSpectatorHandshakeAttempts();
+                    tick++;
                     return;
                 }
 
@@ -376,18 +400,19 @@ public class SceneSessionManager {
                     return;
                 }
 
-                if (retries < 9) {
-                    retries++;
+                if (tick <= 10) {
                     protocolAdapter.applySpectatorCamera(player, rig);
                     session.incrementSpectatorHandshakeAttempts();
-                    plugin.getLogger().warning("Spectator lock handshake retry=" + retries
+                    plugin.getLogger().warning("Spectator lock handshake retry tick=" + tick
                             + " for " + player.getName());
+                    tick++;
                     return;
                 }
 
                 plugin.getLogger().severe("Spectator lock handshake failed for " + player.getName()
-                        + " after retries=" + retries);
+                        + " after attempts=" + session.getSpectatorHandshakeAttempts());
                 cancel();
+                abortSession(playerId, "spectator_handshake_failed");
             }
         }.runTaskTimer(plugin, 0L, 1L);
         ownerSession.registerOwnedTask(task);
@@ -405,6 +430,16 @@ public class SceneSessionManager {
             }
         }
         return player.getLocation().clone();
+    }
+
+    private void applyPlaybackZoomEffect(Player player) {
+        PotionEffectType type = PotionEffectType.SLOWNESS;
+        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 1, true, false, false);
+        player.addPotionEffect(effect);
+    }
+
+    private void clearPlaybackZoomEffect(Player player) {
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
     }
 
     private void applyMovementLock(Player player) {
