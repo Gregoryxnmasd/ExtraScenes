@@ -8,6 +8,7 @@ import com.extrascenes.ScaleAttributeResolver;
 import com.extrascenes.SceneModelTrackAdapter;
 import com.extrascenes.SceneProtocolAdapter;
 import com.extrascenes.visibility.SceneVisibilityController;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,6 @@ public class SceneRuntimeEngine {
     private final SceneVisibilityController visibilityController;
     private final SceneProtocolAdapter protocolAdapter;
     private final CitizensAdapter citizensAdapter;
-    private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
     private final EditorPreviewController editorPreviewController;
     private volatile boolean actorDebugEnabled = false;
     private final Set<UUID> debugCameraViewers = ConcurrentHashMap.newKeySet();
@@ -121,9 +121,9 @@ public class SceneRuntimeEngine {
             return;
         }
 
+        updateCameraRigTransform(player, session, time);
         ensureSpectatorTarget(player, session);
         tickSessionActors(player, session, time);
-        updateCamera(player, session, time);
         maybeLogDebugCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
         tickActionBar(player, session, time);
@@ -196,6 +196,8 @@ public class SceneRuntimeEngine {
                 + " sessionId=" + session.getSessionId()
                 + " rig=" + rigId
                 + " spectatorTarget=" + spectatorTargetId
+                + " spectatorTargetMatchesRig=" + (cameraRig != null && spectatorTarget != null
+                && spectatorTarget.getUniqueId().equals(cameraRig.getUniqueId()))
                 + " tick=" + timeTicks
                 + " " + transform);
     }
@@ -203,7 +205,7 @@ public class SceneRuntimeEngine {
 
 
     private void maybeLogActorTransform(Player viewer, String actorId, int tick, Transform transform, SessionActorHandle handle,
-                                        boolean recordingPreview) {
+                                        boolean recordingPreview, List<String> executedActions) {
         if (!actorDebugEnabled || transform == null || tick % 20 != 0) {
             return;
         }
@@ -211,10 +213,13 @@ public class SceneRuntimeEngine {
         String entityInfo = handle != null && handle.getEntity() != null
                 ? handle.getEntity().getUniqueId().toString() + " visible=" + viewer.canSee(handle.getEntity())
                 : "missing";
+        String actions = executedActions == null || executedActions.isEmpty() ? "none" : String.join(",", executedActions);
+        double scale = readScale(handle != null ? handle.getEntity() : null);
         plugin.getLogger().info(String.format(java.util.Locale.ROOT,
-                "Actor %s tick %d -> %.2f %.2f %.2f %.1f %.1f (applied, %s, entity=%s)",
-                actorId, tick, transform.getX(), transform.getY(), transform.getZ(), transform.getYaw(), transform.getPitch(),
-                mode, entityInfo));
+                "[debugactors] actorId=%s tick=%d mode=%s entity=%s transform=%.2f %.2f %.2f %.1f %.1f scale=%.3f actions=%s",
+                actorId, tick, mode, entityInfo,
+                transform.getX(), transform.getY(), transform.getZ(), transform.getYaw(), transform.getPitch(),
+                scale, actions));
     }
 
     private void clearNameplate(Entity entity, Object npc) {
@@ -279,8 +284,8 @@ public class SceneRuntimeEngine {
                 living.setGliding(transformTick.isGliding());
             }
             applyScale(handle.getEntity(), template.getScale());
-            maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, false);
-            applyActorTickAction(viewer, template, handle, action, tick, false);
+            List<String> executedActions = applyActorTickAction(viewer, template, handle, action, tick, false);
+            maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, false, executedActions);
         }
     }
 
@@ -364,40 +369,45 @@ public class SceneRuntimeEngine {
         return last;
     }
 
-    private void applyActorTickAction(Player viewer, SceneActorTemplate template, SessionActorHandle handle,
+    private List<String> applyActorTickAction(Player viewer, SceneActorTemplate template, SessionActorHandle handle,
                                       ActorTickAction action, int tick, boolean previewMode) {
+        List<String> executedActions = new ArrayList<>();
         if (action == null || handle == null || handle.getEntity() == null) {
-            return;
+            return executedActions;
         }
         Entity entity = handle.getEntity();
         if (action.getLookAtTarget() != null) {
             float[] angles = resolveLookAt(viewer, null,
                     Transform.fromLocation(entity.getLocation()), action.getLookAtTarget());
             entity.setRotation(angles[0], angles[1]);
-            logActionExecution(previewMode, tick, "look", template.getActorId(), entity.getUniqueId());
+            executedActions.add("look-at");
         }
         if (action.getAnimation() != null && !action.getAnimation().isBlank() && entity instanceof LivingEntity livingEntity) {
             livingEntity.swingMainHand();
-            logActionExecution(previewMode, tick, "anim", template.getActorId(), entity.getUniqueId());
+            executedActions.add("play-animation:" + action.getAnimation());
+        }
+        if (action.isStopAnimation()) {
+            executedActions.add("stop-animation");
+        }
+        if (action.getScale() != null) {
+            applyScale(entity, action.getScale());
+            executedActions.add("set-scale:" + action.getScale());
+        }
+        if (action.getSkinName() != null && !action.getSkinName().isBlank()) {
+            citizensAdapter.applySkin(handle.getCitizensNpc(), action.getSkinName());
+            executedActions.add("set-skin:" + action.getSkinName());
         }
         if (action.getCommand() != null && !action.getCommand().isBlank()) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), action.getCommand().replace("{player}", viewer.getName()));
-            logActionExecution(previewMode, tick, "command", template.getActorId(), entity.getUniqueId());
+            executedActions.add("run-command");
         }
         if (action.isSpawn()) {
-            logActionExecution(previewMode, tick, "spawn", template.getActorId(), entity.getUniqueId());
+            executedActions.add("spawn");
         }
         if (action.isDespawn()) {
-            logActionExecution(previewMode, tick, "despawn", template.getActorId(), entity.getUniqueId());
+            executedActions.add("despawn");
         }
-    }
-
-    private void logActionExecution(boolean previewMode, int tick, String actionType, String actorId, UUID entityUuid) {
-        if (!actorDebugEnabled) {
-            return;
-        }
-        plugin.getLogger().info("On tick " + tick + " executed actor action: " + actionType
-                + " actor=" + actorId + " mode=" + (previewMode ? "preview" : "runtime") + " entity=" + entityUuid);
+        return executedActions;
     }
 
     public void clearRecordingPreview(Player player) {
@@ -469,9 +479,9 @@ public class SceneRuntimeEngine {
                 handle.getEntity().setInvisible(false);
                 applyScale(handle.getEntity(), template.getScale());
                 handle.setLastTransform(transform);
-                maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true);
                 ActorTickAction action = template.getTickAction(tick);
-                applyActorTickAction(viewer, template, handle, action, tick, true);
+                List<String> executedActions = applyActorTickAction(viewer, template, handle, action, tick, true);
+                maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true, executedActions);
             }
         }
         emitDebugPreview(viewer);
@@ -516,7 +526,9 @@ public class SceneRuntimeEngine {
                 .anyMatch(action -> action != null && (action.isSpawn()
                         || (action.getAnimation() != null && !action.getAnimation().isBlank())
                         || action.getLookAtTarget() != null
-                        || (action.getCommand() != null && !action.getCommand().isBlank())));
+                        || (action.getCommand() != null && !action.getCommand().isBlank())
+                        || action.getScale() != null
+                        || (action.getSkinName() != null && !action.getSkinName().isBlank())));
     }
 
     private void applyScale(Entity entity, double scale) {
@@ -527,9 +539,21 @@ public class SceneRuntimeEngine {
         }
         attributable.getAttribute(attribute).setBaseValue(scale <= 0.0 ? 1.0 : scale);
     }
+
+    private double readScale(Entity entity) {
+        org.bukkit.attribute.Attribute attribute = ScaleAttributeResolver.resolveScaleAttribute();
+        if (attribute == null || !(entity instanceof Attributable attributable)
+                || attributable.getAttribute(attribute) == null) {
+            return 1.0;
+        }
+        return attributable.getAttribute(attribute).getBaseValue();
+    }
     private void ensureSpectatorTarget(Player player, SceneSession session) {
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
+            return;
+        }
+        if (session.getTimeTicks() <= 0) {
             return;
         }
         Entity current = player.getSpectatorTarget();
@@ -537,28 +561,10 @@ public class SceneRuntimeEngine {
         if (!targetLost) {
             return;
         }
-
-        int timeTicks = session.getTimeTicks();
-        boolean cooldownReady = timeTicks >= session.getSpectatorRecoveryCooldownUntilTick();
-        if (cooldownReady) {
-            session.setSpectatorRecoveryCooldownUntilTick(timeTicks + SPECTATOR_RECOVERY_COOLDOWN_TICKS);
-            plugin.getLogger().info("Camera rig target lost; recovering for " + player.getName()
-                    + " rig=" + cameraRig.getUniqueId());
-        }
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            SceneSession active = sessionManager.getSession(player.getUniqueId());
-            if (active == null) {
-                return;
-            }
-            Entity rig = getCameraRig(active, player);
-            if (rig == null) {
-                return;
-            }
-            protocolAdapter.applySpectatorCamera(player, rig);
-        }, 1L);
+        protocolAdapter.applySpectatorCamera(player, cameraRig);
     }
 
-    private void updateCamera(Player player, SceneSession session, int timeTicks) {
+    private void updateCameraRigTransform(Player player, SceneSession session, int timeTicks) {
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             return;
@@ -577,7 +583,6 @@ public class SceneRuntimeEngine {
         Location location = cameraRig.getLocation().clone();
         transform.applyTo(location);
         cameraRig.teleport(location);
-        protocolAdapter.applySpectatorCamera(player, cameraRig);
         session.setLastCameraLocation(location);
     }
 

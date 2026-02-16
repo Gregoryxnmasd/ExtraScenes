@@ -38,6 +38,9 @@ public class SceneSession {
     private BukkitTask runtimeTask;
     private final List<BukkitTask> ownedTasks = new ArrayList<>();
     private int spectatorRecoveryCooldownUntilTick;
+    private String forcedChunkWorld;
+    private int forcedChunkX;
+    private int forcedChunkZ;
     private org.bukkit.inventory.ItemStack originalHelmet;
     private final SessionEntityTracker entityTracker = new SessionEntityTracker();
 
@@ -288,5 +291,23 @@ public class SceneSession {
 
     public void setOriginalHelmet(org.bukkit.inventory.ItemStack originalHelmet) {
         this.originalHelmet = originalHelmet;
+    }
+
+    public String getForcedChunkWorld() {
+        return forcedChunkWorld;
+    }
+
+    public int getForcedChunkX() {
+        return forcedChunkX;
+    }
+
+    public int getForcedChunkZ() {
+        return forcedChunkZ;
+    }
+
+    public void setForcedChunk(String worldName, int chunkX, int chunkZ) {
+        this.forcedChunkWorld = worldName;
+        this.forcedChunkX = chunkX;
+        this.forcedChunkZ = chunkZ;
     }
 }

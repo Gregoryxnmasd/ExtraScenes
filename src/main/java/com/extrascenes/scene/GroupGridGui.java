@@ -143,13 +143,30 @@ public class GroupGridGui implements EditorGui {
             return;
         }
         if (slot >= 18 && slot <= 53) {
+            int row = slot / 9;
             int col = slot % 9;
             int tick = (session.getCurrentGroup() - 1) * GROUP_SIZE + 1 + col;
             session.setCurrentTick(tick);
             if (ctx.isRightClick()) {
-                clearByRow(session.getScene(), slot / 9, tick);
+                clearByRow(session.getScene(), row, tick);
                 editorEngine.markDirty(session.getScene());
                 refresh(session);
+                return;
+            }
+            if (row == 2) {
+                editorEngine.openCameraOptions(player, session, true);
+                return;
+            }
+            if (row == 3) {
+                editorEngine.openActorsList(player, session, true);
+                return;
+            }
+            if (row == 4) {
+                editorEngine.openCommandEditorForTick(player, session, tick);
+                return;
+            }
+            if (row == 5) {
+                editorEngine.openActionBarEditorForTick(player, session, tick);
                 return;
             }
             editorEngine.openTickActionMenu(player, session, true);

@@ -17,6 +17,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -81,6 +82,7 @@ public class SceneSessionManager {
         rig.setSmall(true);
         session.registerEntity(rig);
         registerSceneEntity(session, rig);
+        forceLoadRigChunk(session, rigStartLocation);
         visibilityController.hideEntityFromAllExcept(rig, player);
         visibilityController.showEntityToPlayer(rig, player);
         session.setCameraRigId(rig.getUniqueId());
@@ -93,10 +95,9 @@ public class SceneSessionManager {
         player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         applyMovementLock(player);
 
-        player.teleport(rigStartLocation);
+        teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
         scheduleSpectatorApply(session, player.getUniqueId(), rig.getUniqueId(), 1L, "camera +1");
-        scheduleSpectatorApply(session, player.getUniqueId(), rig.getUniqueId(), 2L, "camera +2");
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -143,6 +144,7 @@ public class SceneSessionManager {
             owned.cancel();
         }
         session.clearOwnedTasks();
+        releaseForcedChunk(session);
         cleanupSessionEntities(session);
 
         if (player != null) {
@@ -232,14 +234,58 @@ public class SceneSessionManager {
         if (mode == EndTeleportMode.TELEPORT_TO_END && session.getScene().getEndLocation() != null) {
             Location target = session.getScene().getEndLocation().toBukkitLocation();
             if (target != null) {
-                player.teleport(target);
+                teleportPlayerWithDebug(player, target, "scene_end_target");
             }
             return;
         }
         Location start = session.getStartLocation();
         if (start != null) {
-            player.teleport(start);
+            teleportPlayerWithDebug(player, start, "scene_end_start");
         }
+    }
+
+    private void forceLoadRigChunk(SceneSession session, Location location) {
+        if (session == null || location == null || location.getWorld() == null) {
+            return;
+        }
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+        location.getWorld().setChunkForceLoaded(chunkX, chunkZ, true);
+        session.setForcedChunk(location.getWorld().getName(), chunkX, chunkZ);
+    }
+
+    private void releaseForcedChunk(SceneSession session) {
+        if (session == null || session.getForcedChunkWorld() == null) {
+            return;
+        }
+        World world = Bukkit.getWorld(session.getForcedChunkWorld());
+        if (world != null) {
+            world.setChunkForceLoaded(session.getForcedChunkX(), session.getForcedChunkZ(), false);
+        }
+    }
+
+    private void teleportPlayerWithDebug(Player player, Location target, String reason) {
+        if (player == null || target == null) {
+            return;
+        }
+        plugin.getLogger().info("[scene-teleport] player=" + player.getUniqueId()
+                + " reason=" + reason
+                + " caller=" + resolveTeleportCaller());
+        player.teleport(target);
+    }
+
+    private String resolveTeleportCaller() {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stack) {
+            if (!element.getClassName().startsWith("com.extrascenes")) {
+                continue;
+            }
+            if (element.getMethodName().equals("teleportPlayerWithDebug")) {
+                continue;
+            }
+            return element.getClassName() + "#" + element.getMethodName();
+        }
+        return "unknown";
     }
 
     private void clearActionBar(Player player, SceneSession session) {

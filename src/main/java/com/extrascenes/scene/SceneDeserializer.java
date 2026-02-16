@@ -455,6 +455,9 @@ public class SceneDeserializer {
                     action.setStopAnimation(actionObj.has("stopAnimation") && actionObj.get("stopAnimation").getAsBoolean());
                     action.setLookAtTarget(deserializeLookAt(actionObj.get("lookAt")));
                     action.setCommand(getString(actionObj, "command"));
+                    action.setScale(actionObj.has("scale") && !actionObj.get("scale").isJsonNull()
+                            ? actionObj.get("scale").getAsDouble() : null);
+                    action.setSkinName(getString(actionObj, "skin"));
                 }
             }
             templates.add(template);
