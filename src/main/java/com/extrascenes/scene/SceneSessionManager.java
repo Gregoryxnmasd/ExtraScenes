@@ -72,6 +72,10 @@ public class SceneSessionManager {
         session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
 
         Location rigStartLocation = resolveRigStartLocation(player, scene);
+        if (rigStartLocation.getWorld() == null || !rigStartLocation.getWorld().equals(player.getWorld())) {
+            rigStartLocation.setWorld(player.getWorld());
+            plugin.getLogger().warning("Camera rig world mismatch corrected for " + player.getName());
+        }
         ArmorStand rig = (ArmorStand) rigStartLocation.getWorld().spawnEntity(rigStartLocation, EntityType.ARMOR_STAND);
         rig.setInvisible(true);
         rig.setMarker(false);
@@ -97,7 +101,7 @@ public class SceneSessionManager {
 
         teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
-        scheduleSpectatorApply(session, player.getUniqueId(), rig.getUniqueId(), 1L, "camera +1");
+        startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -268,6 +272,12 @@ public class SceneSessionManager {
         if (player == null || target == null) {
             return;
         }
+        SceneSession session = sessions.get(player.getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING
+                && !reason.startsWith("start_scene")
+                && !reason.startsWith("scene_end")) {
+            session.incrementPlaybackTeleportCount();
+        }
         plugin.getLogger().info("[scene-teleport] player=" + player.getUniqueId()
                 + " reason=" + reason
                 + " caller=" + resolveTeleportCaller());
@@ -320,26 +330,65 @@ public class SceneSessionManager {
         session.clearSceneEntities();
     }
 
-    private void scheduleSpectatorApply(SceneSession ownerSession, UUID playerId, UUID rigId, long delayTicks, String label) {
-        org.bukkit.scheduler.BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            SceneSession session = sessions.get(playerId);
-            if (session == null) {
-                return;
+    private void startSpectatorHandshake(SceneSession ownerSession, UUID playerId, UUID rigId) {
+        org.bukkit.scheduler.BukkitTask task = new org.bukkit.scheduler.BukkitRunnable() {
+            private int tick = 0;
+            private int retries = 0;
+
+            @Override
+            public void run() {
+                tick++;
+                SceneSession session = sessions.get(playerId);
+                if (session == null) {
+                    cancel();
+                    return;
+                }
+                Player player = Bukkit.getPlayer(playerId);
+                if (player == null) {
+                    cancel();
+                    return;
+                }
+                Entity rig = Bukkit.getEntity(rigId);
+                if (rig == null || !rig.isValid()) {
+                    plugin.getLogger().warning("Camera rig missing before spectator lock completed for " + player.getName());
+                    cancel();
+                    return;
+                }
+
+                if (tick == 1) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                    return;
+                }
+                if (tick == 2) {
+                    protocolAdapter.applySpectatorCamera(player, rig);
+                    session.incrementSpectatorHandshakeAttempts();
+                    return;
+                }
+
+                Entity current = player.getSpectatorTarget();
+                boolean matched = current != null && current.getUniqueId().equals(rigId);
+                if (matched) {
+                    session.setSpectatorHandshakeComplete(true);
+                    plugin.getLogger().info("Spectator lock handshake succeeded for " + player.getName()
+                            + " after attempts=" + session.getSpectatorHandshakeAttempts());
+                    cancel();
+                    return;
+                }
+
+                if (retries < 10) {
+                    retries++;
+                    protocolAdapter.applySpectatorCamera(player, rig);
+                    session.incrementSpectatorHandshakeAttempts();
+                    plugin.getLogger().warning("Spectator lock handshake retry=" + retries
+                            + " for " + player.getName());
+                    return;
+                }
+
+                plugin.getLogger().severe("Spectator lock handshake failed for " + player.getName()
+                        + " after retries=" + retries);
+                cancel();
             }
-            Player player = Bukkit.getPlayer(playerId);
-            if (player == null) {
-                return;
-            }
-            Entity rig = player.getWorld().getEntity(rigId);
-            if (rig == null) {
-                return;
-            }
-            protocolAdapter.applySpectatorCamera(player, rig);
-            Entity current = player.getSpectatorTarget();
-            boolean matched = current != null && current.getUniqueId().equals(rig.getUniqueId());
-            plugin.getLogger().info("Camera rig target check (" + label + ") for " + player.getName()
-                    + " matched=" + matched);
-        }, delayTicks);
+        }.runTaskTimer(plugin, 0L, 1L);
         ownerSession.registerOwnedTask(task);
     }
 
