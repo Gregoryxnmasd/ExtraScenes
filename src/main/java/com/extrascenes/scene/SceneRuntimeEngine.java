@@ -204,21 +204,13 @@ public class SceneRuntimeEngine {
                         loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
             }
         }
-        boolean chunkLoaded = false;
-        boolean chunkForceLoaded = false;
+        boolean rigChunkLoaded = false;
+        boolean rigChunkForceLoaded = false;
         if (cameraRig != null && cameraRig.getWorld() != null) {
             int chunkX = cameraRig.getLocation().getBlockX() >> 4;
             int chunkZ = cameraRig.getLocation().getBlockZ() >> 4;
-            chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
-            chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
-        }
-        boolean chunkLoaded = false;
-        boolean chunkForceLoaded = false;
-        if (cameraRig != null && cameraRig.getWorld() != null) {
-            int chunkX = cameraRig.getLocation().getBlockX() >> 4;
-            int chunkZ = cameraRig.getLocation().getBlockZ() >> 4;
-            chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
-            chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
+            rigChunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
+            rigChunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
         }
         plugin.getLogger().info("[debugcamera] viewer=" + player.getUniqueId()
                 + " viewerName=" + player.getName()
@@ -229,8 +221,8 @@ public class SceneRuntimeEngine {
                 + " spectatorTarget=" + spectatorTargetId
                 + " spectatorTargetMatchesRig=" + spectatorTargetMatchesRig
                 + " tick=" + timeTicks
-                + " chunkLoaded=" + chunkLoaded
-                + " chunkForceLoaded=" + chunkForceLoaded
+                + " chunkLoaded=" + rigChunkLoaded
+                + " chunkForceLoaded=" + rigChunkForceLoaded
                 + " " + transform + " " + transformDelta);
     }
 
@@ -958,12 +950,11 @@ public class SceneRuntimeEngine {
         if (transform != null) {
             transform.applyTo(location);
         }
-        try {
-            Particle particle = Particle.valueOf(keyframe.getParticleId().toUpperCase());
-            player.spawnParticle(particle, location, 10, 0.2, 0.2, 0.2);
-        } catch (IllegalArgumentException ex) {
-            // ignore invalid particle
+        Particle particle = findParticleByName(keyframe.getParticleId());
+        if (particle == null) {
+            return;
         }
+        player.spawnParticle(particle, location, 10, 0.2, 0.2, 0.2);
     }
 
     private void handleSoundKeyframe(Player player, SoundKeyframe keyframe) {
@@ -975,12 +966,37 @@ public class SceneRuntimeEngine {
         if (transform != null) {
             transform.applyTo(location);
         }
-        try {
-            Sound sound = Sound.valueOf(keyframe.getSoundId().toUpperCase());
+        Sound sound = findSoundByName(keyframe.getSoundId());
+        if (sound != null) {
             player.playSound(location, sound, keyframe.getVolume(), keyframe.getPitch());
-        } catch (IllegalArgumentException ex) {
-            player.playSound(location, keyframe.getSoundId(), keyframe.getVolume(), keyframe.getPitch());
+            return;
         }
+        player.playSound(location, keyframe.getSoundId(), keyframe.getVolume(), keyframe.getPitch());
+    }
+
+
+    private Particle findParticleByName(String particleId) {
+        if (particleId == null || particleId.isBlank()) {
+            return null;
+        }
+        for (Particle particle : Particle.values()) {
+            if (particle.name().equalsIgnoreCase(particleId)) {
+                return particle;
+            }
+        }
+        return null;
+    }
+
+    private Sound findSoundByName(String soundId) {
+        if (soundId == null || soundId.isBlank()) {
+            return null;
+        }
+        for (Sound sound : Sound.values()) {
+            if (sound.name().equalsIgnoreCase(soundId)) {
+                return sound;
+            }
+        }
+        return null;
     }
 
     private void handleBlockIllusionKeyframe(Player player, BlockIllusionKeyframe keyframe) {
