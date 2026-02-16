@@ -17,6 +17,7 @@ import org.bukkit.scheduler.BukkitTask;
 public class ActorRecordingService {
     private final ExtraScenesPlugin plugin;
     private final Map<UUID, ActiveRecording> activeRecordings = new HashMap<>();
+    private final Map<UUID, BukkitTask> pendingCountdowns = new HashMap<>();
 
     public ActorRecordingService(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
@@ -49,13 +50,15 @@ public class ActorRecordingService {
     public void startRecordingWithCountdown(Player player, Scene scene, SceneActorTemplate template,
                                             int startTick, boolean previewOthers, int durationTicks,
                                             RecordingDurationUnit durationUnit) {
+        stopRecording(player, false);
         int boundedDurationTicks = Math.max(1, durationTicks);
         RecordingDurationUnit boundedUnit = durationUnit == null ? RecordingDurationUnit.SECONDS : durationUnit;
-        new BukkitRunnable() {
+        BukkitTask countdownTask = new BukkitRunnable() {
             int countdown = 3;
             @Override
             public void run() {
                 if (!player.isOnline()) {
+                    pendingCountdowns.remove(player.getUniqueId());
                     cancel();
                     return;
                 }
@@ -69,6 +72,7 @@ public class ActorRecordingService {
                     countdown--;
                     return;
                 }
+                pendingCountdowns.remove(player.getUniqueId());
                 startRecording(player, scene, template, startTick, previewOthers, boundedDurationTicks, boundedUnit);
                 int displayLimit = boundedUnit == RecordingDurationUnit.SECONDS
                         ? Math.max(1, boundedDurationTicks / 20)
@@ -78,12 +82,23 @@ public class ActorRecordingService {
                 cancel();
             }
         }.runTaskTimer(plugin, 0L, 20L);
+        pendingCountdowns.put(player.getUniqueId(), countdownTask);
     }
 
     public boolean stopRecording(Player player, boolean markDirty) {
+        BukkitTask countdownTask = pendingCountdowns.remove(player.getUniqueId());
+        boolean cancelledCountdown = false;
+        if (countdownTask != null) {
+            countdownTask.cancel();
+            cancelledCountdown = true;
+        }
         ActiveRecording recording = activeRecordings.remove(player.getUniqueId());
         if (recording == null) {
-            return false;
+            if (cancelledCountdown) {
+                player.getInventory().removeItem(SceneWand.createRecordingWand());
+                plugin.getRuntimeEngine().clearRecordingPreview(player);
+            }
+            return cancelledCountdown;
         }
         if (recording.task != null) {
             recording.task.cancel();
@@ -114,6 +129,10 @@ public class ActorRecordingService {
     }
 
     public void stopAll(boolean markDirty) {
+        for (BukkitTask countdown : new java.util.ArrayList<>(pendingCountdowns.values())) {
+            countdown.cancel();
+        }
+        pendingCountdowns.clear();
         for (UUID playerId : new java.util.ArrayList<>(activeRecordings.keySet())) {
             Player player = plugin.getServer().getPlayer(playerId);
             if (player != null) {
@@ -127,8 +146,7 @@ public class ActorRecordingService {
             if (recording.task != null) {
                 recording.task.cancel();
             }
-            plugin.getRuntimeEngine().clearRecordingPreview(player);
-        if (markDirty) {
+            if (markDirty) {
                 plugin.getSceneManager().markDirty(recording.scene);
             }
         }
