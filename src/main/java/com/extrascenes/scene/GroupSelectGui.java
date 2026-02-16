@@ -89,7 +89,7 @@ public class GroupSelectGui implements EditorGui {
         }
         if (slot == 46 && totalPages > 1) {
             session.setGroupPage(Math.max(0, currentPage - 1));
-            refresh(session);
+            editorEngine.openGroupSelect(player, session, false);
             return;
         }
         if (slot == 49) {
@@ -115,7 +115,7 @@ public class GroupSelectGui implements EditorGui {
         }
         if (slot == 52 && totalPages > 1) {
             session.setGroupPage(Math.min(maxPage, currentPage + 1));
-            refresh(session);
+            editorEngine.openGroupSelect(player, session, false);
             return;
         }
         if (slot == 53) {

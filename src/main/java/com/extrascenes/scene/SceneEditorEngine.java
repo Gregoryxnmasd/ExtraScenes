@@ -60,7 +60,15 @@ public class SceneEditorEngine {
 
     public void openMainMenu(Player player) {
         MainMenuState state = mainMenuStates.computeIfAbsent(player.getUniqueId(), id -> new MainMenuState());
+        armGuiTransitionGuard(player);
         player.openInventory(buildMainMenuInventory(state));
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (player.getOpenInventory() == null
+                    || !isMainMenuTitle(player.getOpenInventory().getTitle())) {
+                plugin.getLogger().warning("Failed to open /scene main menu for " + player.getName()
+                        + " (possible login/auth restriction)");
+            }
+        });
     }
 
     public boolean isMainMenuTitle(String title) {
@@ -101,6 +109,7 @@ public class SceneEditorEngine {
         inventory.setItem(11, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Confirm Delete", java.util.List.of(sceneName)));
         inventory.setItem(15, GuiUtils.makeItem(Material.BARRIER, "Cancel", java.util.List.of("Return to main menu.")));
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", java.util.List.of("Return to main menu.")));
+        armGuiTransitionGuard(player);
         player.openInventory(inventory);
     }
 
@@ -315,6 +324,9 @@ public class SceneEditorEngine {
         if (session == null) {
             session = editorSessionManager.createSession(player.getUniqueId(), cached);
         } else {
+            if (!session.getScene().getName().equalsIgnoreCase(cached.getName())) {
+                plugin.getRuntimeEngine().previewCleanup(player, "scene_switch");
+            }
             session.setScene(cached);
         }
         session.clearHistory();
@@ -461,7 +473,7 @@ public class SceneEditorEngine {
     }
 
     public void closeEditor(Player player, EditorSession session) {
-        plugin.getRuntimeEngine().cleanupEditorPreview(player);
+        plugin.getRuntimeEngine().previewCleanup(player, "editor_close");
         plugin.getActorRecordingService().stopRecording(player, true);
         if (session.isPreviewPlaying()) {
             plugin.getSessionManager().stopScene(player, "editor_close");
@@ -497,7 +509,15 @@ public class SceneEditorEngine {
             return;
         }
         Inventory inventory = gui.build(session);
+        session.armGuiTransitionGuard(350L);
         player.openInventory(inventory);
+    }
+
+    private void armGuiTransitionGuard(Player player) {
+        EditorSession session = editorSessionManager.getSession(player.getUniqueId());
+        if (session != null) {
+            session.armGuiTransitionGuard(350L);
+        }
     }
 
     public void openGuiByType(Player player, EditorSession session, GuiType guiType) {
@@ -704,10 +724,11 @@ public class SceneEditorEngine {
     public void togglePreview(Player player, EditorSession session) {
         if (session.isPreviewPlaying()) {
             plugin.getSessionManager().stopScene(player, "preview_stop");
-            plugin.getRuntimeEngine().cleanupEditorPreview(player);
+            plugin.getRuntimeEngine().previewDisable(player);
             session.setPreviewPlaying(false);
         } else {
             plugin.getSessionManager().startScene(player, session.getScene(), true);
+            plugin.getRuntimeEngine().previewEnable(session.getScene(), player);
             session.setPreviewPlaying(true);
         }
     }

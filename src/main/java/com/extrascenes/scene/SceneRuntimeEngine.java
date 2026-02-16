@@ -205,14 +205,15 @@ public class SceneRuntimeEngine {
             }
             applyScale(handle.getEntity(), template.getScale());
             maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, false);
-            if (action != null && action.getCommand() != null && !action.getCommand().isBlank()) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), action.getCommand().replace("{player}", viewer.getName()));
-            }
+            applyActorTickAction(viewer, template, handle, action, tick, false);
         }
     }
 
     private void spawnSessionActors(Player viewer, SceneSession session) {
         for (SceneActorTemplate template : session.getScene().getActorTemplates().values()) {
+            if (session.isPreview() && !isPreviewEligible(template)) {
+                continue;
+            }
             spawnSessionActor(viewer, session, template);
         }
     }
@@ -224,6 +225,11 @@ public class SceneRuntimeEngine {
             }
             citizensAdapter.applySkinPersistent(npc, template);
             boolean playerFilterApplied = citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
+            if (!playerFilterApplied && !protocolAdapter.isProtocolLibAvailable()) {
+                plugin.getLogger().warning("per-viewer actor visibility requires ProtocolLib");
+                citizensAdapter.destroy(npc);
+                return;
+            }
             citizensAdapter.configureNpc(npc);
 
             Location spawnLocation = viewer.getLocation().clone();
@@ -283,11 +289,62 @@ public class SceneRuntimeEngine {
         return last;
     }
 
+    private void applyActorTickAction(Player viewer, SceneActorTemplate template, SessionActorHandle handle,
+                                      ActorTickAction action, int tick, boolean previewMode) {
+        if (action == null || handle == null || handle.getEntity() == null) {
+            return;
+        }
+        Entity entity = handle.getEntity();
+        if (action.getLookAtTarget() != null) {
+            float[] angles = resolveLookAt(viewer, null,
+                    Transform.fromLocation(entity.getLocation()), action.getLookAtTarget());
+            entity.setRotation(angles[0], angles[1]);
+            logActionExecution(previewMode, tick, "look", template.getActorId(), entity.getUniqueId());
+        }
+        if (action.getAnimation() != null && !action.getAnimation().isBlank() && entity instanceof LivingEntity livingEntity) {
+            livingEntity.swingMainHand();
+            logActionExecution(previewMode, tick, "anim", template.getActorId(), entity.getUniqueId());
+        }
+        if (action.getCommand() != null && !action.getCommand().isBlank()) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), action.getCommand().replace("{player}", viewer.getName()));
+            logActionExecution(previewMode, tick, "command", template.getActorId(), entity.getUniqueId());
+        }
+        if (action.isSpawn()) {
+            logActionExecution(previewMode, tick, "spawn", template.getActorId(), entity.getUniqueId());
+        }
+        if (action.isDespawn()) {
+            logActionExecution(previewMode, tick, "despawn", template.getActorId(), entity.getUniqueId());
+        }
+    }
+
+    private void logActionExecution(boolean previewMode, int tick, String actionType, String actorId, UUID entityUuid) {
+        if (!actorDebugEnabled) {
+            return;
+        }
+        plugin.getLogger().info("On tick " + tick + " executed actor action: " + actionType
+                + " actor=" + actorId + " mode=" + (previewMode ? "preview" : "runtime") + " entity=" + entityUuid);
+    }
+
     public void clearRecordingPreview(Player player) {
         if (player == null) {
             return;
         }
-        editorPreviewController.cleanup(player);
+        previewCleanup(player, "recording_preview_clear");
+    }
+
+    public void previewEnable(Scene scene, Player viewer) {
+        if (scene == null || viewer == null) {
+            return;
+        }
+        previewActorsAtTick(viewer, scene, null, 0);
+    }
+
+    public void previewDisable(Player viewer) {
+        cleanupEditorPreview(viewer, "preview_disable");
+    }
+
+    public void previewCleanup(Player viewer, String reason) {
+        cleanupEditorPreview(viewer, reason == null ? "preview_cleanup" : reason);
     }
 
     public void previewActorsAtTick(Player viewer, Scene scene, String recordingActorId, int tick) {
@@ -296,9 +353,10 @@ public class SceneRuntimeEngine {
         }
         Map<String, SessionActorHandle> handles = editorPreviewController.handlesFor(viewer);
         for (SceneActorTemplate template : scene.getActorTemplates().values()) {
-            if (template.getActorId().equalsIgnoreCase(recordingActorId)
-                    || !template.isPreviewEnabled()
-                    || template.getTransformTicks().isEmpty()) {
+            if (recordingActorId != null && template.getActorId().equalsIgnoreCase(recordingActorId)) {
+                continue;
+            }
+            if (!isPreviewEligible(template)) {
                 continue;
             }
             SessionActorHandle handle = handles.get(template.getActorId().toLowerCase());
@@ -314,7 +372,16 @@ public class SceneRuntimeEngine {
                 }
                 clearNameplate(entity, npc);
                 entity.setInvisible(true);
-                citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
+                boolean playerFilterApplied = citizensAdapter.applyPlayerFilter(npc, viewer.getUniqueId());
+                if (!playerFilterApplied && !protocolAdapter.isProtocolLibAvailable()) {
+                    plugin.getLogger().warning("per-viewer actor visibility requires ProtocolLib");
+                    citizensAdapter.destroy(npc);
+                    continue;
+                }
+                if (!playerFilterApplied) {
+                    visibilityController.hideEntityFromAllExcept(entity, viewer);
+                }
+                visibilityController.showEntityToPlayer(entity, viewer);
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
                 editorPreviewController.register(viewer, handle);
             }
@@ -328,12 +395,52 @@ public class SceneRuntimeEngine {
                 applyScale(handle.getEntity(), template.getScale());
                 handle.setLastTransform(transform);
                 maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true);
+                ActorTickAction action = template.getTickAction(tick);
+                applyActorTickAction(viewer, template, handle, action, tick, true);
             }
         }
     }
 
     public void cleanupEditorPreview(Player viewer) {
+        cleanupEditorPreview(viewer, "manual");
+    }
+
+    public void cleanupEditorPreview(Player viewer, String reason) {
+        if (viewer == null) {
+            return;
+        }
         editorPreviewController.cleanup(viewer);
+        if (actorDebugEnabled) {
+            plugin.getLogger().info("preview.cleanup(" + viewer.getUniqueId() + ") reason=" + reason);
+        }
+    }
+
+    public SessionActorHandle findViewerActorHandle(Player viewer, String actorId) {
+        if (viewer == null || actorId == null) {
+            return null;
+        }
+        SceneSession session = sessionManager.getSession(viewer.getUniqueId());
+        if (session != null) {
+            SessionActorHandle handle = session.getActorHandle(actorId);
+            if (handle != null) {
+                return handle;
+            }
+        }
+        return editorPreviewController.getHandle(viewer, actorId);
+    }
+
+    private boolean isPreviewEligible(SceneActorTemplate template) {
+        if (template == null || !template.isPreviewEnabled()) {
+            return false;
+        }
+        if (!template.getTransformTicks().isEmpty()) {
+            return true;
+        }
+        return template.getTickActions().values().stream()
+                .anyMatch(action -> action != null && (action.isSpawn()
+                        || (action.getAnimation() != null && !action.getAnimation().isBlank())
+                        || action.getLookAtTarget() != null
+                        || (action.getCommand() != null && !action.getCommand().isBlank())));
     }
 
     private void applyScale(Entity entity, double scale) {

@@ -37,6 +37,7 @@ public class EditorSession {
     private SceneTrackType confirmTrack;
     private UUID confirmKeyframeId;
     private Integer confirmCommandIndex;
+    private long guiTransitionGuardUntilMs;
 
     public EditorSession(UUID playerUuid, Scene scene) {
         this.playerUuid = playerUuid;
@@ -312,6 +313,14 @@ public class EditorSession {
 
     public void setConfirmCommandIndex(Integer confirmCommandIndex) {
         this.confirmCommandIndex = confirmCommandIndex;
+    }
+
+    public void armGuiTransitionGuard(long durationMs) {
+        this.guiTransitionGuardUntilMs = System.currentTimeMillis() + Math.max(0L, durationMs);
+    }
+
+    public boolean isGuiTransitionGuardActive() {
+        return System.currentTimeMillis() <= guiTransitionGuardUntilMs;
     }
 
     public record NavigationState(GuiType guiType, int keyframePage, int groupPage, int currentGroup,

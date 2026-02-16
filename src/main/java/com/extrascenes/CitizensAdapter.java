@@ -111,6 +111,10 @@ public class CitizensAdapter {
         }
     }
 
+    public boolean supportsPlayerFilter() {
+        return available && playerFilterSetMethod != null;
+    }
+
     public Integer resolveSelectedNpcId(Player player) {
         if (!available || player == null || npcRegistryGetByIdMethod == null) {
             return null;

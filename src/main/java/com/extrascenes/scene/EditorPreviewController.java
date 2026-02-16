@@ -27,6 +27,13 @@ public class EditorPreviewController {
         handlesFor(viewer).put(handle.getActorId().toLowerCase(Locale.ROOT), handle);
     }
 
+    public SessionActorHandle getHandle(Player viewer, String actorId) {
+        if (viewer == null || actorId == null) {
+            return null;
+        }
+        return handlesFor(viewer).get(actorId.toLowerCase(Locale.ROOT));
+    }
+
     public void cleanup(Player viewer) {
         if (viewer == null) {
             return;

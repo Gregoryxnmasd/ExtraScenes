@@ -55,8 +55,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
         PluginCommand command = getCommand("scene");
         if (command != null) {
-            command.setExecutor(new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine));
-            command.setTabCompleter(new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine));
+            SceneCommandExecutor commandExecutor = new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine);
+            command.setExecutor(commandExecutor);
+            command.setTabCompleter(commandExecutor);
         }
 
         runtimeEngine.start();
@@ -117,6 +118,10 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SceneRuntimeEngine getRuntimeEngine() {
         return runtimeEngine;
+    }
+
+    public SceneVisibilityController getVisibilityController() {
+        return visibilityController;
     }
 
     public SkinLibrary getSkinLibrary() {

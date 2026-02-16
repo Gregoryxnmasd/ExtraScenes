@@ -56,7 +56,7 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
-        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
+        editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_quit");
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_quit");
         if (editorSessionManager != null) {
             EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
@@ -73,13 +73,13 @@ public class SceneListener implements Listener {
     @EventHandler
     public void onPlayerKick(PlayerKickEvent event) {
         actorRecordingService.stopRecording(event.getPlayer(), true);
-        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
+        editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_kick");
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_kick");
     }
 
     @EventHandler
     public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
-        editorEngine.getPlugin().getRuntimeEngine().cleanupEditorPreview(event.getPlayer());
+        editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "world_change");
         actorRecordingService.stopRecording(event.getPlayer(), true);
         visibilityController.hideAllSceneEntities(event.getPlayer());
         SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
