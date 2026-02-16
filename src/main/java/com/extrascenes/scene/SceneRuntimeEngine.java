@@ -184,7 +184,11 @@ public class SceneRuntimeEngine {
         Entity cameraRig = getCameraRig(session, player);
         Entity spectatorTarget = player.getSpectatorTarget();
         String rigId = cameraRig != null ? cameraRig.getUniqueId().toString() : "null";
+        String rigWorld = cameraRig != null && cameraRig.getWorld() != null ? cameraRig.getWorld().getName() : "null";
+        boolean rigValid = cameraRig != null && cameraRig.isValid();
         String spectatorTargetId = spectatorTarget != null ? spectatorTarget.getUniqueId().toString() : "null";
+        boolean spectatorTargetMatchesRig = cameraRig != null && spectatorTarget != null
+                && spectatorTarget.getUniqueId().equals(cameraRig.getUniqueId());
         String transform = "missing";
         if (cameraRig != null) {
             Location loc = cameraRig.getLocation();
@@ -192,13 +196,25 @@ public class SceneRuntimeEngine {
                     "x=%.3f y=%.3f z=%.3f yaw=%.2f pitch=%.2f",
                     loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
         }
+        boolean chunkLoaded = false;
+        boolean chunkForceLoaded = false;
+        if (cameraRig != null && cameraRig.getWorld() != null) {
+            int chunkX = cameraRig.getLocation().getBlockX() >> 4;
+            int chunkZ = cameraRig.getLocation().getBlockZ() >> 4;
+            chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
+            chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
+        }
         plugin.getLogger().info("[debugcamera] viewer=" + player.getUniqueId()
+                + " viewerName=" + player.getName()
                 + " sessionId=" + session.getSessionId()
                 + " rig=" + rigId
+                + " rigValid=" + rigValid
+                + " rigWorld=" + rigWorld
                 + " spectatorTarget=" + spectatorTargetId
-                + " spectatorTargetMatchesRig=" + (cameraRig != null && spectatorTarget != null
-                && spectatorTarget.getUniqueId().equals(cameraRig.getUniqueId()))
+                + " spectatorTargetMatchesRig=" + spectatorTargetMatchesRig
                 + " tick=" + timeTicks
+                + " chunkLoaded=" + chunkLoaded
+                + " chunkForceLoaded=" + chunkForceLoaded
                 + " " + transform);
     }
 
@@ -561,6 +577,10 @@ public class SceneRuntimeEngine {
         if (!targetLost) {
             return;
         }
+        plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
+                + " session=" + session.getSessionId()
+                + " current=" + (current == null ? "null" : current.getUniqueId())
+                + " expected=" + cameraRig.getUniqueId());
         protocolAdapter.applySpectatorCamera(player, cameraRig);
     }
 
