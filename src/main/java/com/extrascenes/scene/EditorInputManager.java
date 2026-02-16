@@ -34,6 +34,7 @@ public class EditorInputManager {
         MODEL_ENTRY_MODEL_ID,
         MODEL_ENTRY_ANIMATION_ID,
         ACTOR_RECORD_DURATION,
+        ACTOR_RENAME,
         ACTOR_TICK_ANIMATION,
         ACTOR_TICK_COMMAND,
         ACTOR_TICK_SCALE,
@@ -338,6 +339,14 @@ public class EditorInputManager {
         Text.send(player, "&b" + "Enter recording duration (examples: 12s, 240t).");
     }
 
+    public void beginActorRenameInput(Player player, Scene scene, EditorSession session, GuiType returnGui) {
+        PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_RENAME);
+        state.setReturnGui(returnGui);
+        prompts.put(player.getUniqueId(), state);
+        Text.send(player, "&b" + "Rename actor: write '<oldId> <newId>' or only '<newId>' to rename selected actor."
+                + " Type 'cancel' to abort.");
+    }
+
     public void beginActorTickAnimationInput(Player player, Scene scene, EditorSession session,
                                              String actorId, int tick, GuiType returnGui) {
         PromptState state = new PromptState(player.getUniqueId(), scene, session, PromptType.ACTOR_TICK_ANIMATION);
@@ -416,6 +425,7 @@ public class EditorInputManager {
             case MODEL_ENTRY_MODEL_ID -> handleModelEntryModelId(player, state, message);
             case MODEL_ENTRY_ANIMATION_ID -> handleModelEntryAnimation(player, state, message);
             case ACTOR_RECORD_DURATION -> handleActorRecordDuration(player, state, message);
+            case ACTOR_RENAME -> handleActorRename(player, state, message);
             case ACTOR_TICK_ANIMATION -> handleActorTickAnimation(player, state, message);
             case ACTOR_TICK_COMMAND -> handleActorTickCommand(player, state, message);
             case ACTOR_TICK_SCALE -> handleActorTickScale(player, state, message);
@@ -803,6 +813,78 @@ public class EditorInputManager {
         } catch (NumberFormatException ex) {
             Text.send(player, "&c" + "Invalid duration. Use formats like 12s or 240t.");
         }
+    }
+
+    private void handleActorRename(Player player, PromptState state, String message) {
+        String trimmed = message == null ? "" : message.trim();
+        if (trimmed.isEmpty()) {
+            Text.send(player, "&c" + "Invalid format. Use '<oldId> <newId>' or '<newId>'.");
+            return;
+        }
+
+        EditorSession session = state.getEditorSession();
+        String[] split = trimmed.split("\\s+", 2);
+        String oldId;
+        String newId;
+        if (split.length == 1) {
+            oldId = session.getSelectedActorId();
+            newId = split[0];
+            if (oldId == null || oldId.isBlank()) {
+                Text.send(player, "&c" + "No selected actor. Use '<oldId> <newId>' format.");
+                return;
+            }
+        } else {
+            oldId = split[0];
+            newId = split[1].trim();
+        }
+
+        if (newId.isBlank()) {
+            Text.send(player, "&c" + "New actor id cannot be empty.");
+            return;
+        }
+        if (!newId.matches("[A-Za-z0-9_-]+")) {
+            Text.send(player, "&c" + "Invalid actor id. Allowed characters: letters, numbers, '_' and '-'.");
+            return;
+        }
+
+        SceneActorTemplate source = state.getScene().getActorTemplate(oldId);
+        if (source == null) {
+            Text.send(player, "&c" + "Actor not found: " + oldId);
+            return;
+        }
+        SceneActorTemplate conflict = state.getScene().getActorTemplate(newId);
+        if (conflict != null && !oldId.equalsIgnoreCase(newId)) {
+            Text.send(player, "&c" + "Actor id already exists: " + newId);
+            return;
+        }
+
+        if (!oldId.equalsIgnoreCase(newId)) {
+            state.getScene().removeActorTemplate(oldId);
+            state.getScene().putActorTemplate(cloneActorWithId(source, newId));
+            session.setSelectedActorId(newId);
+            editorEngine.markDirty(state.getScene());
+        }
+
+        prompts.remove(player.getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, () -> editorEngine.openGuiByType(player, session,
+                state.getReturnGui() == null ? GuiType.ACTORS_LIST : state.getReturnGui()));
+        Text.send(player, "&a" + "Actor renamed: " + oldId + " -> " + newId);
+    }
+
+    private SceneActorTemplate cloneActorWithId(SceneActorTemplate source, String newId) {
+        SceneActorTemplate renamed = new SceneActorTemplate(newId);
+        renamed.setDisplayName(newId);
+        renamed.setEntityType(source.getEntityType());
+        renamed.setSkinName(source.getSkinName());
+        renamed.setSkinSignature(source.getSkinSignature());
+        renamed.setSkinTexture(source.getSkinTexture());
+        renamed.setSkinCacheKey(source.getSkinCacheKey());
+        renamed.setScale(source.getScale());
+        renamed.setPlaybackMode(source.getPlaybackMode());
+        renamed.setPreviewEnabled(source.isPreviewEnabled());
+        renamed.getTransformTicks().putAll(source.getTransformTicks());
+        renamed.getTickActions().putAll(source.getTickActions());
+        return renamed;
     }
 
     private ActorTickAction resolveActorTickAction(PromptState state) {

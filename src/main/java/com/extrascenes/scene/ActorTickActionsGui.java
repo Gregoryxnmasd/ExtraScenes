@@ -77,9 +77,9 @@ public class ActorTickActionsGui implements EditorGui {
                 action.setAnimation(null);
                 changed = true;
             } else {
+                player.closeInventory();
                 editorEngine.getInputManager().beginActorTickAnimationInput(player, scene, session,
                         actor.getActorId(), session.getCurrentTick(), GuiType.ACTOR_TICK_ACTIONS);
-                player.closeInventory();
                 return;
             }
         } else if (ctx.getSlot() == 14) {
@@ -94,9 +94,9 @@ public class ActorTickActionsGui implements EditorGui {
                 action.setCommand(null);
                 changed = true;
             } else {
+                player.closeInventory();
                 editorEngine.getInputManager().beginActorTickCommandInput(player, scene, session,
                         actor.getActorId(), session.getCurrentTick(), GuiType.ACTOR_TICK_ACTIONS);
-                player.closeInventory();
                 return;
             }
         } else if (ctx.getSlot() == 16) {
@@ -104,9 +104,9 @@ public class ActorTickActionsGui implements EditorGui {
                 action.setScale(null);
                 changed = true;
             } else {
+                player.closeInventory();
                 editorEngine.getInputManager().beginActorTickScaleInput(player, scene, session,
                         actor.getActorId(), session.getCurrentTick(), GuiType.ACTOR_TICK_ACTIONS);
-                player.closeInventory();
                 return;
             }
         } else if (ctx.getSlot() == 17) {
@@ -114,9 +114,9 @@ public class ActorTickActionsGui implements EditorGui {
                 action.setSkinName(null);
                 changed = true;
             } else {
+                player.closeInventory();
                 editorEngine.getInputManager().beginActorTickSkinInput(player, scene, session,
                         actor.getActorId(), session.getCurrentTick(), GuiType.ACTOR_TICK_ACTIONS);
-                player.closeInventory();
                 return;
             }
         } else if (ctx.getSlot() == 22) {
