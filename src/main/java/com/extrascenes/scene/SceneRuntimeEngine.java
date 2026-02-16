@@ -212,6 +212,14 @@ public class SceneRuntimeEngine {
             chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
             chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
         }
+        boolean chunkLoaded = false;
+        boolean chunkForceLoaded = false;
+        if (cameraRig != null && cameraRig.getWorld() != null) {
+            int chunkX = cameraRig.getLocation().getBlockX() >> 4;
+            int chunkZ = cameraRig.getLocation().getBlockZ() >> 4;
+            chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
+            chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
+        }
         plugin.getLogger().info("[debugcamera] viewer=" + player.getUniqueId()
                 + " viewerName=" + player.getName()
                 + " sessionId=" + session.getSessionId()
@@ -590,6 +598,10 @@ public class SceneRuntimeEngine {
                     + " current=" + (current == null ? "null" : current.getUniqueId())
                     + " expected=" + cameraRig.getUniqueId());
         }
+        plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
+                + " session=" + session.getSessionId()
+                + " current=" + (current == null ? "null" : current.getUniqueId())
+                + " expected=" + cameraRig.getUniqueId());
         protocolAdapter.applySpectatorCamera(player, cameraRig);
     }
 
