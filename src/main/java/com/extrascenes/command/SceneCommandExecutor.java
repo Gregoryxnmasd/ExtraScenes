@@ -118,7 +118,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor skin <scene> <actorId> <skin>");
         Text.send(sender, "&b" + "/scene actor playback <scene> <actorId> <exact|walk>");
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
-        Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [startTick] [duration:10s|200t]");
+        Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [tick|start:20] [duration:10s|200t] [preview:on|off]");
         Text.send(sender, "&b" + "/scene actor record stop");
         Text.send(sender, "&b" + "/scene selftest <name>");
     }
@@ -704,7 +704,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 5 || !"start".equalsIgnoreCase(args[2])) {
-            Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick] [duration:10s|200t]");
+            Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick|start:<tick>] [duration:10s|200t] [preview:on|off]");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
@@ -720,42 +720,79 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         int startTick = 1;
         int durationTicks = 15 * 20;
         com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-        int durationArgIndex = -1;
-        if (args.length >= 6) {
-            String candidate = args[5].toLowerCase(Locale.ROOT);
-            if (looksLikeDuration(candidate)) {
-                durationArgIndex = 5;
-            } else {
-                try {
-                    startTick = Integer.parseInt(args[5]);
-                } catch (NumberFormatException ex) {
-                    Text.send(sender, "&c" + "Invalid tick; using 1.");
-                }
-                if (args.length >= 7) {
-                    durationArgIndex = 6;
-                }
+        boolean previewOthers = true;
+        boolean startTickSet = false;
+
+        for (int i = 5; i < args.length; i++) {
+            String token = args[i].trim();
+            if (token.isBlank()) {
+                continue;
             }
+            String lower = token.toLowerCase(Locale.ROOT);
+            if (!startTickSet && lower.matches("\\d+")) {
+                startTick = Integer.parseInt(lower);
+                startTickSet = true;
+                continue;
+            }
+            if (lower.startsWith("start:")) {
+                Integer parsedStart = parsePositiveInt(lower.substring("start:".length()));
+                if (parsedStart == null) {
+                    Text.send(sender, "&c" + "Invalid start tick token '" + token + "'; using current value.");
+                } else {
+                    startTick = parsedStart;
+                    startTickSet = true;
+                }
+                continue;
+            }
+            if (lower.startsWith("preview:")) {
+                String raw = lower.substring("preview:".length());
+                if (raw.equals("on") || raw.equals("true") || raw.equals("yes")) {
+                    previewOthers = true;
+                } else if (raw.equals("off") || raw.equals("false") || raw.equals("no")) {
+                    previewOthers = false;
+                } else {
+                    Text.send(sender, "&c" + "Invalid preview token '" + token + "'; expected preview:on|off.");
+                }
+                continue;
+            }
+            String durationRaw = lower.startsWith("duration:")
+                    ? lower.substring("duration:".length())
+                    : lower;
+            if (looksLikeDuration(durationRaw) || durationRaw.matches("\\d+")) {
+                int[] parsed = parseDurationTicks(durationRaw);
+                if (parsed == null) {
+                    Text.send(sender, "&c" + "Invalid duration token '" + token + "'; keeping current duration.");
+                } else {
+                    durationTicks = parsed[0];
+                    durationUnit = parsed[1] == 1
+                            ? com.extrascenes.scene.RecordingDurationUnit.TICKS
+                            : com.extrascenes.scene.RecordingDurationUnit.SECONDS;
+                }
+                continue;
+            }
+            Text.send(sender, "&e" + "Unknown recording option ignored: " + token);
         }
-        startTick = Math.max(1, Math.min(scene.getDurationTicks(), startTick));
-        if (durationArgIndex != -1) {
-            String raw = args[durationArgIndex].toLowerCase(Locale.ROOT);
-            int[] parsed = parseDurationTicks(raw);
-            if (parsed == null) {
-                Text.send(sender, "&c" + "Invalid duration; using 15s.");
-            } else {
-                durationTicks = parsed[0];
-                durationUnit = parsed[1] == 1
-                        ? com.extrascenes.scene.RecordingDurationUnit.TICKS
-                        : com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-            }
+        if (scene.getDurationTicks() > 0) {
+            startTick = Math.max(1, Math.min(scene.getDurationTicks(), startTick));
+        } else {
+            startTick = Math.max(1, startTick);
         }
         player.getInventory().addItem(com.extrascenes.scene.SceneWand.createRecordingWand());
-        actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick, true, durationTicks, durationUnit);
+        actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick, previewOthers, durationTicks, durationUnit);
         int displayDuration = durationUnit == com.extrascenes.scene.RecordingDurationUnit.SECONDS
                 ? Math.max(1, (durationTicks + 19) / 20)
                 : durationTicks;
         Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick
-                + " for " + displayDuration + durationUnit.suffix() + " (countdown 3..2..1).");
+                + " for " + displayDuration + durationUnit.suffix()
+                + " (preview others: " + (previewOthers ? "on" : "off") + ", countdown 3..2..1).");
+    }
+
+    private Integer parsePositiveInt(String raw) {
+        try {
+            return Math.max(1, Integer.parseInt(raw));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private boolean looksLikeDuration(String value) {
@@ -874,6 +911,9 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 if (sc != null) {
                     return filterPrefix(new ArrayList<>(sc.getActorTemplates().keySet()), args[4]);
                 }
+            }
+            if (args.length >= 6 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
+                return filterPrefix(List.of("1", "20", "start:20", "duration:10s", "duration:200t", "preview:on", "preview:off"), args[args.length - 1]);
             }
         }
         return List.of();
