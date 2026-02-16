@@ -10,7 +10,9 @@ import com.extrascenes.SceneProtocolAdapter;
 import com.extrascenes.visibility.SceneVisibilityController;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -32,6 +34,8 @@ public class SceneRuntimeEngine {
     private static final int SPECTATOR_RECOVERY_COOLDOWN_TICKS = 10;
     private final EditorPreviewController editorPreviewController;
     private volatile boolean actorDebugEnabled = false;
+    private final Set<UUID> debugCameraViewers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> debugPreviewViewers = ConcurrentHashMap.newKeySet();
 
     public SceneRuntimeEngine(ExtraScenesPlugin plugin, SceneSessionManager sessionManager,
                               SceneVisibilityController visibilityController,
@@ -120,9 +124,80 @@ public class SceneRuntimeEngine {
         ensureSpectatorTarget(player, session);
         tickSessionActors(player, session, time);
         updateCamera(player, session, time);
+        maybeLogDebugCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
         tickActionBar(player, session, time);
         session.incrementTime();
+    }
+
+    public void setDebugCameraEnabled(UUID viewerId, boolean enabled) {
+        if (viewerId == null) {
+            return;
+        }
+        if (enabled) {
+            debugCameraViewers.add(viewerId);
+        } else {
+            debugCameraViewers.remove(viewerId);
+        }
+    }
+
+    public boolean isDebugCameraEnabled(UUID viewerId) {
+        return viewerId != null && debugCameraViewers.contains(viewerId);
+    }
+
+    public void setDebugPreviewEnabled(UUID viewerId, boolean enabled) {
+        if (viewerId == null) {
+            return;
+        }
+        if (enabled) {
+            debugPreviewViewers.add(viewerId);
+        } else {
+            debugPreviewViewers.remove(viewerId);
+        }
+    }
+
+    public boolean isDebugPreviewEnabled(UUID viewerId) {
+        return viewerId != null && debugPreviewViewers.contains(viewerId);
+    }
+
+    public void emitDebugPreview(Player viewer) {
+        if (viewer == null || !isDebugPreviewEnabled(viewer.getUniqueId())) {
+            return;
+        }
+        if (Bukkit.getCurrentTick() % 20 != 0) {
+            return;
+        }
+        List<SessionActorHandle> handles = editorPreviewController.listHandles(viewer.getUniqueId());
+        String entities = handles.stream()
+                .map(handle -> handle.getEntity() != null ? handle.getEntity().getUniqueId().toString() : "missing")
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("none");
+        plugin.getLogger().info("[debugpreview] viewer=" + viewer.getUniqueId()
+                + " previewActors=" + handles.size()
+                + " entities=" + entities);
+    }
+
+    private void maybeLogDebugCamera(Player player, SceneSession session, int timeTicks) {
+        if (!isDebugCameraEnabled(player.getUniqueId()) || timeTicks % 20 != 0) {
+            return;
+        }
+        Entity cameraRig = getCameraRig(session, player);
+        Entity spectatorTarget = player.getSpectatorTarget();
+        String rigId = cameraRig != null ? cameraRig.getUniqueId().toString() : "null";
+        String spectatorTargetId = spectatorTarget != null ? spectatorTarget.getUniqueId().toString() : "null";
+        String transform = "missing";
+        if (cameraRig != null) {
+            Location loc = cameraRig.getLocation();
+            transform = String.format(java.util.Locale.ROOT,
+                    "x=%.3f y=%.3f z=%.3f yaw=%.2f pitch=%.2f",
+                    loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+        }
+        plugin.getLogger().info("[debugcamera] viewer=" + player.getUniqueId()
+                + " sessionId=" + session.getSessionId()
+                + " rig=" + rigId
+                + " spectatorTarget=" + spectatorTargetId
+                + " tick=" + timeTicks
+                + " " + transform);
     }
 
 
@@ -399,6 +474,7 @@ public class SceneRuntimeEngine {
                 applyActorTickAction(viewer, template, handle, action, tick, true);
             }
         }
+        emitDebugPreview(viewer);
     }
 
     public void cleanupEditorPreview(Player viewer) {
@@ -466,7 +542,6 @@ public class SceneRuntimeEngine {
         boolean cooldownReady = timeTicks >= session.getSpectatorRecoveryCooldownUntilTick();
         if (cooldownReady) {
             session.setSpectatorRecoveryCooldownUntilTick(timeTicks + SPECTATOR_RECOVERY_COOLDOWN_TICKS);
-            player.teleport(cameraRig.getLocation());
             plugin.getLogger().info("Camera rig target lost; recovering for " + player.getName()
                     + " rig=" + cameraRig.getUniqueId());
         }
