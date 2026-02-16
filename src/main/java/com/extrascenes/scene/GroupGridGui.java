@@ -127,13 +127,13 @@ public class GroupGridGui implements EditorGui {
         }
         if (slot == 1) {
             session.setCurrentGroup(Math.max(1, session.getCurrentGroup() - 1));
-            refresh(session);
+            editorEngine.openGroupGrid(player, session, false);
             return;
         }
         if (slot == 7) {
             int maxGroups = (int) Math.ceil(Math.max(session.getScene().getDurationTicks(), GROUP_SIZE) / (double) GROUP_SIZE);
             session.setCurrentGroup(Math.min(maxGroups, session.getCurrentGroup() + 1));
-            refresh(session);
+            editorEngine.openGroupGrid(player, session, false);
             return;
         }
         if (slot >= 9 && slot <= 17) {
