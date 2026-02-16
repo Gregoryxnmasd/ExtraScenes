@@ -65,6 +65,11 @@ public class SceneSessionManager {
         SceneSession session = new SceneSession(player, scene, preview, startTick, endTick);
         sessions.put(player.getUniqueId(), session);
         session.setStartLocation(player.getLocation().clone());
+        plugin.getLogger().info("[scene-session] start viewer=" + player.getName()
+                + " session=" + session.getSessionId()
+                + " preview=" + preview
+                + " startTick=" + startTick
+                + " endTick=" + endTick);
 
         if (scene.isFreezePlayer()) {
             player.setWalkSpeed(0.0f);
@@ -80,7 +85,7 @@ public class SceneSessionManager {
         }
         ArmorStand rig = (ArmorStand) rigStartLocation.getWorld().spawnEntity(rigStartLocation, EntityType.ARMOR_STAND);
         rig.setInvisible(true);
-        rig.setMarker(false);
+        rig.setMarker(true);
         rig.setGravity(false);
         rig.setSilent(true);
         rig.setInvulnerable(true);
@@ -137,6 +142,11 @@ public class SceneSessionManager {
         if (session == null) {
             return;
         }
+        plugin.getLogger().info("[scene-session] finish session=" + session.getSessionId()
+                + " viewer=" + playerId
+                + " reason=" + reason
+                + " teleportOnEnd=" + teleportOnEnd
+                + " openPreviewDashboard=" + openPreviewDashboard);
         pendingRestores.remove(playerId);
         plugin.getRuntimeEngine().stopSession(session);
 
@@ -434,8 +444,10 @@ public class SceneSessionManager {
 
     private void applyPlaybackZoomEffect(Player player) {
         PotionEffectType type = PotionEffectType.SLOWNESS;
-        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 1, true, false, false);
+        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 4, false, false, false);
         player.addPotionEffect(effect);
+        plugin.getLogger().info("[scene-zoom] applied slowness zoom effect to " + player.getName()
+                + " amplifier=" + effect.getAmplifier());
     }
 
     private void clearPlaybackZoomEffect(Player player) {

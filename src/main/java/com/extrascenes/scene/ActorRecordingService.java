@@ -34,6 +34,11 @@ public class ActorRecordingService {
                                   boolean previewOthers, int durationSeconds) {
         stopRecording(player, false);
         ActiveRecording recording = new ActiveRecording(scene, template, startTick, previewOthers, durationSeconds);
+        plugin.getLogger().info("[actor-record] start viewer=" + player.getName()
+                + " actor=" + template.getActorId()
+                + " startTick=" + startTick
+                + " durationSeconds=" + durationSeconds
+                + " previewOthers=" + previewOthers);
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> capture(player, recording), 1L, 1L);
         recording.task = task;
         activeRecordings.put(player.getUniqueId(), recording);
@@ -56,6 +61,9 @@ public class ActorRecordingService {
                     player.showTitle(Title.title(Component.text(String.valueOf(countdown)), Component.text("Recording starts"),
                             Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
                     player.sendActionBar("§eRecording starts in §f" + countdown + "§e...");
+                    plugin.getLogger().info("[actor-record] countdown viewer=" + player.getName()
+                            + " actor=" + template.getActorId()
+                            + " secondsLeft=" + countdown);
                     countdown--;
                     return;
                 }
@@ -77,6 +85,10 @@ public class ActorRecordingService {
         }
         player.getInventory().removeItem(SceneWand.createRecordingWand());
         plugin.getRuntimeEngine().clearRecordingPreview(player);
+        plugin.getLogger().info("[actor-record] stop viewer=" + player.getName()
+                + " actor=" + recording.template.getActorId()
+                + " ticksCaptured=" + recording.relativeTick
+                + " markDirty=" + markDirty);
         if (markDirty) {
             plugin.getSceneManager().markDirty(recording.scene);
         }
@@ -132,16 +144,18 @@ public class ActorRecordingService {
                 player.isSprinting(),
                 player.isSwimming(),
                 player.isGliding()));
-        player.sendActionBar("§cREC §7• §fActor: " + recording.template.getActorId() + " §7• §fTick: " + String.format("%04d", tick));
+        int elapsedSeconds = Math.max(1, recording.relativeTick / 20 + 1);
+        String durationText = recording.durationSeconds > 0
+                ? elapsedSeconds + "/" + recording.durationSeconds + "s"
+                : (elapsedSeconds + "s");
+        player.sendActionBar("§cREC §7• §f" + recording.template.getActorId()
+                + " §7• §fTick " + String.format("%04d", tick)
+                + " §7• §f" + durationText);
         if (recording.previewOthers) {
             plugin.getRuntimeEngine().previewActorsAtTick(player, recording.scene, recording.template.getActorId(), tick);
         }
-        if (recording.durationSeconds > 0) {
-            int elapsedSeconds = Math.max(1, recording.relativeTick / 20 + 1);
-            player.sendActionBar("§cREC §7• §f" + elapsedSeconds + "/" + recording.durationSeconds + "s");
-            if (recording.relativeTick + 1 >= recording.durationSeconds * 20) {
-                stopRecording(player, true);
-            }
+        if (recording.durationSeconds > 0 && recording.relativeTick + 1 >= recording.durationSeconds * 20) {
+            stopRecording(player, true);
         }
         recording.relativeTick++;
     }

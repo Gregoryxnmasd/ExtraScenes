@@ -148,10 +148,14 @@ public class SceneListener implements Listener {
             return;
         }
         SceneSession session = sessionManager.getSession(player.getUniqueId());
-        if (session != null && session.isBlockingInventory()) {
+        if (session != null
+                && session.getState() == SceneState.PLAYING
+                && session.isBlockingInventory()) {
             if (event.getSlotType() == org.bukkit.event.inventory.InventoryType.SlotType.ARMOR
                     && event.getSlot() == 39) {
                 event.setCancelled(true);
+                editorEngine.getPlugin().getLogger().fine("[scene-inventory-lock] blocked helmet interaction for "
+                        + player.getName() + " session=" + session.getSessionId());
             }
         }
     }
