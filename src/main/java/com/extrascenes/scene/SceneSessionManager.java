@@ -273,14 +273,15 @@ public class SceneSessionManager {
             return;
         }
         SceneSession session = sessions.get(player.getUniqueId());
+        String caller = resolveTeleportCaller();
         if (session != null && session.getState() == SceneState.PLAYING
                 && !reason.startsWith("start_scene")
                 && !reason.startsWith("scene_end")) {
-            session.incrementPlaybackTeleportCount();
+            session.incrementPlaybackTeleportCount(caller);
         }
         plugin.getLogger().info("[scene-teleport] player=" + player.getUniqueId()
                 + " reason=" + reason
-                + " caller=" + resolveTeleportCaller());
+                + " caller=" + caller);
         player.teleport(target);
     }
 
@@ -375,7 +376,7 @@ public class SceneSessionManager {
                     return;
                 }
 
-                if (retries < 10) {
+                if (retries < 9) {
                     retries++;
                     protocolAdapter.applySpectatorCamera(player, rig);
                     session.incrementSpectatorHandshakeAttempts();
