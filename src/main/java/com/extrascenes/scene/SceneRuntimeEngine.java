@@ -190,11 +190,27 @@ public class SceneRuntimeEngine {
         boolean spectatorTargetMatchesRig = cameraRig != null && spectatorTarget != null
                 && spectatorTarget.getUniqueId().equals(cameraRig.getUniqueId());
         String transform = "missing";
+        String transformDelta = "delta=missing";
         if (cameraRig != null) {
             Location loc = cameraRig.getLocation();
             transform = String.format(java.util.Locale.ROOT,
                     "x=%.3f y=%.3f z=%.3f yaw=%.2f pitch=%.2f",
                     loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+            Location prev = session.getLastCameraLocation();
+            if (prev != null) {
+                transformDelta = String.format(java.util.Locale.ROOT,
+                        "from=%.3f,%.3f,%.3f,%.2f,%.2f to=%.3f,%.3f,%.3f,%.2f,%.2f",
+                        prev.getX(), prev.getY(), prev.getZ(), prev.getYaw(), prev.getPitch(),
+                        loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+            }
+        }
+        boolean chunkLoaded = false;
+        boolean chunkForceLoaded = false;
+        if (cameraRig != null && cameraRig.getWorld() != null) {
+            int chunkX = cameraRig.getLocation().getBlockX() >> 4;
+            int chunkZ = cameraRig.getLocation().getBlockZ() >> 4;
+            chunkLoaded = cameraRig.getWorld().isChunkLoaded(chunkX, chunkZ);
+            chunkForceLoaded = cameraRig.getWorld().isChunkForceLoaded(chunkX, chunkZ);
         }
         boolean chunkLoaded = false;
         boolean chunkForceLoaded = false;
@@ -215,7 +231,7 @@ public class SceneRuntimeEngine {
                 + " tick=" + timeTicks
                 + " chunkLoaded=" + chunkLoaded
                 + " chunkForceLoaded=" + chunkForceLoaded
-                + " " + transform);
+                + " " + transform + " " + transformDelta);
     }
 
 
@@ -567,15 +583,20 @@ public class SceneRuntimeEngine {
     private void ensureSpectatorTarget(Player player, SceneSession session) {
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
-            return;
-        }
-        if (session.getTimeTicks() <= 0) {
+            plugin.getLogger().severe("Camera rig unavailable for lock enforcement viewer=" + player.getName()
+                    + " session=" + session.getSessionId()
+                    + " rigId=" + session.getCameraRigId()
+                    + " rigWorld=" + session.getCameraRigWorld());
+            sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
         Entity current = player.getSpectatorTarget();
         boolean targetLost = current == null || !current.getUniqueId().equals(cameraRig.getUniqueId());
-        if (!targetLost) {
-            return;
+        if (targetLost) {
+            plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
+                    + " session=" + session.getSessionId()
+                    + " current=" + (current == null ? "null" : current.getUniqueId())
+                    + " expected=" + cameraRig.getUniqueId());
         }
         plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
                 + " session=" + session.getSessionId()
@@ -600,10 +621,18 @@ public class SceneRuntimeEngine {
         if (transform == null) {
             return;
         }
-        Location location = cameraRig.getLocation().clone();
+        Location from = cameraRig.getLocation().clone();
+        Location location = from.clone();
         transform.applyTo(location);
         cameraRig.teleport(location);
-        session.setLastCameraLocation(location);
+        if (isDebugCameraEnabled(player.getUniqueId()) && timeTicks % 20 == 0) {
+            plugin.getLogger().info(String.format(java.util.Locale.ROOT,
+                    "[debugcamera-rigstep] viewer=%s sessionId=%s rig=%s from=%.3f %.3f %.3f %.2f %.2f to=%.3f %.3f %.3f %.2f %.2f",
+                    player.getUniqueId(), session.getSessionId(), cameraRig.getUniqueId(),
+                    from.getX(), from.getY(), from.getZ(), from.getYaw(), from.getPitch(),
+                    location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()));
+        }
+        session.setLastCameraLocation(from);
     }
 
     private Transform interpolateCamera(Player player, SceneSession session, List<CameraKeyframe> keyframes, int timeTicks) {
@@ -612,12 +641,35 @@ public class SceneRuntimeEngine {
         }
         SmoothingQuality quality = session.getScene().getSmoothingQuality();
         int subSamples = Math.max(1, quality.getSubSamples());
-        Transform result = null;
-        for (int i = 0; i < subSamples; i++) {
-            float sampleTime = timeTicks + ((i + 1f) / subSamples);
-            result = sampleCameraTransform(player, session, keyframes, sampleTime, quality);
+        if (subSamples <= 1) {
+            return sampleCameraTransform(player, session, keyframes, timeTicks, quality);
         }
-        return result;
+        Transform accumulated = null;
+        for (int i = 0; i < subSamples; i++) {
+            float sampleTime = timeTicks + (i / (float) subSamples);
+            Transform sample = sampleCameraTransform(player, session, keyframes, sampleTime, quality);
+            if (sample == null) {
+                continue;
+            }
+            if (accumulated == null) {
+                accumulated = new Transform(sample.getX(), sample.getY(), sample.getZ(), sample.getYaw(), sample.getPitch());
+            } else {
+                accumulated.setX(accumulated.getX() + sample.getX());
+                accumulated.setY(accumulated.getY() + sample.getY());
+                accumulated.setZ(accumulated.getZ() + sample.getZ());
+                accumulated.setYaw(accumulated.getYaw() + sample.getYaw());
+                accumulated.setPitch(accumulated.getPitch() + sample.getPitch());
+            }
+        }
+        if (accumulated == null) {
+            return null;
+        }
+        accumulated.setX(accumulated.getX() / subSamples);
+        accumulated.setY(accumulated.getY() / subSamples);
+        accumulated.setZ(accumulated.getZ() / subSamples);
+        accumulated.setYaw(accumulated.getYaw() / subSamples);
+        accumulated.setPitch(accumulated.getPitch() / subSamples);
+        return accumulated;
     }
 
     private Transform sampleCameraTransform(Player player, SceneSession session, List<CameraKeyframe> keyframes,
@@ -946,7 +998,17 @@ public class SceneRuntimeEngine {
         if (session.getCameraRigId() == null) {
             return null;
         }
-        return player.getWorld().getEntity(session.getCameraRigId());
+        Entity rig = Bukkit.getEntity(session.getCameraRigId());
+        if (rig != null) {
+            return rig;
+        }
+        if (session.getCameraRigWorld() != null) {
+            org.bukkit.World world = Bukkit.getWorld(session.getCameraRigWorld());
+            if (world != null) {
+                return world.getEntity(session.getCameraRigId());
+            }
+        }
+        return null;
     }
 
     private String resolveHandle(SceneSession session, ModelKeyframe keyframe) {

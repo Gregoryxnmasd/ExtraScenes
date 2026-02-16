@@ -26,6 +26,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
@@ -90,6 +92,7 @@ public class SceneSessionManager {
         visibilityController.hideEntityFromAllExcept(rig, player);
         visibilityController.showEntityToPlayer(rig, player);
         session.setCameraRigId(rig.getUniqueId());
+        session.setCameraRigWorld(rig.getWorld().getName());
         plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
                 + " marker=" + rig.isMarker());
 
@@ -98,8 +101,11 @@ public class SceneSessionManager {
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
         player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         applyMovementLock(player);
+        applyPlaybackZoomEffect(player);
 
         teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
+        player.setGameMode(GameMode.SPECTATOR);
+        protocolAdapter.applySpectatorCamera(player, rig);
         startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
@@ -227,6 +233,7 @@ public class SceneSessionManager {
         protocolAdapter.clearSpectatorCamera(player);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
+        clearPlaybackZoomEffect(player);
         player.getInventory().setHelmet(session.getOriginalHelmet());
 
         if (session.getScene().isFreezePlayer()) {
@@ -423,6 +430,16 @@ public class SceneSessionManager {
             }
         }
         return player.getLocation().clone();
+    }
+
+    private void applyPlaybackZoomEffect(Player player) {
+        PotionEffectType type = PotionEffectType.SLOWNESS;
+        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 1, true, false, false);
+        player.addPotionEffect(effect);
+    }
+
+    private void clearPlaybackZoomEffect(Player player) {
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
     }
 
     private void applyMovementLock(Player player) {
