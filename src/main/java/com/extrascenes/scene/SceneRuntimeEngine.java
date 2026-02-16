@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attributable;
@@ -590,10 +592,6 @@ public class SceneRuntimeEngine {
                     + " current=" + (current == null ? "null" : current.getUniqueId())
                     + " expected=" + cameraRig.getUniqueId());
         }
-        plugin.getLogger().warning("Spectator target drift detected for " + player.getName()
-                + " session=" + session.getSessionId()
-                + " current=" + (current == null ? "null" : current.getUniqueId())
-                + " expected=" + cameraRig.getUniqueId());
         protocolAdapter.applySpectatorCamera(player, cameraRig);
     }
 
@@ -976,27 +974,30 @@ public class SceneRuntimeEngine {
 
 
     private Particle findParticleByName(String particleId) {
-        if (particleId == null || particleId.isBlank()) {
+        NamespacedKey key = parseNamespacedKey(particleId);
+        if (key == null) {
             return null;
         }
-        for (Particle particle : Particle.values()) {
-            if (particle.name().equalsIgnoreCase(particleId)) {
-                return particle;
-            }
-        }
-        return null;
+        return Registry.PARTICLE_TYPE.get(key);
     }
 
     private Sound findSoundByName(String soundId) {
-        if (soundId == null || soundId.isBlank()) {
+        NamespacedKey key = parseNamespacedKey(soundId);
+        if (key == null) {
             return null;
         }
-        for (Sound sound : Sound.values()) {
-            if (sound.name().equalsIgnoreCase(soundId)) {
-                return sound;
-            }
+        return Registry.SOUNDS.get(key);
+    }
+
+    private NamespacedKey parseNamespacedKey(String id) {
+        if (id == null || id.isBlank()) {
+            return null;
         }
-        return null;
+        NamespacedKey key = NamespacedKey.fromString(id.toLowerCase(java.util.Locale.ROOT));
+        if (key != null) {
+            return key;
+        }
+        return NamespacedKey.minecraft(id.toLowerCase(java.util.Locale.ROOT));
     }
 
     private void handleBlockIllusionKeyframe(Player player, BlockIllusionKeyframe keyframe) {
