@@ -9,6 +9,8 @@ public class ActorTickAction {
     private boolean stopAnimation;
     private LookAtTarget lookAtTarget;
     private String command;
+    private Double scale;
+    private String skinName;
 
     public ActorTickAction(int tick) {
         this.tick = Math.max(0, tick);
@@ -72,5 +74,21 @@ public class ActorTickAction {
 
     public void setCommand(String command) {
         this.command = command;
+    }
+
+    public Double getScale() {
+        return scale;
+    }
+
+    public void setScale(Double scale) {
+        this.scale = scale;
+    }
+
+    public String getSkinName() {
+        return skinName;
+    }
+
+    public void setSkinName(String skinName) {
+        this.skinName = skinName;
     }
 }

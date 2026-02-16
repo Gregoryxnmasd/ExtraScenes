@@ -183,6 +183,8 @@ public class SceneSerializer {
                 actionObj.addProperty("stopAnimation", action.isStopAnimation());
                 actionObj.add("lookAt", serializeLookAt(action.getLookAtTarget()));
                 actionObj.addProperty("command", action.getCommand());
+                actionObj.addProperty("scale", action.getScale());
+                actionObj.addProperty("skin", action.getSkinName());
                 actions.add(actionObj);
             }
             obj.add("actions", actions);

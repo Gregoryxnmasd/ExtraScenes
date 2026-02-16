@@ -35,6 +35,8 @@ public class ActorTickActionsGui implements EditorGui {
         inventory.setItem(13, GuiUtils.makeItem(Material.PAPER, "Animation", List.of("Left: set demo", "Right: clear")));
         inventory.setItem(14, GuiUtils.makeItem(Material.COMPASS, "Look-at", List.of("Set to player look target")));
         inventory.setItem(15, GuiUtils.makeItem(Material.COMMAND_BLOCK, "Command", List.of("Left: set /say", "Right: clear")));
+        inventory.setItem(16, GuiUtils.makeItem(Material.SLIME_BALL, "Set Scale", List.of("Left: use actor scale", "Right: clear")));
+        inventory.setItem(17, GuiUtils.makeItem(Material.PLAYER_HEAD, "Set Skin", List.of("Left: use actor skin", "Right: clear")));
         inventory.setItem(22, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return timeline")));
         return inventory;
     }
@@ -73,6 +75,12 @@ public class ActorTickActionsGui implements EditorGui {
             changed = true;
         } else if (ctx.getSlot() == 15) {
             action.setCommand(ctx.isRightClick() ? null : "say actor " + actor.getActorId() + " tick " + session.getCurrentTick());
+            changed = true;
+        } else if (ctx.getSlot() == 16) {
+            action.setScale(ctx.isRightClick() ? null : actor.getScale());
+            changed = true;
+        } else if (ctx.getSlot() == 17) {
+            action.setSkinName(ctx.isRightClick() ? null : actor.getSkinName());
             changed = true;
         } else if (ctx.getSlot() == 22) {
             editorEngine.navigateBack(player, session);
