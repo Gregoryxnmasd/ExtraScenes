@@ -274,7 +274,14 @@ public class SceneSessionManager {
         try {
             rig = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
         } catch (Throwable ignored) {
-            // Fallback below for legacy compatibility.
+            // Legacy fallback below.
+        }
+        if (rig == null) {
+            try {
+                rig = location.getWorld().spawnEntity(location, EntityType.AREA_EFFECT_CLOUD);
+            } catch (Throwable ignored) {
+                // Legacy fallback below.
+            }
         }
         if (rig == null) {
             rig = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
@@ -287,15 +294,23 @@ public class SceneSessionManager {
         rig.setGravity(false);
         rig.setPersistent(false);
         rig.setVisibleByDefault(false);
+        rig.addScoreboardTag("extrascenes_camera_rig");
         if (rig instanceof Interaction interaction) {
             interaction.setResponsive(false);
-            interaction.setInteractionHeight(0.1F);
-            interaction.setInteractionWidth(0.1F);
+            interaction.setInteractionHeight(0.02F);
+            interaction.setInteractionWidth(0.02F);
             return interaction;
+        }
+        if (rig instanceof org.bukkit.entity.AreaEffectCloud cloud) {
+            cloud.setDuration(Integer.MAX_VALUE);
+            cloud.setRadius(0F);
+            cloud.setWaitTime(0);
+            cloud.setReapplicationDelay(0);
+            return cloud;
         }
         if (rig instanceof org.bukkit.entity.ArmorStand armorStand) {
             armorStand.setInvisible(true);
-            armorStand.setMarker(false);
+            armorStand.setMarker(true);
             armorStand.setCollidable(false);
             armorStand.setSmall(true);
             armorStand.setBasePlate(false);
