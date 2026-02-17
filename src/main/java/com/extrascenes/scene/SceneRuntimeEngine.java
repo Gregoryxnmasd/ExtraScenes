@@ -824,25 +824,25 @@ public class SceneRuntimeEngine {
         Location from = cameraRig.getLocation().clone();
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
-        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+
+        CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
+        if (frame != null) {
+            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+        }
     }
 
     private boolean isPlayerCameraFrame(SceneSession session, int tick) {
-        List<CutsceneFrame> timeline = session.getCameraTimeline();
-        if (timeline.isEmpty()) {
-            return false;
-        }
-        int frameIndex = Math.min(Math.max(0, tick), timeline.size() - 1);
-        return timeline.get(frameIndex).isPlayerCamera();
+        CutsceneFrame frame = getCameraFrameAtTick(session, tick);
+        return frame != null && frame.isPlayerCamera();
     }
 
-    private boolean isPlayerCameraFrame(SceneSession session, int tick) {
+    private CutsceneFrame getCameraFrameAtTick(SceneSession session, int tick) {
         List<CutsceneFrame> timeline = session.getCameraTimeline();
         if (timeline.isEmpty()) {
-            return false;
+            return null;
         }
         int frameIndex = Math.min(Math.max(0, tick), timeline.size() - 1);
-        return timeline.get(frameIndex).isPlayerCamera();
+        return timeline.get(frameIndex);
     }
 
     private void clampCameraDelta(Location from, Location to, SceneSession session, int tick) {
