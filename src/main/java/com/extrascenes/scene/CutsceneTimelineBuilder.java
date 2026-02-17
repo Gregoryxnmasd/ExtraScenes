@@ -75,11 +75,43 @@ public final class CutsceneTimelineBuilder {
             return rawFrames;
         }
         List<CutsceneFrame> resized = new ArrayList<>(target);
+        if (rawFrames.size() == 1) {
+            for (int tick = 0; tick < target; tick++) {
+                resized.add(rawFrames.get(0));
+            }
+            return resized;
+        }
         for (int tick = 0; tick < target; tick++) {
-            int index = (int) Math.floor((tick / (double) Math.max(1, target - 1)) * Math.max(0, rawFrames.size() - 1));
-            resized.add(rawFrames.get(Math.max(0, Math.min(index, rawFrames.size() - 1))));
+            double rawIndex = (tick / (double) Math.max(1, target - 1)) * (rawFrames.size() - 1);
+            int baseIndex = (int) Math.floor(rawIndex);
+            int nextIndex = Math.min(rawFrames.size() - 1, baseIndex + 1);
+            double t = rawIndex - baseIndex;
+            CutsceneFrame from = rawFrames.get(Math.max(0, Math.min(baseIndex, rawFrames.size() - 1)));
+            CutsceneFrame to = rawFrames.get(nextIndex);
+            resized.add(interpolateFrame(from, to, t));
         }
         return resized;
+    }
+
+    private static CutsceneFrame interpolateFrame(CutsceneFrame from, CutsceneFrame to, double t) {
+        if (t <= 0.0D) {
+            return from;
+        }
+        if (t >= 1.0D) {
+            return to;
+        }
+        Location a = from.getLocation();
+        Location b = to.getLocation();
+        if (a == null || b == null) {
+            return from;
+        }
+        double x = a.getX() + (b.getX() - a.getX()) * t;
+        double y = a.getY() + (b.getY() - a.getY()) * t;
+        double z = a.getZ() + (b.getZ() - a.getZ()) * t;
+        float yaw = lerpAngle(a.getYaw(), b.getYaw(), (float) t);
+        float pitch = (float) (a.getPitch() + (b.getPitch() - a.getPitch()) * t);
+        Location location = new Location(null, x, y, z, yaw, pitch);
+        return new CutsceneFrame(location, from.getSegmentIndex(), from.isPlayerCamera());
     }
 
     private static double applySmoothing(SmoothingMode mode, double t) {

@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class SceneProtocolAdapter {
-    private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
+    private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -1000.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
     private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
@@ -92,7 +92,7 @@ public class SceneProtocolAdapter {
                     continue;
                 }
                 if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
-                        && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
+                        && modifier.getOperation() == AttributeModifier.Operation.ADD_NUMBER
                         && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
                 } else {
@@ -104,7 +104,7 @@ public class SceneProtocolAdapter {
             AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
                     PUMPKIN_MOVEMENT_LOCK_AMOUNT,
-                    AttributeModifier.Operation.ADD_SCALAR,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     EquipmentSlot.HEAD.getGroup()
             );
             meta.addAttributeModifier(attribute, modifier);
