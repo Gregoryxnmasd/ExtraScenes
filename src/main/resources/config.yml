@@ -17,10 +17,15 @@ camera:
   armorstand-invisible: true
   hide-others: true
   fake-equip: true
+  zoom-slowness-amplifier: 3
+  zoom-slowness-duration-ticks: 1200
   step-resolution: 0.35
   player-segments: ""
   start-commands: []
   segment-commands: {}
+  zoom:
+    enabled: true
+    slowness-level: 6
 locks:
   movement: true
   hud: true

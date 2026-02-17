@@ -782,7 +782,16 @@ public class SceneRuntimeEngine {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
+        Entity spectatorTarget = player.getSpectatorTarget();
+        boolean matched = spectatorTarget != null && spectatorTarget.getUniqueId().equals(cameraRig.getUniqueId());
+        if (matched) {
+            return;
+        }
+        if (session.getTimeTicks() < session.getSpectatorRecoveryCooldownUntilTick()) {
+            return;
+        }
         protocolAdapter.applySpectatorCamera(player, cameraRig);
+        session.setSpectatorRecoveryCooldownUntilTick(session.getTimeTicks() + 5);
     }
 
     private void updateCameraRigTransform(Player player, SceneSession session, int timeTicks) {
@@ -790,14 +799,13 @@ public class SceneRuntimeEngine {
         if (frame == null || frame.getLocation() == null) {
             return;
         }
-        Location point = frame.getLocation().clone();
-        point.setWorld(player.getWorld());
-
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
+        Location point = frame.getLocation().clone();
+        point.setWorld(cameraRig.getWorld());
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
         visibilityController.showEntityToPlayer(cameraRig, player);
 
