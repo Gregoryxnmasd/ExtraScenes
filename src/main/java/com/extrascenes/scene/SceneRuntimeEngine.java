@@ -1105,22 +1105,58 @@ public class SceneRuntimeEngine {
     private void executeCommands(Player player, SceneSession session, CommandKeyframe keyframe, int durationTicks) {
         List<String> commands = keyframe.getCommands();
         for (String command : commands) {
-            String resolved = SceneTextFormatter.replacePlaceholders(plugin, player, session, command, durationTicks);
-            boolean globalRequested = resolved.startsWith("global:");
-            String normalized = globalRequested ? resolved.substring("global:".length()).trim() : resolved;
-            if (globalRequested && !session.getScene().isAllowGlobalCommands() && !keyframe.isAllowGlobal()) {
-                plugin.getLogger().warning("[scene-command] blocked global command because scene/keyframe policy denied it"
-                        + " viewer=" + player.getName() + " session=" + session.getSessionId()
-                        + " tick=" + session.getTimeTicks() + " command=" + normalized);
+            ParsedSceneCommand parsed = parseSceneCommand(
+                    SceneTextFormatter.replacePlaceholders(plugin, player, session, command, durationTicks),
+                    keyframe.getExecutorMode());
+            if (parsed.command().isBlank()) {
                 continue;
             }
-            if (keyframe.getExecutorMode() == CommandKeyframe.ExecutorMode.CONSOLE) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), normalized.replaceFirst("^console:", "").trim());
+            if (parsed.globalRequested() && !session.getScene().isAllowGlobalCommands() && !keyframe.isAllowGlobal()) {
+                plugin.getLogger().warning("[scene-command] blocked global command because scene/keyframe policy denied it"
+                        + " viewer=" + player.getName() + " session=" + session.getSessionId()
+                        + " tick=" + session.getTimeTicks() + " command=" + parsed.command());
+                continue;
+            }
+            if (parsed.executorMode() == CommandKeyframe.ExecutorMode.CONSOLE) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed.command());
             } else {
-                String sanitized = normalized.replaceFirst("^player:", "").trim();
-                Bukkit.dispatchCommand(player, sanitized);
+                Bukkit.dispatchCommand(player, parsed.command());
             }
         }
+    }
+
+    private ParsedSceneCommand parseSceneCommand(String raw,
+                                                 CommandKeyframe.ExecutorMode fallbackExecutorMode) {
+        if (raw == null) {
+            return new ParsedSceneCommand(false, fallbackExecutorMode, "");
+        }
+        String normalized = raw.trim();
+        boolean globalRequested = false;
+        CommandKeyframe.ExecutorMode executorMode = fallbackExecutorMode;
+        boolean keepParsing = true;
+        while (keepParsing) {
+            keepParsing = false;
+            if (normalized.regionMatches(true, 0, "global:", 0, "global:".length())) {
+                globalRequested = true;
+                normalized = normalized.substring("global:".length()).trim();
+                keepParsing = true;
+            }
+            if (normalized.regionMatches(true, 0, "console:", 0, "console:".length())) {
+                executorMode = CommandKeyframe.ExecutorMode.CONSOLE;
+                normalized = normalized.substring("console:".length()).trim();
+                keepParsing = true;
+            } else if (normalized.regionMatches(true, 0, "player:", 0, "player:".length())) {
+                executorMode = CommandKeyframe.ExecutorMode.PLAYER;
+                normalized = normalized.substring("player:".length()).trim();
+                keepParsing = true;
+            }
+        }
+        return new ParsedSceneCommand(globalRequested, executorMode, normalized);
+    }
+
+    private record ParsedSceneCommand(boolean globalRequested,
+                                      CommandKeyframe.ExecutorMode executorMode,
+                                      String command) {
     }
 
     private void handleModelKeyframe(Player player, SceneSession session, ModelKeyframe keyframe) {
