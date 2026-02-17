@@ -190,7 +190,7 @@ public class SceneRuntimeEngine {
         if (!isDebugCameraEnabled(player.getUniqueId()) || timeTicks % 20 != 0) {
             return;
         }
-        Entity cameraRig = getCameraRig(session, player);
+        Entity cameraRig = getCameraRigForTick(session, player, session.getTimeTicks());
         Entity spectatorTarget = player.getSpectatorTarget();
         String rigId = cameraRig != null ? cameraRig.getUniqueId().toString() : "null";
         String rigWorld = cameraRig != null && cameraRig.getWorld() != null ? cameraRig.getWorld().getName() : "null";
@@ -781,7 +781,7 @@ public class SceneRuntimeEngine {
             player.setSpectatorTarget(null);
             return;
         }
-        Entity cameraRig = getCameraRig(session, player);
+        Entity cameraRig = getCameraRigForTick(session, player, session.getTimeTicks());
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
@@ -812,17 +812,14 @@ public class SceneRuntimeEngine {
             return;
         }
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
-        Entity cameraRig = getCameraRig(session, player);
+        Entity cameraRig = getCameraRigForTick(session, player, timeTicks);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
-        Location point = frame.getLocation().clone();
-        point.setWorld(cameraRig.getWorld());
+        Location point = cameraRig.getLocation().clone();
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
         visibilityController.showEntityToPlayer(cameraRig, player);
-
-        cameraRig.teleport(point);
         protocolAdapter.applySpectatorCamera(player, cameraRig);
         session.setLastCameraLocation(point);
         session.setPlayerCameraActive(false);
@@ -1308,8 +1305,21 @@ public class SceneRuntimeEngine {
         player.sendBlockChange(location, material.createBlockData());
     }
 
-    private Entity getCameraRig(SceneSession session, Player player) {
-        if (session.getCameraRigId() == null || player == null) {
+    private Entity getCameraRigForTick(SceneSession session, Player player, int tick) {
+        if (player == null || session == null) {
+            return null;
+        }
+        int pointIndex = resolveActiveCameraPointIndex(session, tick);
+        java.util.UUID rigId = session.getCameraPointRigId(pointIndex);
+        if (rigId != null) {
+            Entity pointRig = Bukkit.getEntity(rigId);
+            if (pointRig != null && pointRig.isValid()) {
+                session.setCameraRigId(pointRig.getUniqueId());
+                session.setCameraRigWorld(pointRig.getWorld().getName());
+                return pointRig;
+            }
+        }
+        if (session.getCameraRigId() == null) {
             return null;
         }
         Location fallback = session.getLastCameraLocation();
@@ -1317,6 +1327,25 @@ public class SceneRuntimeEngine {
             fallback = player.getLocation();
         }
         return sessionManager.ensureCameraRig(session, player, fallback);
+    }
+
+    private int resolveActiveCameraPointIndex(SceneSession session, int tick) {
+        CutscenePath path = session.getCutscenePath();
+        if (path == null || path.getPoints().isEmpty()) {
+            return 0;
+        }
+        java.util.List<CameraKeyframe> points = new java.util.ArrayList<>(path.getPoints());
+        points.sort(java.util.Comparator.comparingInt(CameraKeyframe::getTimeTicks));
+        int activePoint = 0;
+        for (int index = 0; index < points.size(); index++) {
+            CameraKeyframe keyframe = points.get(index);
+            if (keyframe != null && keyframe.getTimeTicks() <= tick) {
+                activePoint = index;
+                continue;
+            }
+            break;
+        }
+        return activePoint;
     }
 
     private String resolveHandle(SceneSession session, ModelKeyframe keyframe) {

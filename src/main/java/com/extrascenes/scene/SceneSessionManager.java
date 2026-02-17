@@ -93,7 +93,7 @@ public class SceneSessionManager {
         Location rigStartLocation = timeline.get(0).getLocation().clone();
         rigStartLocation.setWorld(player.getWorld());
 
-        Entity rig = ensureCameraRig(session, player, rigStartLocation);
+        Entity rig = ensureCameraPointRigs(session, player);
         if (rig == null) {
             sessions.remove(player.getUniqueId());
             plugin.getLogger().severe("Unable to spawn camera rig for " + player.getName()
@@ -226,12 +226,26 @@ public class SceneSessionManager {
     }
 
     public Entity ensureCameraRig(SceneSession session, Player viewer, Location preferredLocation) {
+        return ensureCameraRig(session, viewer, preferredLocation, -1);
+    }
+
+    public Entity ensureCameraRig(SceneSession session, Player viewer, Location preferredLocation, int pointIndex) {
         if (session == null || viewer == null || !viewer.isOnline()) {
             return null;
         }
-        Entity existing = resolveCameraRigEntity(session, viewer);
-        if (existing != null && existing.isValid()) {
-            return existing;
+        if (pointIndex >= 0) {
+            UUID pointRigId = session.getCameraPointRigId(pointIndex);
+            if (pointRigId != null) {
+                Entity pointRig = Bukkit.getEntity(pointRigId);
+                if (pointRig != null && pointRig.isValid()) {
+                    return pointRig;
+                }
+            }
+        } else {
+            Entity existing = resolveCameraRigEntity(session, viewer);
+            if (existing != null && existing.isValid()) {
+                return existing;
+            }
         }
         Location spawnLocation = preferredLocation == null ? viewer.getLocation().clone() : preferredLocation.clone();
         if (spawnLocation.getWorld() == null) {
@@ -248,6 +262,9 @@ public class SceneSessionManager {
         registerSceneEntity(session, rig);
         session.setCameraRigId(rig.getUniqueId());
         session.setCameraRigWorld(rig.getWorld().getName());
+        if (pointIndex >= 0) {
+            session.registerCameraPointRig(pointIndex, rig.getUniqueId());
+        }
         if (plugin.getConfig().getBoolean("camera.hide-others", true)) {
             visibilityController.hideEntityFromAllExcept(rig, viewer);
         }
@@ -256,6 +273,36 @@ public class SceneSessionManager {
                 + " session=" + session.getSessionId()
                 + " rig=" + rig.getUniqueId());
         return rig;
+    }
+
+    private Entity ensureCameraPointRigs(SceneSession session, Player viewer) {
+        CutscenePath path = session.getCutscenePath();
+        if (path == null || path.getPoints().isEmpty()) {
+            return null;
+        }
+        session.clearCameraPointRigs();
+        java.util.List<CameraKeyframe> points = new java.util.ArrayList<>(path.getPoints());
+        points.sort(java.util.Comparator.comparingInt(CameraKeyframe::getTimeTicks));
+        Entity first = null;
+        for (int index = 0; index < points.size(); index++) {
+            CameraKeyframe keyframe = points.get(index);
+            if (keyframe == null || keyframe.getTransform() == null) {
+                continue;
+            }
+            Transform transform = keyframe.getTransform();
+            Location location = new Location(viewer.getWorld(), transform.getX(), transform.getY(), transform.getZ(),
+                    transform.getYaw(), transform.getPitch());
+            Entity rig = ensureCameraRig(session, viewer, location, index);
+            if (rig != null && first == null) {
+                first = rig;
+            }
+        }
+        if (first == null) {
+            return null;
+        }
+        session.setCameraRigId(first.getUniqueId());
+        session.setCameraRigWorld(first.getWorld().getName());
+        return first;
     }
 
     private Entity resolveCameraRigEntity(SceneSession session, Player viewer) {
