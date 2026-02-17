@@ -109,8 +109,11 @@ public class SceneSessionManager {
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
-        if (plugin.getConfig().getBoolean("camera.fake-equip", true)) {
-            player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
+        if (isFakeEquipEnabled()) {
+            double fakeHelmetMovementSpeed = getFakeHelmetMovementSpeed();
+            protocolAdapter.sendFakeHelmet(player,
+                    protocolAdapter.createMovementLockedPumpkin(fakeHelmetMovementSpeed),
+                    fakeHelmetMovementSpeed);
         }
         applyCinematicZoom(player);
         applyMovementLock(player);
@@ -327,7 +330,7 @@ public class SceneSessionManager {
         protocolAdapter.clearSpectatorCamera(player);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
-        player.getInventory().setHelmet(session.getOriginalHelmet());
+        protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
         player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
         player.getInventory().setItemInOffHand(session.getSnapshot().getOffHand());
@@ -597,6 +600,20 @@ public class SceneSessionManager {
                 startCommands, segmentCommands);
     }
 
+
+    private boolean isFakeEquipEnabled() {
+        if (plugin.getConfig().isSet("cutscene.fake-equip")) {
+            return plugin.getConfig().getBoolean("cutscene.fake-equip", true);
+        }
+        return plugin.getConfig().getBoolean("camera.fake-equip", true);
+    }
+
+    private double getFakeHelmetMovementSpeed() {
+        if (plugin.getConfig().isSet("cutscene.fake-helmet-movement-speed")) {
+            return plugin.getConfig().getDouble("cutscene.fake-helmet-movement-speed", 10.0D);
+        }
+        return plugin.getConfig().getDouble("camera.fake-helmet-movement-speed", 10.0D);
+    }
 
     private void applyCameraZoomEffect(Player player) {
         if (player == null) {
