@@ -22,8 +22,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
@@ -79,11 +77,18 @@ public class SceneSessionManager {
 
         session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
 
-        Location rigStartLocation = resolveRigStartLocation(player, scene);
-        if (rigStartLocation.getWorld() == null || !rigStartLocation.getWorld().equals(player.getWorld())) {
-            rigStartLocation.setWorld(player.getWorld());
-            plugin.getLogger().warning("Camera rig world mismatch corrected for " + player.getName());
+        CutscenePath cutscenePath = buildCutscenePath(scene);
+        java.util.List<CutsceneFrame> timeline = CutsceneTimelineBuilder.build(cutscenePath);
+        if (timeline.isEmpty()) {
+            sessions.remove(player.getUniqueId());
+            plugin.getLogger().severe("Scene " + scene.getName() + " has no camera points, aborting start for " + player.getName());
+            return null;
         }
+        session.setCameraTimeline(timeline);
+
+        Location rigStartLocation = timeline.get(0).getLocation().clone();
+        rigStartLocation.setWorld(player.getWorld());
+
         Entity rig = ensureCameraRig(session, player, rigStartLocation);
         if (rig == null) {
             sessions.remove(player.getUniqueId());
@@ -92,19 +97,20 @@ public class SceneSessionManager {
             return null;
         }
         forceLoadRigChunk(session, rigStartLocation);
-        visibilityController.hideEntityFromAllExcept(rig, player);
+        if (plugin.getConfig().getBoolean("camera.hide-others", true)) {
+            visibilityController.hideEntityFromAllExcept(rig, player);
+        }
         visibilityController.showEntityToPlayer(rig, player);
-        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
-                + " type=" + rig.getType());
 
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
-        player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
+        if (plugin.getConfig().getBoolean("camera.fake-equip", true)) {
+            player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
+        }
         applyMovementLock(player);
         applyPlaybackZoomEffect(player);
 
-        teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
         protocolAdapter.applySpectatorCamera(player, rig);
         startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
@@ -235,7 +241,9 @@ public class SceneSessionManager {
         registerSceneEntity(session, rig);
         session.setCameraRigId(rig.getUniqueId());
         session.setCameraRigWorld(rig.getWorld().getName());
-        visibilityController.hideEntityFromAllExcept(rig, viewer);
+        if (plugin.getConfig().getBoolean("camera.hide-others", true)) {
+            visibilityController.hideEntityFromAllExcept(rig, viewer);
+        }
         visibilityController.showEntityToPlayer(rig, viewer);
         plugin.getLogger().warning("Recreated missing camera rig for " + viewer.getName()
                 + " session=" + session.getSessionId()
@@ -271,57 +279,16 @@ public class SceneSessionManager {
     }
 
     private Entity spawnCameraRig(Location location) {
-        Entity rig = null;
-        try {
-            rig = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
-        } catch (Throwable ignored) {
-            // Legacy fallback below.
-        }
-        if (rig == null) {
-            try {
-                rig = location.getWorld().spawnEntity(location, EntityType.AREA_EFFECT_CLOUD);
-            } catch (Throwable ignored) {
-                // Legacy fallback below.
-            }
-        }
-        if (rig == null) {
-            rig = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
-        }
-        if (rig == null || !rig.isValid()) {
+        if (location == null || location.getWorld() == null) {
             return null;
         }
-        configureCameraRigBase(rig);
-        if (rig instanceof Interaction interaction) {
-            interaction.setResponsive(false);
-            interaction.setInteractionHeight(0.0001F);
-            interaction.setInteractionWidth(0.0001F);
-            return interaction;
+        try {
+            Entity camera = CameraEntityFactory.spawn(plugin, location);
+            return camera != null && camera.isValid() ? camera : null;
+        } catch (Throwable throwable) {
+            plugin.getLogger().severe("Failed to spawn camera entity: " + throwable.getMessage());
+            return null;
         }
-        if (rig instanceof ArmorStand armorStand) {
-            configureArmorStandRig(armorStand);
-            return armorStand;
-        }
-        return rig;
-    }
-
-    private void configureCameraRigBase(Entity rig) {
-        rig.setSilent(true);
-        rig.setInvulnerable(true);
-        rig.setGravity(false);
-        rig.setPersistent(false);
-        rig.setVisibleByDefault(false);
-        rig.setCustomName(null);
-        rig.setCustomNameVisible(false);
-    }
-
-    private void configureArmorStandRig(ArmorStand armorStand) {
-        armorStand.setInvisible(true);
-        armorStand.setMarker(true);
-        armorStand.setSmall(true);
-        armorStand.setBasePlate(false);
-        armorStand.setArms(false);
-        armorStand.setCanMove(false);
-        armorStand.setCanTick(false);
     }
 
     public void reapplyVisibility(Player player) {
@@ -357,12 +324,19 @@ public class SceneSessionManager {
         removeMovementLock(player);
         clearPlaybackZoomEffect(player);
         player.getInventory().setHelmet(session.getOriginalHelmet());
+        player.getInventory().setContents(session.getSnapshot().getInventoryContents());
+        player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
+        player.getInventory().setItemInOffHand(session.getSnapshot().getOffHand());
 
         if (session.getScene().isFreezePlayer()) {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
             player.setFlySpeed(session.getSnapshot().getFlySpeed());
         }
         player.setFlying(session.getSnapshot().isFlying());
+        Location original = session.getSnapshot().getLocation();
+        if (original != null && original.getWorld() != null) {
+            player.teleport(original);
+        }
     }
 
     private void teleportOnEnd(Player player, SceneSession session) {
@@ -552,6 +526,42 @@ public class SceneSessionManager {
             }
         }
         return player.getLocation().clone();
+    }
+
+    private CutscenePath buildCutscenePath(Scene scene) {
+        Track<CameraKeyframe> cameraTrack = scene.getTrack(SceneTrackType.CAMERA);
+        java.util.List<CameraKeyframe> points = cameraTrack == null
+                ? java.util.Collections.emptyList()
+                : new java.util.ArrayList<>(cameraTrack.getKeyframes());
+        double stepResolution = plugin.getConfig().getDouble("camera.step-resolution", 0.35D);
+        String rawSegments = plugin.getConfig().getString("camera.player-segments", "");
+        java.util.List<CutscenePath.IntRange> segments = new java.util.ArrayList<>();
+        if (rawSegments != null && !rawSegments.isBlank()) {
+            for (String token : rawSegments.split(",")) {
+                String value = token.trim();
+                if (value.isBlank()) {
+                    continue;
+                }
+                if (value.contains("-")) {
+                    String[] split = value.split("-");
+                    if (split.length == 2) {
+                        try {
+                            int start = Integer.parseInt(split[0].trim());
+                            int end = Integer.parseInt(split[1].trim());
+                            segments.add(new CutscenePath.IntRange(Math.min(start, end), Math.max(start, end)));
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                } else {
+                    try {
+                        int index = Integer.parseInt(value);
+                        segments.add(new CutscenePath.IntRange(index, index));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+        return new CutscenePath(stepResolution, scene.getDefaultSmoothing(), points, segments);
     }
 
     private void applyPlaybackZoomEffect(Player player) {

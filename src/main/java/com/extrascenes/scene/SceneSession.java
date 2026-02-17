@@ -48,6 +48,8 @@ public class SceneSession {
     private String lastPlaybackTeleportCaller;
     private boolean spectatorHandshakeComplete;
     private int spectatorHandshakeAttempts;
+    private java.util.List<CutsceneFrame> cameraTimeline = java.util.Collections.emptyList();
+    private int lastAppliedSegmentIndex = -1;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -366,5 +368,21 @@ public class SceneSession {
 
     public void incrementSpectatorHandshakeAttempts() {
         this.spectatorHandshakeAttempts++;
+    }
+
+    public java.util.List<CutsceneFrame> getCameraTimeline() {
+        return cameraTimeline;
+    }
+
+    public void setCameraTimeline(java.util.List<CutsceneFrame> cameraTimeline) {
+        this.cameraTimeline = cameraTimeline == null ? java.util.Collections.emptyList() : cameraTimeline;
+    }
+
+    public int getLastAppliedSegmentIndex() {
+        return lastAppliedSegmentIndex;
+    }
+
+    public void setLastAppliedSegmentIndex(int lastAppliedSegmentIndex) {
+        this.lastAppliedSegmentIndex = lastAppliedSegmentIndex;
     }
 }

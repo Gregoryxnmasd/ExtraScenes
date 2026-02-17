@@ -25,6 +25,9 @@ import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 
@@ -138,6 +141,38 @@ public class SceneListener implements Listener {
 
     @EventHandler
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null || session.getState() != SceneState.PLAYING) {
+            return;
+        }
+        if (!editorEngine.getPlugin().getConfig().getBoolean("locks.movement", true)) {
+            return;
+        }
+        if (event.getFrom().getX() != event.getTo().getX()
+                || event.getFrom().getY() != event.getTo().getY()
+                || event.getFrom().getZ() != event.getTo().getZ()) {
+            event.setTo(event.getFrom());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDrop(PlayerDropItemEvent event) {
+        SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session != null && session.getState() == SceneState.PLAYING) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerSwapHands(PlayerSwapHandItemsEvent event) {
         SceneSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session != null && session.getState() == SceneState.PLAYING) {
             event.setCancelled(true);
