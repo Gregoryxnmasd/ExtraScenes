@@ -286,16 +286,13 @@ public class SceneRuntimeEngine {
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
             ActorTickAction action = template.getTickAction(tick);
-            if (action != null && action.isSpawn()) {
-                handle.getEntity().setInvisible(false);
-                handle.setSpawned(true);
-            }
-            if (action != null && action.isDespawn()) {
+            boolean shouldBeSpawned = isActorSpawnedAtTick(template, tick);
+            handle.setSpawned(shouldBeSpawned);
+            if (!shouldBeSpawned) {
+                if (action != null) {
+                    applyActorTickAction(viewer, template, handle, action, tick, false);
+                }
                 handle.getEntity().setInvisible(true);
-                handle.setSpawned(false);
-                continue;
-            }
-            if (!handle.isSpawned() && tick > 0) {
                 continue;
             }
 
@@ -496,6 +493,9 @@ public class SceneRuntimeEngine {
             liveActorIds.add(actorKey);
             SessionActorHandle handle = handles.get(actorKey);
             if (handle == null || handle.getEntity() == null || !handle.getEntity().isValid()) {
+                if (handle != null) {
+                    handles.remove(actorKey);
+                }
                 Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
                 if (npc == null) {
                     continue;
@@ -532,27 +532,20 @@ public class SceneRuntimeEngine {
                 }
                 visibilityController.showEntityToPlayer(entity, viewer);
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
-                Integer firstSpawnTick = template.getTickActions().values().stream()
-                        .filter(ActorTickAction::isSpawn)
-                        .map(ActorTickAction::getTick)
-                        .min(Integer::compareTo)
-                        .orElse(0);
-                if (firstSpawnTick > 0) {
-                    handle.setSpawned(false);
-                }
+                handle.setSpawned(isActorSpawnedAtTick(template, tick));
                 editorPreviewController.register(viewer, handle);
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
             tagPreviewEntity(handle.getEntity(), viewer, actorKey);
             cleanupDuplicateTaggedPreviewEntities(viewer, actorKey, handle.getEntity());
             ActorTickAction action = template.getTickAction(tick);
-            boolean shouldBeSpawned = shouldActorBeSpawnedAtTick(template, tick);
+            boolean shouldBeSpawned = isActorSpawnedAtTick(template, tick);
+            handle.setSpawned(shouldBeSpawned);
             if (!shouldBeSpawned) {
                 if (action != null) {
                     applyActorTickAction(viewer, template, handle, action, tick, true);
                 }
                 handle.getEntity().setInvisible(true);
-                handle.setSpawned(false);
                 continue;
             }
 
@@ -627,6 +620,26 @@ public class SceneRuntimeEngine {
             return null;
         }
         return first.getValue().getTransform();
+    }
+
+    private boolean isActorSpawnedAtTick(SceneActorTemplate template, int tick) {
+        if (template == null) {
+            return false;
+        }
+        boolean hasExplicitSpawnAction = template.getTickActions().values().stream().anyMatch(ActorTickAction::isSpawn);
+        boolean spawned = !hasExplicitSpawnAction;
+        for (ActorTickAction action : template.getTickActions().values()) {
+            if (action == null || action.getTick() > tick) {
+                continue;
+            }
+            if (action.isSpawn()) {
+                spawned = true;
+            }
+            if (action.isDespawn()) {
+                spawned = false;
+            }
+        }
+        return spawned;
     }
 
     private void cleanupStalePreviewActors(Player viewer, Map<String, SessionActorHandle> handles, Set<String> liveActorIds) {
@@ -1110,7 +1123,13 @@ public class SceneRuntimeEngine {
                     Text.send(player, "&c" + "Model entry missing modelId; spawn skipped.");
                     return;
                 }
-                Entity base = adapter.spawnModelBase(player, location);
+                Entity base;
+                try {
+                    base = adapter.spawnModelBase(player, location);
+                } catch (IllegalStateException ex) {
+                    plugin.getLogger().warning("Model anchor spawn failed: " + ex.getMessage());
+                    return;
+                }
                 adapter.bindModel(base, modelId);
                 session.registerEntity(base);
                 sessionManager.registerSceneEntity(session, base);
@@ -1154,6 +1173,7 @@ public class SceneRuntimeEngine {
                     if (entity != null) {
                         session.unregisterEntity(entity);
                         sessionManager.unregisterSceneEntity(entity);
+                        adapter.unregisterModelBase(player, entity);
                         entity.remove();
                     }
                 }

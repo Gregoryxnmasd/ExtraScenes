@@ -2,8 +2,11 @@ package com.extrascenes;
 
 import com.extrascenes.visibility.SceneVisibilityController;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
@@ -27,6 +30,7 @@ public class SceneModelTrackAdapter {
     private Method animationHandlerPlayMethod;
     private Method animationHandlerStopMethod;
     private Method animationHandlerStopAllMethod;
+    private final Map<UUID, Set<UUID>> ownedModelBases = new java.util.concurrent.ConcurrentHashMap<>();
 
     public SceneModelTrackAdapter(ExtraScenesPlugin plugin, SceneVisibilityController visibilityController) {
         this.plugin = plugin;
@@ -43,36 +47,91 @@ public class SceneModelTrackAdapter {
     }
 
     public Entity spawnModelBase(Player owner, Location location) {
-        Entity base;
-        try {
-            base = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
-        } catch (Throwable ignored) {
-            base = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        cleanupInvalidBases(owner);
+        Entity base = spawnModelAnchor(location);
+        if (base == null) {
+            throw new IllegalStateException("Unable to spawn model anchor");
         }
-        if (base == null || !base.isValid()) {
-            return null;
-        }
-        base.setSilent(true);
-        base.setInvulnerable(true);
-        base.setGravity(false);
-        base.setVisibleByDefault(false);
-        base.addScoreboardTag("extrascenes_model_anchor");
-        if (base instanceof org.bukkit.entity.Interaction interaction) {
-            interaction.setResponsive(false);
-            interaction.setInteractionHeight(0.02F);
-            interaction.setInteractionWidth(0.02F);
-        }
-        if (base instanceof ArmorStand armorStand) {
-            armorStand.setAI(false);
-            armorStand.setInvisible(true);
-            armorStand.setMarker(true);
-            armorStand.setCollidable(false);
-            armorStand.setSmall(true);
-            armorStand.setBasePlate(false);
-        }
-        visibilityController.hideEntityFromAllExcept(base, owner);
-        visibilityController.showEntityToPlayer(base, owner);
+        configureBaseEntity(base, owner);
+        trackBase(owner, base);
         return base;
+    }
+
+    private Entity spawnModelAnchor(Location location) {
+        Entity anchor = null;
+        try {
+            anchor = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
+        } catch (Throwable ignored) {
+            // fallback below
+        }
+        if (anchor == null) {
+            anchor = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        }
+        return anchor;
+    }
+
+    private void configureBaseEntity(Entity entity, Player owner) {
+        entity.setSilent(true);
+        entity.setInvulnerable(true);
+        entity.setGravity(false);
+        entity.setPersistent(false);
+        entity.setVisibleByDefault(false);
+        if (entity instanceof org.bukkit.entity.Interaction interaction) {
+            interaction.setResponsive(false);
+            interaction.setInteractionWidth(0.05F);
+            interaction.setInteractionHeight(0.05F);
+        }
+        if (entity instanceof ArmorStand base) {
+            base.setAI(false);
+            base.setInvisible(true);
+            base.setMarker(true);
+            base.setBasePlate(false);
+            base.setArms(false);
+            base.setCollidable(false);
+            base.setSmall(true);
+            base.setCanMove(false);
+        }
+        visibilityController.hideEntityFromAllExcept(entity, owner);
+        visibilityController.showEntityToPlayer(entity, owner);
+    }
+
+    private void trackBase(Player owner, Entity base) {
+        if (owner == null || base == null) {
+            return;
+        }
+        ownedModelBases.computeIfAbsent(owner.getUniqueId(), ignored -> new HashSet<>())
+                .add(base.getUniqueId());
+    }
+
+    private void cleanupInvalidBases(Player owner) {
+        if (owner == null) {
+            return;
+        }
+        Set<UUID> bases = ownedModelBases.get(owner.getUniqueId());
+        if (bases == null || bases.isEmpty()) {
+            return;
+        }
+        bases.removeIf(id -> {
+            Entity entity = Bukkit.getEntity(id);
+            return entity == null || !entity.isValid();
+        });
+        if (bases.isEmpty()) {
+            ownedModelBases.remove(owner.getUniqueId());
+        }
+    }
+
+    public void unregisterModelBase(Player owner, Entity baseEntity) {
+        if (owner == null || baseEntity == null) {
+            return;
+        }
+        Set<UUID> bases = ownedModelBases.get(owner.getUniqueId());
+        if (bases == null) {
+            return;
+        }
+        bases.remove(baseEntity.getUniqueId());
+        if (bases.isEmpty()) {
+            ownedModelBases.remove(owner.getUniqueId());
+        }
     }
 
     public void bindModel(Entity baseEntity, String modelId) {
