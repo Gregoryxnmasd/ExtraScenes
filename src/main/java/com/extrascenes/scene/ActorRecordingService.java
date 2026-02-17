@@ -51,7 +51,7 @@ public class ActorRecordingService {
                                             int startTick, boolean previewOthers, int durationTicks,
                                             RecordingDurationUnit durationUnit) {
         stopRecording(player, false);
-        int boundedDurationTicks = Math.max(1, durationTicks);
+        int boundedDurationTicks = normalizeDurationTicks(durationTicks);
         RecordingDurationUnit boundedUnit = durationUnit == null ? RecordingDurationUnit.SECONDS : durationUnit;
         BukkitTask countdownTask = new BukkitRunnable() {
             int countdown = 3;
@@ -74,15 +74,26 @@ public class ActorRecordingService {
                 }
                 pendingCountdowns.remove(player.getUniqueId());
                 startRecording(player, scene, template, startTick, previewOthers, boundedDurationTicks, boundedUnit);
-                int displayLimit = boundedUnit == RecordingDurationUnit.SECONDS
-                        ? Math.max(1, (boundedDurationTicks + 19) / 20)
-                        : boundedDurationTicks;
-                player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + displayLimit + boundedUnit.suffix()),
+                player.showTitle(Title.title(Component.text("REC"), Component.text(actorLabel(template) + " • " + formatDurationLimit(boundedDurationTicks, boundedUnit)),
                         Title.Times.times(Duration.ofMillis(0), Duration.ofMillis(700), Duration.ofMillis(200))));
                 cancel();
             }
         }.runTaskTimer(plugin, 0L, 20L);
         pendingCountdowns.put(player.getUniqueId(), countdownTask);
+    }
+
+    private int normalizeDurationTicks(int durationTicks) {
+        return Math.max(0, durationTicks);
+    }
+
+    private String formatDurationLimit(int durationTicks, RecordingDurationUnit durationUnit) {
+        if (durationTicks <= 0) {
+            return "∞";
+        }
+        if (durationUnit == RecordingDurationUnit.SECONDS) {
+            return Math.max(1, (durationTicks + 19) / 20) + durationUnit.suffix();
+        }
+        return durationTicks + durationUnit.suffix();
     }
 
     public boolean stopRecording(Player player, boolean markDirty) {
@@ -211,7 +222,7 @@ public class ActorRecordingService {
             this.template = template;
             this.startTick = Math.max(0, startTick);
             this.previewOthers = previewOthers;
-            this.durationTicks = Math.max(0, durationTicks);
+            this.durationTicks = durationTicks <= 0 ? 0 : durationTicks;
             this.durationUnit = durationUnit == null ? RecordingDurationUnit.SECONDS : durationUnit;
         }
 
