@@ -120,7 +120,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
         Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [tick|start:20] [duration:10s|200t] [preview:on|off]");
         Text.send(sender, "&b" + "/scene actor record stop");
-        Text.send(sender, "&b" + "/scene actor record delete <scene> <actorId> [fromTick] [toTick] confirm");
+        Text.send(sender, "&b" + "/scene actor record delete <scene> <actorId> [confirm]");
         Text.send(sender, "&b" + "/scene selftest <name>");
     }
 
@@ -798,8 +798,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
 
     private void handleActorRecordDelete(CommandSender sender, String[] args) {
-        if (args.length < 6 || !"confirm".equalsIgnoreCase(args[args.length - 1])) {
-            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> [fromTick] [toTick] confirm");
+        if (args.length < 5) {
+            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> [confirm]");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
