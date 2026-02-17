@@ -26,6 +26,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
+    private static final String ACTOR_ID_PATTERN = "[a-zA-Z0-9_-]{3,32}";
     private static final List<String> SUBCOMMANDS = List.of(
             "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
             "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
@@ -541,13 +542,22 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
-                SceneActorTemplate template = new SceneActorTemplate(args[3]);
-                template.setDisplayName(args[3]);
+                String actorId = args[3].trim();
+                if (!actorId.matches(ACTOR_ID_PATTERN)) {
+                    Text.send(sender, "&c" + "Invalid actorId. Use 3-32 chars: letters, numbers, _ or -.");
+                    return;
+                }
+                if (scene.getActorTemplate(actorId) != null) {
+                    Text.send(sender, "&c" + "Actor already exists in this scene.");
+                    return;
+                }
+                SceneActorTemplate template = new SceneActorTemplate(actorId);
+                template.setDisplayName(actorId);
                 scene.putActorTemplate(template);
-                scene.setDirty(true);
+                sceneManager.markDirty(scene);
                 try {
                     sceneManager.saveScene(scene);
-                    Text.send(sender, "&a" + "Actor template created: " + args[3]);
+                    Text.send(sender, "&a" + "Actor template created: " + actorId);
                 } catch (Exception ex) {
                     Text.send(sender, "&c" + "Failed to save scene.");
                 }
@@ -567,9 +577,18 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Actor not found.");
                     return;
                 }
+                String targetActorId = args[4].trim();
+                if (!targetActorId.matches(ACTOR_ID_PATTERN)) {
+                    Text.send(sender, "&c" + "Invalid actorId. Use 3-32 chars: letters, numbers, _ or -.");
+                    return;
+                }
+                if (scene.getActorTemplate(targetActorId) != null) {
+                    Text.send(sender, "&c" + "Target actorId already exists.");
+                    return;
+                }
                 scene.removeActorTemplate(args[3]);
-                SceneActorTemplate renamed = new SceneActorTemplate(args[4]);
-                renamed.setDisplayName(args[4]);
+                SceneActorTemplate renamed = new SceneActorTemplate(targetActorId);
+                renamed.setDisplayName(targetActorId);
                 renamed.setEntityType(template.getEntityType());
                 renamed.setSkinName(template.getSkinName());
                 renamed.setSkinSignature(template.getSkinSignature());
@@ -581,8 +600,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 renamed.getTransformTicks().putAll(template.getTransformTicks());
                 renamed.getTickActions().putAll(template.getTickActions());
                 scene.putActorTemplate(renamed);
-                sceneManager.markDirty(scene);
-                Text.send(sender, "&a" + "Actor renamed.");
+                sceneManager.saveSceneImmediate(scene);
+                Text.send(sender, "&a" + "Actor renamed to " + targetActorId + ".");
             }
             case "delete" -> {
                 if (args.length < 5 || !"confirm".equalsIgnoreCase(args[4])) {
@@ -594,8 +613,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
+                if (scene.getActorTemplate(args[3]) == null) {
+                    Text.send(sender, "&c" + "Actor not found.");
+                    return;
+                }
                 scene.removeActorTemplate(args[3]);
-                sceneManager.markDirty(scene);
+                sceneManager.saveSceneImmediate(scene);
                 Text.send(sender, "&a" + "Actor deleted.");
             }
             case "skin" -> {
