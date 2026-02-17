@@ -777,6 +777,11 @@ public class SceneRuntimeEngine {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
+        CutsceneFrame frame = getCameraFrameAtTick(session, session.getTimeTicks());
+        if (frame != null && frame.isPlayerCamera()) {
+            player.setSpectatorTarget(null);
+            return;
+        }
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
@@ -799,6 +804,15 @@ public class SceneRuntimeEngine {
         if (frame == null || frame.getLocation() == null) {
             return;
         }
+        if (frame.isPlayerCamera()) {
+            Location playerPoint = frame.getLocation().clone();
+            playerPoint.setWorld(player.getWorld());
+            player.teleport(playerPoint);
+            player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS, 6, 0, false, false, false), true);
+            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+            return;
+        }
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");

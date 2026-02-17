@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class SceneProtocolAdapter {
-    private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
     private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
@@ -58,13 +57,13 @@ public class SceneProtocolAdapter {
     }
 
     public void sendFakeHelmet(Player player, ItemStack itemStack) {
-        ensurePumpkinMovementLock(itemStack);
+        ensurePumpkinMovementLock(itemStack, -10.0D);
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    public ItemStack createMovementLockedPumpkin() {
+    public ItemStack createMovementLockedPumpkin(double amount) {
         ItemStack itemStack = new ItemStack(Material.CARVED_PUMPKIN);
-        ensurePumpkinMovementLock(itemStack);
+        ensurePumpkinMovementLock(itemStack, amount);
         return itemStack;
     }
 
@@ -72,7 +71,7 @@ public class SceneProtocolAdapter {
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    private void ensurePumpkinMovementLock(ItemStack itemStack) {
+    private void ensurePumpkinMovementLock(ItemStack itemStack, double amount) {
         if (itemStack == null || itemStack.getType() != Material.CARVED_PUMPKIN) {
             return;
         }
@@ -91,8 +90,8 @@ public class SceneProtocolAdapter {
                 if (!AttributeModifiers.hasKey(modifier, cutsceneSpeedLockKey)) {
                     continue;
                 }
-                if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
-                        && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
+                if (modifier.getAmount() == amount
+                        && modifier.getOperation() == AttributeModifier.Operation.ADD_NUMBER
                         && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
                 } else {
@@ -103,8 +102,8 @@ public class SceneProtocolAdapter {
         if (!hasCorrectModifier) {
             AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
-                    PUMPKIN_MOVEMENT_LOCK_AMOUNT,
-                    AttributeModifier.Operation.ADD_SCALAR,
+                    amount,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     EquipmentSlot.HEAD.getGroup()
             );
             meta.addAttributeModifier(attribute, modifier);

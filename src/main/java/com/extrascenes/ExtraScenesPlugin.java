@@ -10,6 +10,7 @@ import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneRuntimeEngine;
 import com.extrascenes.scene.SkinLibrary;
 import com.extrascenes.scene.SceneSessionManager;
+import com.extrascenes.scene.CutscenePathRegistry;
 import com.extrascenes.visibility.SceneVisibilityController;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -28,6 +29,7 @@ public class ExtraScenesPlugin extends JavaPlugin {
     private SceneEditorEngine editorEngine;
     private ActorRecordingService actorRecordingService;
     private SkinLibrary skinLibrary;
+    private CutscenePathRegistry cutscenePathRegistry;
 
     @Override
     public void onEnable() {
@@ -41,6 +43,8 @@ public class ExtraScenesPlugin extends JavaPlugin {
         this.skinLibrary = new SkinLibrary(getDataFolder());
         this.editorSessionManager = new EditorSessionManager();
         this.editorEngine = new SceneEditorEngine(this, sceneManager, editorSessionManager);
+        this.cutscenePathRegistry = new CutscenePathRegistry(this);
+        this.cutscenePathRegistry.reload();
         this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
         this.runtimeEngine = new SceneRuntimeEngine(this, sessionManager, visibilityController, protocolAdapter);
         this.modelTrackAdapter = new SceneModelTrackAdapter(this, visibilityController);
@@ -126,5 +130,9 @@ public class ExtraScenesPlugin extends JavaPlugin {
 
     public SkinLibrary getSkinLibrary() {
         return skinLibrary;
+    }
+
+    public CutscenePathRegistry getCutscenePathRegistry() {
+        return cutscenePathRegistry;
     }
 }

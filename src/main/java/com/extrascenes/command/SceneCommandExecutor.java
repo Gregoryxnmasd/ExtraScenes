@@ -10,6 +10,13 @@ import com.extrascenes.scene.SceneEditorEngine;
 import com.extrascenes.scene.SceneLocation;
 import com.extrascenes.scene.SceneManager;
 import com.extrascenes.scene.SceneSession;
+import com.extrascenes.scene.RouteEditSession;
+import com.extrascenes.scene.CutscenePath;
+import com.extrascenes.scene.CameraKeyframe;
+import com.extrascenes.scene.Transform;
+import com.extrascenes.scene.Track;
+import com.extrascenes.scene.SceneTrackType;
+import com.extrascenes.scene.SmoothingMode;
 import com.extrascenes.scene.SceneSelfTestRunner;
 import com.extrascenes.scene.SceneSessionManager;
 import com.extrascenes.scene.SceneActorTemplate;
@@ -30,7 +37,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
             "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
             "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
-            "debugcamera", "debugpreview", "debugactors", "debugvisibility", "actor", "selftest"
+            "debugcamera", "debugpreview", "debugactors", "debugvisibility", "actor", "selftest", "route", "cutscene"
     );
 
     private final ExtraScenesPlugin plugin;
@@ -39,6 +46,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     private final SceneEditorEngine editorEngine;
     private final ActorRecordingService actorRecordingService;
     private final SceneSelfTestRunner selfTestRunner;
+    private final java.util.Map<java.util.UUID, RouteEditSession> routeSessions = new java.util.HashMap<>();
 
     public SceneCommandExecutor(ExtraScenesPlugin plugin, SceneManager sceneManager,
                                 SceneSessionManager sessionManager, SceneEditorEngine editorEngine) {
@@ -86,6 +94,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             case "debugvisibility" -> handleDebugVisibility(sender, args);
             case "actor" -> handleActor(sender, args);
             case "selftest" -> handleSelfTest(sender, args);
+            case "route" -> handleRoute(sender, args);
+            case "cutscene" -> handleCutscene(sender, args);
             default -> Text.send(sender, "&c" + "Unknown scene subcommand.");
         }
         return true;
@@ -345,6 +355,92 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
         Text.send(sender, "&a" + "Scene playing for " + target.getName());
+    }
+
+
+    private void handleRoute(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&cOnly players can edit routes.");
+            return;
+        }
+        if (args.length < 2) {
+            Text.send(sender, "&cUsage: /scene route <start|add|save|cancel|list> ...");
+            return;
+        }
+        String mode = args[1].toLowerCase(Locale.ROOT);
+        if ("list".equals(mode)) {
+            Text.send(sender, "&ePaths: " + String.join(", ", plugin.getCutscenePathRegistry().getIds()));
+            return;
+        }
+        if ("start".equals(mode)) {
+            if (args.length < 3) {
+                Text.send(sender, "&cUsage: /scene route start <id>");
+                return;
+            }
+            RouteEditSession session = new RouteEditSession(player.getUniqueId(), args[2]);
+            routeSessions.put(player.getUniqueId(), session);
+            Text.send(sender, "&aRoute session started for " + args[2] + ". Use /scene route add.");
+            return;
+        }
+        if ("cancel".equals(mode)) {
+            routeSessions.remove(player.getUniqueId());
+            Text.send(sender, "&eRoute session cancelled.");
+            return;
+        }
+        RouteEditSession session = routeSessions.get(player.getUniqueId());
+        if (session == null) {
+            Text.send(sender, "&cNo active route session. Use /scene route start <id>.");
+            return;
+        }
+        if ("add".equals(mode)) {
+            org.bukkit.Location loc = player.getLocation();
+            session.addPoint(new Transform(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch()));
+            player.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, loc, 10, 0.05, 0.05, 0.05, 0.0);
+            Text.send(sender, "&aPoint added (#" + session.getPoints().size() + ").");
+            return;
+        }
+        if ("save".equals(mode)) {
+            if (session.getPoints().size() < 2) {
+                Text.send(sender, "&cAt least 2 points are required.");
+                return;
+            }
+            java.util.List<CameraKeyframe> points = new java.util.ArrayList<>();
+            for (int i = 0; i < session.getPoints().size(); i++) {
+                points.add(new CameraKeyframe(java.util.UUID.randomUUID(), i, session.getPoints().get(i), SmoothingMode.LINEAR, false, com.extrascenes.scene.LookAtTarget.none()));
+            }
+            CutscenePath cutscenePath = new CutscenePath(points.size() * 8, 0.12D, SmoothingMode.LINEAR,
+                    points, java.util.Collections.emptyList(), java.util.Collections.emptySet(),
+                    java.util.Collections.emptyList(), java.util.Collections.emptyMap(), org.bukkit.Particle.END_ROD);
+            plugin.getCutscenePathRegistry().putPath(session.getRouteId(), cutscenePath);
+            routeSessions.remove(player.getUniqueId());
+            Text.send(sender, "&aRoute saved in paths.yml as " + session.getRouteId());
+        }
+    }
+
+    private void handleCutscene(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            Text.send(sender, "&cOnly players can run this command.");
+            return;
+        }
+        if (args.length < 3 || !"test".equalsIgnoreCase(args[1])) {
+            Text.send(sender, "&cUsage: /scene cutscene test <id>");
+            return;
+        }
+        String id = args[2].toLowerCase(Locale.ROOT);
+        CutscenePath path = plugin.getCutscenePathRegistry().getPath(id);
+        if (path == null) {
+            Text.send(sender, "&cUnknown cutscene path: " + id);
+            return;
+        }
+        Scene scene = new Scene("cutscene_" + id, id, path.getDurationTicks(), 1, new java.util.EnumMap<>(SceneTrackType.class));
+        scene.setFreezePlayer(true);
+        scene.setDefaultSmoothing(SmoothingMode.LINEAR);
+        SceneSession started = sessionManager.startScene(player, scene, true, 0, path.getDurationTicks());
+        if (started == null) {
+            Text.send(sender, "&cCould not start cutscene test.");
+            return;
+        }
+        Text.send(sender, "&aRunning cutscene path test: " + id);
     }
 
     private void handleStop(CommandSender sender, String[] args) {

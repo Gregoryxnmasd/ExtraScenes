@@ -38,11 +38,12 @@ public final class CutsceneTimelineBuilder {
             double dy = b.getY() - a.getY();
             double dz = b.getZ() - a.getZ();
             double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            int steps = Math.max(1, (int) Math.ceil(distance / path.getStepResolution()));
+            boolean directToPoint = path.isDirectPoint(index + 1);
+            int steps = directToPoint ? 1 : Math.max(1, (int) Math.ceil(distance / path.getStepResolution()));
             SmoothingMode mode = from.getSmoothingMode() == null ? path.getDefaultSmoothing() : from.getSmoothingMode();
 
             for (int step = 0; step < steps; step++) {
-                double t = step / (double) steps;
+                double t = directToPoint ? 1.0D : step / (double) steps;
                 double eased = applySmoothing(mode, t);
                 frames.add(buildFrame(index, a, b, eased, path));
             }
