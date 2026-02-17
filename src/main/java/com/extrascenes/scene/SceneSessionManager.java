@@ -112,6 +112,7 @@ public class SceneSessionManager {
         if (plugin.getConfig().getBoolean("camera.fake-equip", true)) {
             player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         }
+        applyCinematicZoom(player);
         applyMovementLock(player);
         applyCameraZoomEffect(player);
 
@@ -330,6 +331,7 @@ public class SceneSessionManager {
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
         player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
         player.getInventory().setItemInOffHand(session.getSnapshot().getOffHand());
+        clearCinematicZoom(player);
 
         if (session.getScene().isFreezePlayer()) {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
@@ -342,6 +344,16 @@ public class SceneSessionManager {
         if (original != null && original.getWorld() != null) {
             player.teleport(original);
         }
+    }
+
+    private void applyCinematicZoom(Player player) {
+        int amplifier = Math.max(0, plugin.getConfig().getInt("camera.zoom-slowness-amplifier", 3));
+        int durationTicks = Math.max(40, plugin.getConfig().getInt("camera.zoom-slowness-duration-ticks", 1200));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, amplifier, false, false, false));
+    }
+
+    private void clearCinematicZoom(Player player) {
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
     }
 
     private void teleportOnEnd(Player player, SceneSession session) {

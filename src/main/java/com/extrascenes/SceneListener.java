@@ -80,6 +80,16 @@ public class SceneListener implements Listener {
         editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_kick");
         sessionManager.markRestorePending(event.getPlayer().getUniqueId());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_kick");
+        if (editorSessionManager != null) {
+            EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
+            if (editorSession != null && editorEngine.hasArmedPlacement(editorSession)) {
+                editorEngine.cancelPlacementSilent(event.getPlayer(), editorSession);
+            }
+            editorSessionManager.removeSession(event.getPlayer().getUniqueId());
+        }
+        if (inputManager != null) {
+            inputManager.clearPrompt(event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler
@@ -162,7 +172,18 @@ public class SceneListener implements Listener {
         if (event.getFrom().getX() != event.getTo().getX()
                 || event.getFrom().getY() != event.getTo().getY()
                 || event.getFrom().getZ() != event.getTo().getZ()) {
-            event.setTo(event.getFrom());
+            org.bukkit.Location locked = event.getFrom().clone();
+            locked.setYaw(event.getFrom().getYaw());
+            locked.setPitch(event.getFrom().getPitch());
+            event.setTo(locked);
+            return;
+        }
+        if (event.getFrom().getYaw() != event.getTo().getYaw()
+                || event.getFrom().getPitch() != event.getTo().getPitch()) {
+            org.bukkit.Location locked = event.getTo().clone();
+            locked.setYaw(event.getFrom().getYaw());
+            locked.setPitch(event.getFrom().getPitch());
+            event.setTo(locked);
         }
     }
 
