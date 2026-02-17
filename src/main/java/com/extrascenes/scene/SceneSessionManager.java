@@ -328,6 +328,8 @@ public class SceneSessionManager {
             player.setWalkSpeed(session.getSnapshot().getWalkSpeed());
             player.setFlySpeed(session.getSnapshot().getFlySpeed());
         }
+        player.getActivePotionEffects().forEach(effect -> player.removePotionEffect(effect.getType()));
+        session.getSnapshot().getPotionEffects().forEach(player::addPotionEffect);
         player.setFlying(session.getSnapshot().isFlying());
         Location original = session.getSnapshot().getLocation();
         if (original != null && original.getWorld() != null) {
