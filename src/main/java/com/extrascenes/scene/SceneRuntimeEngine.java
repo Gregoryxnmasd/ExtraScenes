@@ -773,7 +773,7 @@ public class SceneRuntimeEngine {
         }
         return attributable.getAttribute(attribute).getBaseValue();
     }
-    private void ensureSpectatorTarget(Player player, SceneSession session, CutsceneFrame frame) {
+    private void ensureSpectatorTarget(Player player, SceneSession session) {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
@@ -829,6 +829,17 @@ public class SceneRuntimeEngine {
         for (String command : path.getSegmentCommands(currentSegment)) {
             dispatchConsoleCommand(player, command);
         }
+    }
+
+    private void dispatchConsoleCommand(Player player, String command) {
+        if (player == null || command == null || command.isBlank()) {
+            return;
+        }
+        String resolved = command.replace("{player}", player.getName()).trim();
+        if (resolved.isEmpty()) {
+            return;
+        }
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), resolved);
     }
 
     private CutsceneFrame getCameraFrameAtTick(SceneSession session, int tick) {
