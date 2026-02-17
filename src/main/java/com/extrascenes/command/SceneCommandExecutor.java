@@ -26,6 +26,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
+    private static final String ACTOR_ID_PATTERN = "[a-zA-Z0-9_-]{3,32}";
     private static final List<String> SUBCOMMANDS = List.of(
             "main", "edit", "play", "stop", "pause", "resume", "reload", "list",
             "create", "delete", "rename", "duplicate", "group", "tick", "cancel", "here", "setend",
@@ -545,13 +546,22 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
-                SceneActorTemplate template = new SceneActorTemplate(args[3]);
-                template.setDisplayName(args[3]);
+                String actorId = args[3].trim();
+                if (!actorId.matches(ACTOR_ID_PATTERN)) {
+                    Text.send(sender, "&c" + "Invalid actorId. Use 3-32 chars: letters, numbers, _ or -.");
+                    return;
+                }
+                if (scene.getActorTemplate(actorId) != null) {
+                    Text.send(sender, "&c" + "Actor already exists in this scene.");
+                    return;
+                }
+                SceneActorTemplate template = new SceneActorTemplate(actorId);
+                template.setDisplayName(actorId);
                 scene.putActorTemplate(template);
-                scene.setDirty(true);
+                sceneManager.markDirty(scene);
                 try {
                     sceneManager.saveScene(scene);
-                    Text.send(sender, "&a" + "Actor template created: " + args[3]);
+                    Text.send(sender, "&a" + "Actor template created: " + actorId);
                 } catch (Exception ex) {
                     Text.send(sender, "&c" + "Failed to save scene.");
                 }
@@ -571,9 +581,18 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Actor not found.");
                     return;
                 }
+                String targetActorId = args[4].trim();
+                if (!targetActorId.matches(ACTOR_ID_PATTERN)) {
+                    Text.send(sender, "&c" + "Invalid actorId. Use 3-32 chars: letters, numbers, _ or -.");
+                    return;
+                }
+                if (scene.getActorTemplate(targetActorId) != null) {
+                    Text.send(sender, "&c" + "Target actorId already exists.");
+                    return;
+                }
                 scene.removeActorTemplate(args[3]);
-                SceneActorTemplate renamed = new SceneActorTemplate(args[4]);
-                renamed.setDisplayName(args[4]);
+                SceneActorTemplate renamed = new SceneActorTemplate(targetActorId);
+                renamed.setDisplayName(targetActorId);
                 renamed.setEntityType(template.getEntityType());
                 renamed.setSkinName(template.getSkinName());
                 renamed.setSkinSignature(template.getSkinSignature());
@@ -585,8 +604,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 renamed.getTransformTicks().putAll(template.getTransformTicks());
                 renamed.getTickActions().putAll(template.getTickActions());
                 scene.putActorTemplate(renamed);
-                sceneManager.markDirty(scene);
-                Text.send(sender, "&a" + "Actor renamed.");
+                sceneManager.saveSceneImmediate(scene);
+                Text.send(sender, "&a" + "Actor renamed to " + targetActorId + ".");
             }
             case "delete" -> {
                 if (args.length < 5 || !"confirm".equalsIgnoreCase(args[4])) {
@@ -598,8 +617,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                     Text.send(sender, "&c" + "Scene not found.");
                     return;
                 }
+                if (scene.getActorTemplate(args[3]) == null) {
+                    Text.send(sender, "&c" + "Actor not found.");
+                    return;
+                }
                 scene.removeActorTemplate(args[3]);
-                sceneManager.markDirty(scene);
+                sceneManager.saveSceneImmediate(scene);
                 Text.send(sender, "&a" + "Actor deleted.");
             }
             case "skin" -> {
@@ -730,74 +753,24 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             Text.send(sender, "&c" + "Actor not found.");
             return;
         }
-        int startTick = 1;
-        int durationTicks = 15 * 20;
-        com.extrascenes.scene.RecordingDurationUnit durationUnit = com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-        boolean previewOthers = true;
-        boolean startTickSet = false;
+        ActorRecordArguments recordArguments = ActorRecordArguments.parse(args, 5);
+        recordArguments.warnings().forEach(warning -> Text.send(sender, "&e" + warning));
 
-        for (int i = 5; i < args.length; i++) {
-            String token = args[i].trim();
-            if (token.isBlank()) {
-                continue;
-            }
-            String lower = token.toLowerCase(Locale.ROOT);
-            if (!startTickSet && lower.matches("\\d+")) {
-                startTick = Integer.parseInt(lower);
-                startTickSet = true;
-                continue;
-            }
-            if (lower.startsWith("start:")) {
-                Integer parsedStart = parsePositiveInt(lower.substring("start:".length()));
-                if (parsedStart == null) {
-                    Text.send(sender, "&c" + "Invalid start tick token '" + token + "'; using current value.");
-                } else {
-                    startTick = parsedStart;
-                    startTickSet = true;
-                }
-                continue;
-            }
-            if (lower.startsWith("preview:")) {
-                String raw = lower.substring("preview:".length());
-                if (raw.equals("on") || raw.equals("true") || raw.equals("yes")) {
-                    previewOthers = true;
-                } else if (raw.equals("off") || raw.equals("false") || raw.equals("no")) {
-                    previewOthers = false;
-                } else {
-                    Text.send(sender, "&c" + "Invalid preview token '" + token + "'; expected preview:on|off.");
-                }
-                continue;
-            }
-            String durationRaw = lower.startsWith("duration:")
-                    ? lower.substring("duration:".length())
-                    : lower;
-            if (looksLikeDuration(durationRaw) || durationRaw.matches("\\d+")) {
-                int[] parsed = parseDurationTicks(durationRaw);
-                if (parsed == null) {
-                    Text.send(sender, "&c" + "Invalid duration token '" + token + "'; keeping current duration.");
-                } else {
-                    durationTicks = parsed[0];
-                    durationUnit = parsed[1] == 1
-                            ? com.extrascenes.scene.RecordingDurationUnit.TICKS
-                            : com.extrascenes.scene.RecordingDurationUnit.SECONDS;
-                }
-                continue;
-            }
-            Text.send(sender, "&e" + "Unknown recording option ignored: " + token);
-        }
+        int startTick = recordArguments.startTick();
         if (scene.getDurationTicks() > 0) {
             startTick = Math.max(1, Math.min(scene.getDurationTicks(), startTick));
         } else {
             startTick = Math.max(1, startTick);
         }
         player.getInventory().addItem(com.extrascenes.scene.SceneWand.createRecordingWand());
-        actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick, previewOthers, durationTicks, durationUnit);
-        int displayDuration = durationUnit == com.extrascenes.scene.RecordingDurationUnit.SECONDS
-                ? Math.max(1, (durationTicks + 19) / 20)
-                : durationTicks;
+        actorRecordingService.startRecordingWithCountdown(player, scene, template, startTick,
+                recordArguments.previewOthers(), recordArguments.durationTicks(), recordArguments.durationUnit());
+        int displayDuration = recordArguments.durationUnit() == com.extrascenes.scene.RecordingDurationUnit.SECONDS
+                ? Math.max(1, (recordArguments.durationTicks() + 19) / 20)
+                : recordArguments.durationTicks();
         Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick
-                + " for " + displayDuration + durationUnit.suffix()
-                + " (preview others: " + (previewOthers ? "on" : "off") + ", countdown 3..2..1).");
+                + " for " + displayDuration + recordArguments.durationUnit().suffix()
+                + " (preview others: " + (recordArguments.previewOthers() ? "on" : "off") + ", countdown 3..2..1).");
     }
 
 
@@ -824,14 +797,14 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
         Integer fromTick = null;
         Integer toTick = null;
-        if (args.length >= 7) {
+        if (optionalLimit >= 6) {
             fromTick = parsePositiveInt(args[5]);
             if (fromTick == null) {
                 Text.send(sender, "&c" + "Invalid fromTick value.");
                 return;
             }
         }
-        if (args.length >= 8) {
+        if (optionalLimit >= 7) {
             toTick = parsePositiveInt(args[6]);
             if (toTick == null) {
                 Text.send(sender, "&c" + "Invalid toTick value.");
@@ -887,29 +860,6 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return null;
         }
     }
-
-    private boolean looksLikeDuration(String value) {
-        if (value == null || value.isBlank()) {
-            return false;
-        }
-        char last = value.charAt(value.length() - 1);
-        return last == 's' || last == 't';
-    }
-
-    private int[] parseDurationTicks(String raw) {
-        try {
-            if (raw.endsWith("t")) {
-                return new int[]{Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1))), 1};
-            }
-            if (raw.endsWith("s")) {
-                return new int[]{Math.max(1, Integer.parseInt(raw.substring(0, raw.length() - 1)) * 20), 0};
-            }
-            return new int[]{Math.max(1, Integer.parseInt(raw) * 20), 0};
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
-
 
     private void handleSelfTest(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
