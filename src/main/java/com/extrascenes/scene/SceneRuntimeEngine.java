@@ -817,6 +817,7 @@ public class SceneRuntimeEngine {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
+        Location point = frame.getLocation().clone();
         point.setWorld(cameraRig.getWorld());
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
         visibilityController.showEntityToPlayer(cameraRig, player);
