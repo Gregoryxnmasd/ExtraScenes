@@ -7,7 +7,9 @@ import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.Location;
 
 public class PlayerStateSnapshot {
     private static final NamespacedKey GENERIC_MAX_HEALTH_KEY = NamespacedKey.minecraft("generic.max_health");
@@ -19,6 +21,10 @@ public class PlayerStateSnapshot {
     private final double health;
     private final Collection<PotionEffect> potionEffects;
     private final ItemStack helmet;
+    private final ItemStack[] inventoryContents;
+    private final ItemStack[] armorContents;
+    private final ItemStack offHand;
+    private final Location location;
 
     public PlayerStateSnapshot(Player player) {
         this.gameMode = player.getGameMode();
@@ -30,7 +36,12 @@ public class PlayerStateSnapshot {
                 ? player.getHealth()
                 : 20.0;
         this.potionEffects = player.getActivePotionEffects();
-        this.helmet = player.getInventory().getHelmet();
+        PlayerInventory inventory = player.getInventory();
+        this.helmet = inventory.getHelmet();
+        this.inventoryContents = inventory.getContents().clone();
+        this.armorContents = inventory.getArmorContents().clone();
+        this.offHand = inventory.getItemInOffHand() == null ? null : inventory.getItemInOffHand().clone();
+        this.location = player.getLocation().clone();
     }
 
     private static Attribute resolveMaxHealthAttribute() {
@@ -67,5 +78,21 @@ public class PlayerStateSnapshot {
 
     public ItemStack getHelmet() {
         return helmet;
+    }
+
+    public ItemStack[] getInventoryContents() {
+        return inventoryContents.clone();
+    }
+
+    public ItemStack[] getArmorContents() {
+        return armorContents.clone();
+    }
+
+    public ItemStack getOffHand() {
+        return offHand == null ? null : offHand.clone();
+    }
+
+    public Location getLocation() {
+        return location == null ? null : location.clone();
     }
 }
