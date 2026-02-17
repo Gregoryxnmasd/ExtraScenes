@@ -774,12 +774,11 @@ public class SceneRuntimeEngine {
         }
         return attributable.getAttribute(attribute).getBaseValue();
     }
-    private void ensureSpectatorTarget(Player player, SceneSession session) {
+    private void ensureSpectatorTarget(Player player, SceneSession session, CutsceneFrame frame) {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
-        boolean playerCamera = isPlayerCameraFrame(session, session.getTimeTicks());
-        if (playerCamera) {
+        if (frame != null && frame.isPlayerCamera()) {
             if (player.getSpectatorTarget() != null) {
                 protocolAdapter.clearSpectatorCamera(player);
             }
@@ -814,6 +813,7 @@ public class SceneRuntimeEngine {
 
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
+            sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
@@ -858,9 +858,38 @@ public class SceneRuntimeEngine {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.startsWith("/") ? command.substring(1) : command);
     }
 
-    private boolean isPlayerCameraFrame(SceneSession session, int tick) {
-        CutsceneFrame frame = getCameraFrameAtTick(session, tick);
-        return frame != null && frame.isPlayerCamera();
+    private void applySegmentCommands(Player player, SceneSession session, CutsceneFrame frame) {
+        if (frame == null) {
+            return;
+        }
+        int segmentIndex = frame.getSegmentIndex();
+        if (segmentIndex == session.getLastAppliedSegmentIndex()) {
+            return;
+        }
+        session.setLastAppliedSegmentIndex(segmentIndex);
+        CutscenePath path = session.getCutscenePath();
+        if (path == null || !session.markSegmentCommandExecuted(segmentIndex)) {
+            return;
+        }
+        executeConfiguredCommands(player, path.getSegmentCommands(segmentIndex), segmentIndex);
+    }
+
+    private void executeConfiguredCommands(Player player, List<String> commands, int segmentIndex) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        for (String rawCommand : commands) {
+            if (rawCommand == null || rawCommand.isBlank()) {
+                continue;
+            }
+            String command = rawCommand.trim()
+                    .replace("{player}", player.getName())
+                    .replace("{segment}", String.valueOf(segmentIndex));
+            if (command.startsWith("/")) {
+                command = command.substring(1);
+            }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+        }
     }
 
     private CutsceneFrame getCameraFrameAtTick(SceneSession session, int tick) {

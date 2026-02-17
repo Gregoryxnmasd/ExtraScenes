@@ -25,6 +25,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.configuration.ConfigurationSection;
 
 public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
@@ -76,6 +77,8 @@ public class SceneSessionManager {
         session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
 
         CutscenePath cutscenePath = buildCutscenePath(scene);
+        session.setCutscenePath(cutscenePath);
+        session.resetSegmentCommandExecution();
         java.util.List<CutsceneFrame> timeline = CutsceneTimelineBuilder.build(cutscenePath);
         if (timeline.isEmpty()) {
             sessions.remove(player.getUniqueId());
