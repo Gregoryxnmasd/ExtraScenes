@@ -30,7 +30,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 public class SceneRuntimeEngine {
-    private static final double MAX_CAMERA_STEP_DISTANCE = 1.75D;
     private static final String PREVIEW_TAG = "extrascenes_preview";
     private static final String PREVIEW_VIEWER_PREFIX = "extrascenes_viewer_";
     private static final String PREVIEW_ACTOR_PREFIX = "extrascenes_actor_";
@@ -818,16 +817,14 @@ public class SceneRuntimeEngine {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
-        Location point = frame.getLocation().clone();
         point.setWorld(cameraRig.getWorld());
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
         visibilityController.showEntityToPlayer(cameraRig, player);
 
-        Location from = cameraRig.getLocation().clone();
-        clampCameraDelta(from, point, session, timeTicks);
         cameraRig.teleport(point);
-        session.setLastCameraLocation(from);
-        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+        protocolAdapter.applySpectatorCamera(player, cameraRig);
+        session.setLastCameraLocation(point);
+        session.setPlayerCameraActive(false);
     }
 
     private void runCutscenePathCommands(Player player, SceneSession session, int timeTicks) {
@@ -845,11 +842,11 @@ public class SceneRuntimeEngine {
             return;
         }
         int currentSegment = frame.getSegmentIndex();
-        if (currentSegment == session.getLastAppliedSegmentIndex()) {
-            return;
-        }
-        for (String command : path.getSegmentCommands(currentSegment)) {
-            dispatchConsoleCommand(player, command);
+        if (currentSegment != session.getLastAppliedSegmentIndex()
+                && session.markSegmentCommandExecuted(currentSegment)) {
+            for (String command : path.getSegmentCommands(currentSegment)) {
+                dispatchConsoleCommand(player, command);
+            }
         }
     }
 
@@ -871,26 +868,6 @@ public class SceneRuntimeEngine {
         }
         int frameIndex = Math.min(Math.max(0, tick), timeline.size() - 1);
         return timeline.get(frameIndex);
-    }
-
-    private void clampCameraDelta(Location from, Location to, SceneSession session, int tick) {
-        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
-                || !from.getWorld().equals(to.getWorld())) {
-            return;
-        }
-        double distance = from.distance(to);
-        if (distance <= MAX_CAMERA_STEP_DISTANCE || distance <= 0.0D) {
-            return;
-        }
-        double ratio = MAX_CAMERA_STEP_DISTANCE / distance;
-        to.setX(from.getX() + (to.getX() - from.getX()) * ratio);
-        to.setY(from.getY() + (to.getY() - from.getY()) * ratio);
-        to.setZ(from.getZ() + (to.getZ() - from.getZ()) * ratio);
-        if (tick % 20 == 0) {
-            plugin.getLogger().warning(String.format(java.util.Locale.ROOT,
-                    "[camera-clamp] session=%s tick=%d delta=%.3f clampedTo=%.3f",
-                    session.getSessionId(), tick, distance, MAX_CAMERA_STEP_DISTANCE));
-        }
     }
 
     private Transform interpolateCamera(Player player, SceneSession session, List<CameraKeyframe> keyframes, int timeTicks) {

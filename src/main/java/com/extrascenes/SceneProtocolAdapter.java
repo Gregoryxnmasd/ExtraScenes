@@ -2,6 +2,7 @@ package com.extrascenes;
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
@@ -10,7 +11,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.key.Key;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,12 +18,12 @@ import java.util.Collection;
 public class SceneProtocolAdapter {
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
-    private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
+    private final NamespacedKey cutsceneSpeedLockKey;
 
     public SceneProtocolAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.protocolLibAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib");
-        this.cutsceneSpeedLockKey = new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock");
+        this.cutsceneSpeedLockKey = new NamespacedKey(plugin, "cutscene_speed_lock");
     }
 
     public boolean isProtocolLibAvailable() {

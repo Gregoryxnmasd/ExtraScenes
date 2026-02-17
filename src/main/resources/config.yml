@@ -31,3 +31,7 @@ camera:
 locks:
   movement: true
   hud: true
+
+cutscene:
+  fake-equip: true
+  fake-helmet-movement-speed: 10.0

@@ -119,6 +119,7 @@ public class SceneSessionManager {
 
         player.setGameMode(GameMode.SPECTATOR);
         protocolAdapter.applySpectatorCamera(player, rig);
+        session.setPlayerCameraActive(false);
         startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
@@ -326,10 +327,12 @@ public class SceneSessionManager {
 
     private void restorePlayerState(Player player, SceneSession session) {
         protocolAdapter.clearSpectatorCamera(player);
+        session.setPlayerCameraActive(false);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
         protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setHelmet(session.getOriginalHelmet());
+        protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
         player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
         player.getInventory().setItemInOffHand(session.getSnapshot().getOffHand());
@@ -605,6 +608,20 @@ public class SceneSessionManager {
                 directPoints, startCommands, segmentCommands, particle);
     }
 
+
+    private boolean isFakeEquipEnabled() {
+        if (plugin.getConfig().isSet("cutscene.fake-equip")) {
+            return plugin.getConfig().getBoolean("cutscene.fake-equip", true);
+        }
+        return plugin.getConfig().getBoolean("camera.fake-equip", true);
+    }
+
+    private double getFakeHelmetMovementSpeed() {
+        if (plugin.getConfig().isSet("cutscene.fake-helmet-movement-speed")) {
+            return plugin.getConfig().getDouble("cutscene.fake-helmet-movement-speed", 10.0D);
+        }
+        return plugin.getConfig().getDouble("camera.fake-helmet-movement-speed", 10.0D);
+    }
 
     private void applyCameraZoomEffect(Player player) {
         if (player == null) {
