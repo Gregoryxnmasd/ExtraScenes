@@ -7,9 +7,15 @@ public class CameraKeyframe extends Keyframe {
     private SmoothingMode smoothingMode;
     private boolean instant;
     private LookAtTarget lookAt;
+    private boolean allowPlayerLook;
 
     public CameraKeyframe(UUID id, int timeTicks, Transform transform, SmoothingMode smoothingMode, boolean instant,
                           LookAtTarget lookAt) {
+        this(id, timeTicks, transform, smoothingMode, instant, lookAt, false);
+    }
+
+    public CameraKeyframe(UUID id, int timeTicks, Transform transform, SmoothingMode smoothingMode, boolean instant,
+                          LookAtTarget lookAt, boolean allowPlayerLook) {
         super(id, timeTicks);
         this.transform = transform;
         this.smoothingMode = smoothingMode == null ? SmoothingMode.SMOOTH : smoothingMode;
@@ -18,6 +24,7 @@ public class CameraKeyframe extends Keyframe {
         }
         this.instant = this.smoothingMode == SmoothingMode.INSTANT;
         this.lookAt = lookAt == null ? LookAtTarget.none() : lookAt;
+        this.allowPlayerLook = allowPlayerLook;
     }
 
     @Override
@@ -64,5 +71,13 @@ public class CameraKeyframe extends Keyframe {
 
     public void setLookAt(LookAtTarget lookAt) {
         this.lookAt = lookAt;
+    }
+
+    public boolean isAllowPlayerLook() {
+        return allowPlayerLook;
+    }
+
+    public void setAllowPlayerLook(boolean allowPlayerLook) {
+        this.allowPlayerLook = allowPlayerLook;
     }
 }

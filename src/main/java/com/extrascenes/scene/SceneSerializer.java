@@ -66,6 +66,7 @@ public class SceneSerializer {
             payload.addProperty("smoothing", camera.getSmoothingMode().name());
             payload.addProperty("instant", camera.isInstant());
             payload.add("lookAt", serializeLookAt(camera.getLookAt()));
+            payload.addProperty("allowPlayerLook", camera.isAllowPlayerLook());
         } else if (keyframe instanceof ActionBarKeyframe actionBar) {
             payload.addProperty("text", actionBar.getText());
             payload.addProperty("durationTicks", actionBar.getDurationTicks());
@@ -204,6 +205,7 @@ public class SceneSerializer {
                     cameraPayload.addProperty("smoothing", camera.getSmoothingMode().name());
                     cameraPayload.addProperty("instant", camera.isInstant());
                     cameraPayload.add("lookAt", serializeLookAt(camera.getLookAt()));
+                    cameraPayload.addProperty("allowPlayerLook", camera.isAllowPlayerLook());
                     tickObject.add("camera", cameraPayload);
                 } else if (keyframe instanceof CommandKeyframe command) {
                     JsonObject commandPayload = new JsonObject();

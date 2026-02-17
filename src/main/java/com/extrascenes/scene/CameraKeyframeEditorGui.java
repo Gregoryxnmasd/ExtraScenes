@@ -36,6 +36,9 @@ public class CameraKeyframeEditorGui implements EditorGui {
                     List.of("Capture player transform.")));
             inventory.setItem(22, GuiUtils.makeItem(Material.REPEATER, "Smoothing: " + keyframe.getSmoothingMode(),
                     List.of("Click to cycle.")));
+            inventory.setItem(23, GuiUtils.makeItem(Material.ENDER_EYE,
+                    "Movimiento libre: " + (keyframe.isAllowPlayerLook() ? "ON" : "OFF"),
+                    List.of("ON: el jugador controla el giro de cámara.", "OFF: cámara bloqueada.")));
 
             inventory.setItem(29, GuiUtils.makeItem(Material.ARROW, "Adjust X ±0.5",
                     List.of("Left: -0.5", "Right: +0.5")));
@@ -99,6 +102,12 @@ public class CameraKeyframeEditorGui implements EditorGui {
         }
         if (slot == 22) {
             keyframe.setSmoothingMode(keyframe.getSmoothingMode().next());
+            editorEngine.markDirty(session.getScene());
+            refresh(session);
+            return;
+        }
+        if (slot == 23) {
+            keyframe.setAllowPlayerLook(!keyframe.isAllowPlayerLook());
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;

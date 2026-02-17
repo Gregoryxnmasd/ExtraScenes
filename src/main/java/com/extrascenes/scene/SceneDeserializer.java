@@ -134,7 +134,8 @@ public class SceneDeserializer {
                     smoothing = SmoothingMode.INSTANT;
                 }
                 LookAtTarget lookAt = deserializeLookAt(payload.get("lookAt"));
-                return new CameraKeyframe(id, timeTicks, transform, smoothing, instant, lookAt);
+                boolean allowPlayerLook = payload.has("allowPlayerLook") && payload.get("allowPlayerLook").getAsBoolean();
+                return new CameraKeyframe(id, timeTicks, transform, smoothing, instant, lookAt, allowPlayerLook);
             }
             case COMMAND -> {
                 List<String> commands = new ArrayList<>();
@@ -264,8 +265,9 @@ public class SceneDeserializer {
                     smoothing = SmoothingMode.INSTANT;
                 }
                 LookAtTarget lookAt = deserializeLookAt(camera.get("lookAt"));
+                boolean allowPlayerLook = camera.has("allowPlayerLook") && camera.get("allowPlayerLook").getAsBoolean();
                 Track<CameraKeyframe> track = getOrCreate(tracks, SceneTrackType.CAMERA);
-                track.addKeyframe(new CameraKeyframe(null, tick, transform, smoothing, instant, lookAt));
+                track.addKeyframe(new CameraKeyframe(null, tick, transform, smoothing, instant, lookAt, allowPlayerLook));
             }
             if (tickObject.has("commands")) {
                 JsonObject commands = tickObject.getAsJsonObject("commands");
