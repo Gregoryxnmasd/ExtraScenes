@@ -17,6 +17,7 @@ camera:
   armorstand-invisible: true
   hide-others: true
   fake-equip: true
+  fake-helmet-movement-speed: 10.0
   zoom-slowness-amplifier: 3
   zoom-slowness-duration-ticks: 1200
   step-resolution: 0.35
@@ -29,3 +30,7 @@ camera:
 locks:
   movement: true
   hud: true
+
+cutscene:
+  fake-equip: true
+  fake-helmet-movement-speed: 10.0

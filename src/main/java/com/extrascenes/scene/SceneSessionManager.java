@@ -603,6 +603,20 @@ public class SceneSessionManager {
     }
 
 
+    private boolean isFakeEquipEnabled() {
+        if (plugin.getConfig().isSet("cutscene.fake-equip")) {
+            return plugin.getConfig().getBoolean("cutscene.fake-equip", true);
+        }
+        return plugin.getConfig().getBoolean("camera.fake-equip", true);
+    }
+
+    private double getFakeHelmetMovementSpeed() {
+        if (plugin.getConfig().isSet("cutscene.fake-helmet-movement-speed")) {
+            return plugin.getConfig().getDouble("cutscene.fake-helmet-movement-speed", 10.0D);
+        }
+        return plugin.getConfig().getDouble("camera.fake-helmet-movement-speed", 10.0D);
+    }
+
     private void applyCameraZoomEffect(Player player) {
         if (player == null) {
             return;
