@@ -19,6 +19,8 @@ camera:
   fake-equip: true
   step-resolution: 0.35
   player-segments: ""
+  start-commands: []
+  segment-commands: {}
 locks:
   movement: true
   hud: true

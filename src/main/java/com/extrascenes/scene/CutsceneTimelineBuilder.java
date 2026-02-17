@@ -10,66 +10,76 @@ public final class CutsceneTimelineBuilder {
     }
 
     public static List<CutsceneFrame> build(CutscenePath path) {
-        if (path == null || path.getPoints().isEmpty()) {
+        if (path == null || path.getPoints().size() < 1) {
             return Collections.emptyList();
         }
         List<CameraKeyframe> keyframes = new ArrayList<>(path.getPoints());
         keyframes.sort(java.util.Comparator.comparingInt(CameraKeyframe::getTimeTicks));
 
-        List<CutsceneFrame> timeline = new ArrayList<>();
-        int totalTicks = Math.max(path.getDurationTicks(), keyframes.get(keyframes.size() - 1).getTimeTicks() + 1);
-        for (int tick = 0; tick < totalTicks; tick++) {
-            InterpolatedFrame frame = sampleAtTick(path, keyframes, tick);
-            if (frame == null) {
-                continue;
-            }
-            timeline.add(new CutsceneFrame(frame.location(), frame.segmentIndex(), path.isPlayerCameraSegment(frame.segmentIndex())));
+        List<CutsceneFrame> rawFrames = buildRawFrames(path, keyframes);
+        if (rawFrames.isEmpty()) {
+            return Collections.emptyList();
         }
-        return timeline;
+        return stretchToDuration(path.getDurationTicks(), rawFrames);
     }
 
-    private static InterpolatedFrame sampleAtTick(CutscenePath path, List<CameraKeyframe> keyframes, int tick) {
-        if (keyframes.isEmpty()) {
-            return null;
-        }
-        CameraKeyframe previous = keyframes.get(0);
-        int prevIndex = 0;
-        CameraKeyframe next = keyframes.get(keyframes.size() - 1);
-
-        for (int i = 0; i < keyframes.size(); i++) {
-            CameraKeyframe candidate = keyframes.get(i);
-            if (candidate.getTimeTicks() <= tick) {
-                previous = candidate;
-                prevIndex = i;
+    private static List<CutsceneFrame> buildRawFrames(CutscenePath path, List<CameraKeyframe> keyframes) {
+        List<CutsceneFrame> frames = new ArrayList<>();
+        for (int index = 0; index < keyframes.size() - 1; index++) {
+            CameraKeyframe from = keyframes.get(index);
+            CameraKeyframe to = keyframes.get(index + 1);
+            Transform a = from.getTransform();
+            Transform b = to.getTransform();
+            if (a == null || b == null) {
+                continue;
             }
-            if (candidate.getTimeTicks() >= tick) {
-                next = candidate;
-                break;
+
+            double dx = b.getX() - a.getX();
+            double dy = b.getY() - a.getY();
+            double dz = b.getZ() - a.getZ();
+            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            int steps = Math.max(1, (int) Math.ceil(distance / path.getStepResolution()));
+            SmoothingMode mode = from.getSmoothingMode() == null ? path.getDefaultSmoothing() : from.getSmoothingMode();
+
+            for (int step = 0; step < steps; step++) {
+                double t = step / (double) steps;
+                double eased = applySmoothing(mode, t);
+                frames.add(buildFrame(index, a, b, eased, path));
             }
         }
 
-        Transform a = previous.getTransform();
-        Transform b = next.getTransform();
-        if (a == null || b == null) {
-            return null;
+        CameraKeyframe last = keyframes.get(keyframes.size() - 1);
+        if (last.getTransform() != null) {
+            Transform transform = last.getTransform();
+            Location location = new Location(null, transform.getX(), transform.getY(), transform.getZ(),
+                    transform.getYaw(), transform.getPitch());
+            frames.add(new CutsceneFrame(location, Math.max(0, keyframes.size() - 2),
+                    path.isPlayerCameraSegment(Math.max(0, keyframes.size() - 2))));
         }
-        int deltaTicks = Math.max(1, next.getTimeTicks() - previous.getTimeTicks());
-        double baseT = Math.max(0.0D, Math.min(1.0D, (tick - previous.getTimeTicks()) / (double) deltaTicks));
+        return frames;
+    }
 
-        SmoothingMode mode = previous.getSmoothingMode() == null ? path.getDefaultSmoothing() : previous.getSmoothingMode();
-        double eased = applySmoothing(mode, baseT);
-
+    private static CutsceneFrame buildFrame(int segmentIndex, Transform a, Transform b, double eased, CutscenePath path) {
         double x = a.getX() + (b.getX() - a.getX()) * eased;
         double y = a.getY() + (b.getY() - a.getY()) * eased;
         double z = a.getZ() + (b.getZ() - a.getZ()) * eased;
-
         float yaw = lerpAngle(a.getYaw(), b.getYaw(), (float) eased);
         float pitch = (float) (a.getPitch() + (b.getPitch() - a.getPitch()) * eased);
-
-        return new InterpolatedFrame(new Location(null, x, y, z, yaw, pitch), prevIndex);
+        Location location = new Location(null, x, y, z, yaw, pitch);
+        return new CutsceneFrame(location, segmentIndex, path.isPlayerCameraSegment(segmentIndex));
     }
 
-    private record InterpolatedFrame(Location location, int segmentIndex) {
+    private static List<CutsceneFrame> stretchToDuration(int durationTicks, List<CutsceneFrame> rawFrames) {
+        int target = Math.max(1, durationTicks);
+        if (rawFrames.size() == target) {
+            return rawFrames;
+        }
+        List<CutsceneFrame> resized = new ArrayList<>(target);
+        for (int tick = 0; tick < target; tick++) {
+            int index = (int) Math.floor((tick / (double) Math.max(1, target - 1)) * Math.max(0, rawFrames.size() - 1));
+            resized.add(rawFrames.get(Math.max(0, Math.min(index, rawFrames.size() - 1))));
+        }
+        return resized;
     }
 
     private static double applySmoothing(SmoothingMode mode, double t) {

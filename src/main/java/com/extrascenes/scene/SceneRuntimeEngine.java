@@ -130,6 +130,7 @@ public class SceneRuntimeEngine {
             return;
         }
 
+        runCutscenePathCommands(player, session, time);
         updateCameraRigTransform(player, session, time);
         ensureSpectatorTarget(player, session);
         tickSessionActors(player, session, time);
@@ -772,7 +773,7 @@ public class SceneRuntimeEngine {
         }
         return attributable.getAttribute(attribute).getBaseValue();
     }
-    private void ensureSpectatorTarget(Player player, SceneSession session) {
+    private void ensureSpectatorTarget(Player player, SceneSession session, CutsceneFrame frame) {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
@@ -785,19 +786,16 @@ public class SceneRuntimeEngine {
     }
 
     private void updateCameraRigTransform(Player player, SceneSession session, int timeTicks) {
-        Track<CameraKeyframe> cameraTrack = session.getScene().getTrack(SceneTrackType.CAMERA);
-        if (cameraTrack == null || cameraTrack.getKeyframes().isEmpty()) {
+        CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
+        if (frame == null || frame.getLocation() == null) {
             return;
         }
-        Transform transform = interpolateCamera(player, session, cameraTrack.getKeyframes(), timeTicks);
-        if (transform == null) {
-            return;
-        }
-        Location point = player.getLocation().clone();
-        transform.applyTo(point);
+        Location point = frame.getLocation().clone();
+        point.setWorld(player.getWorld());
 
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
+            sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
             return;
         }
         visibilityController.hideEntityFromAllExcept(cameraRig, player);
@@ -807,10 +805,29 @@ public class SceneRuntimeEngine {
         clampCameraDelta(from, point, session, timeTicks);
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
+        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+    }
 
+    private void runCutscenePathCommands(Player player, SceneSession session, int timeTicks) {
+        CutscenePath path = session.getCutscenePath();
+        if (path == null) {
+            return;
+        }
+        if (timeTicks == session.getStartTick()) {
+            for (String command : path.getStartCommands()) {
+                dispatchConsoleCommand(player, command);
+            }
+        }
         CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
-        if (frame != null) {
-            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+        if (frame == null) {
+            return;
+        }
+        int currentSegment = frame.getSegmentIndex();
+        if (currentSegment == session.getLastAppliedSegmentIndex()) {
+            return;
+        }
+        for (String command : path.getSegmentCommands(currentSegment)) {
+            dispatchConsoleCommand(player, command);
         }
     }
 

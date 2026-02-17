@@ -25,6 +25,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.configuration.ConfigurationSection;
 
 public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
@@ -76,12 +77,15 @@ public class SceneSessionManager {
         session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
 
         CutscenePath cutscenePath = buildCutscenePath(scene);
+        session.setCutscenePath(cutscenePath);
+        session.resetSegmentCommandExecution();
         java.util.List<CutsceneFrame> timeline = CutsceneTimelineBuilder.build(cutscenePath);
         if (timeline.isEmpty()) {
             sessions.remove(player.getUniqueId());
             plugin.getLogger().severe("Scene " + scene.getName() + " has no camera points, aborting start for " + player.getName());
             return null;
         }
+        session.setCutscenePath(cutscenePath);
         session.setCameraTimeline(timeline);
 
         Location rigStartLocation = timeline.get(0).getLocation().clone();
@@ -562,7 +566,20 @@ public class SceneSessionManager {
         int durationTicks = scene.getDurationTicks() <= 0
                 ? Math.max(1, points.stream().mapToInt(CameraKeyframe::getTimeTicks).max().orElse(0) + 1)
                 : scene.getDurationTicks();
-        return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments);
+        java.util.List<String> startCommands = plugin.getConfig().getStringList("camera.start-commands");
+        java.util.Map<Integer, java.util.List<String>> segmentCommands = new java.util.LinkedHashMap<>();
+        org.bukkit.configuration.ConfigurationSection section = plugin.getConfig().getConfigurationSection("camera.segment-commands");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                try {
+                    int segment = Integer.parseInt(key.trim());
+                    segmentCommands.put(segment, section.getStringList(key));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments,
+                startCommands, segmentCommands);
     }
 
     private void applyMovementLock(Player player) {
