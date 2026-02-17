@@ -777,9 +777,7 @@ public class SceneRuntimeEngine {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
-        java.util.List<CutsceneFrame> timeline = session.getCameraTimeline();
-        int frameIndex = Math.min(Math.max(0, session.getTimeTicks()), Math.max(0, timeline.size() - 1));
-        boolean playerCamera = !timeline.isEmpty() && timeline.get(frameIndex).isPlayerCamera();
+        boolean playerCamera = isPlayerCameraFrame(session, session.getTimeTicks());
         if (playerCamera) {
             if (player.getSpectatorTarget() != null) {
                 protocolAdapter.clearSpectatorCamera(player);
@@ -795,17 +793,18 @@ public class SceneRuntimeEngine {
     }
 
     private void updateCameraRigTransform(Player player, SceneSession session, int timeTicks) {
-        java.util.List<CutsceneFrame> timeline = session.getCameraTimeline();
-        if (timeline.isEmpty()) {
+        Track<CameraKeyframe> cameraTrack = session.getScene().getTrack(SceneTrackType.CAMERA);
+        if (cameraTrack == null || cameraTrack.getKeyframes().isEmpty()) {
             return;
         }
-        int index = Math.min(Math.max(0, timeTicks), timeline.size() - 1);
-        CutsceneFrame frame = timeline.get(index);
-        Location point = frame.getLocation().clone();
-        point.setWorld(player.getWorld());
+        Transform transform = interpolateCamera(player, session, cameraTrack.getKeyframes(), timeTicks);
+        if (transform == null) {
+            return;
+        }
+        Location point = player.getLocation().clone();
+        transform.applyTo(point);
 
-        if (frame.isPlayerCamera()) {
-            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+        if (isPlayerCameraFrame(session, timeTicks)) {
             if (player.getSpectatorTarget() != null) {
                 protocolAdapter.clearSpectatorCamera(player);
             }
@@ -823,10 +822,18 @@ public class SceneRuntimeEngine {
         visibilityController.showEntityToPlayer(cameraRig, player);
 
         Location from = cameraRig.getLocation().clone();
-        clampCameraDelta(from, point, session, timeTicks);
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
         session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+    }
+
+    private boolean isPlayerCameraFrame(SceneSession session, int tick) {
+        List<CutsceneFrame> timeline = session.getCameraTimeline();
+        if (timeline.isEmpty()) {
+            return false;
+        }
+        int frameIndex = Math.min(Math.max(0, tick), timeline.size() - 1);
+        return timeline.get(frameIndex).isPlayerCamera();
     }
 
     private void clampCameraDelta(Location from, Location to, SceneSession session, int tick) {
