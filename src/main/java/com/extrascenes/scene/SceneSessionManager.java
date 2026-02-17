@@ -396,6 +396,17 @@ public class SceneSessionManager {
         if (original != null && original.getWorld() != null) {
             player.teleport(original);
         }
+        player.updateInventory();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            protocolAdapter.clearSpectatorCamera(player);
+            if (player.getGameMode() != session.getSnapshot().getGameMode()) {
+                player.setGameMode(session.getSnapshot().getGameMode());
+            }
+            player.updateInventory();
+        });
     }
 
     private void applyCinematicZoom(Player player) {
