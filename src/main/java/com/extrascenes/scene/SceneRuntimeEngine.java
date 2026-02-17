@@ -130,6 +130,7 @@ public class SceneRuntimeEngine {
             return;
         }
 
+        runCutscenePathCommands(player, session, time);
         updateCameraRigTransform(player, session, time);
         ensureSpectatorTarget(player, session);
         ensureZoomSlowness(player, time);
@@ -793,24 +794,21 @@ public class SceneRuntimeEngine {
     }
 
     private void updateCameraRigTransform(Player player, SceneSession session, int timeTicks) {
-        Track<CameraKeyframe> cameraTrack = session.getScene().getTrack(SceneTrackType.CAMERA);
-        if (cameraTrack == null || cameraTrack.getKeyframes().isEmpty()) {
+        CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
+        if (frame == null || frame.getLocation() == null) {
             return;
         }
-        Transform transform = interpolateCamera(player, session, cameraTrack.getKeyframes(), timeTicks);
-        if (transform == null) {
-            return;
-        }
-        Location point = player.getLocation().clone();
-        transform.applyTo(point);
+        Location point = frame.getLocation().clone();
+        point.setWorld(player.getWorld());
 
-        if (isPlayerCameraFrame(session, timeTicks)) {
+        if (frame.isPlayerCamera()) {
             if (player.getSpectatorTarget() != null) {
                 protocolAdapter.clearSpectatorCamera(player);
             }
             player.teleport(point);
             player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS,
                     3, 0, false, false, false));
+            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
             return;
         }
 
@@ -824,11 +822,40 @@ public class SceneRuntimeEngine {
         Location from = cameraRig.getLocation().clone();
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
+        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+    }
 
-        CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
-        if (frame != null) {
-            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
+    private void runCutscenePathCommands(Player player, SceneSession session, int timeTicks) {
+        CutscenePath path = session.getCutscenePath();
+        if (path == null) {
+            return;
         }
+        if (timeTicks == session.getStartTick()) {
+            for (String command : path.getStartCommands()) {
+                dispatchConsoleCommand(player, command);
+            }
+        }
+        CutsceneFrame frame = getCameraFrameAtTick(session, timeTicks);
+        if (frame == null) {
+            return;
+        }
+        int currentSegment = frame.getSegmentIndex();
+        if (currentSegment == session.getLastAppliedSegmentIndex()) {
+            return;
+        }
+        for (String command : path.getSegmentCommands(currentSegment)) {
+            dispatchConsoleCommand(player, command);
+        }
+    }
+
+    private void dispatchConsoleCommand(Player player, String rawCommand) {
+        if (rawCommand == null || rawCommand.isBlank()) {
+            return;
+        }
+        String command = rawCommand
+                .replace("{player}", player.getName())
+                .replace("%player%", player.getName());
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.startsWith("/") ? command.substring(1) : command);
     }
 
     private boolean isPlayerCameraFrame(SceneSession session, int tick) {

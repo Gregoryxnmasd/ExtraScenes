@@ -49,6 +49,7 @@ public class SceneSession {
     private boolean spectatorHandshakeComplete;
     private int spectatorHandshakeAttempts;
     private java.util.List<CutsceneFrame> cameraTimeline = java.util.Collections.emptyList();
+    private CutscenePath cutscenePath;
     private int lastAppliedSegmentIndex = -1;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
@@ -376,6 +377,14 @@ public class SceneSession {
 
     public void setCameraTimeline(java.util.List<CutsceneFrame> cameraTimeline) {
         this.cameraTimeline = cameraTimeline == null ? java.util.Collections.emptyList() : cameraTimeline;
+    }
+
+    public CutscenePath getCutscenePath() {
+        return cutscenePath;
+    }
+
+    public void setCutscenePath(CutscenePath cutscenePath) {
+        this.cutscenePath = cutscenePath;
     }
 
     public int getLastAppliedSegmentIndex() {
