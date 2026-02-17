@@ -52,7 +52,6 @@ public class SceneSession {
     private java.util.List<CutsceneFrame> cameraTimeline = java.util.Collections.emptyList();
     private CutscenePath cutscenePath;
     private int lastAppliedSegmentIndex = -1;
-    private CutscenePath cutscenePath;
     private final Set<Integer> executedSegmentCommands = new LinkedHashSet<>();
 
     public SceneSession(Player player, Scene scene, boolean preview) {
@@ -382,14 +381,6 @@ public class SceneSession {
         this.cameraTimeline = cameraTimeline == null ? java.util.Collections.emptyList() : cameraTimeline;
     }
 
-    public CutscenePath getCutscenePath() {
-        return cutscenePath;
-    }
-
-    public void setCutscenePath(CutscenePath cutscenePath) {
-        this.cutscenePath = cutscenePath;
-    }
-
     public int getLastAppliedSegmentIndex() {
         return lastAppliedSegmentIndex;
     }
@@ -414,4 +405,3 @@ public class SceneSession {
         executedSegmentCommands.clear();
     }
 }
-
