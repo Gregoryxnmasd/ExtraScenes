@@ -76,7 +76,8 @@ public class SceneSessionManager {
             player.setFlySpeed(0.0f);
         }
 
-        session.setBlockingInventory(plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true));
+        boolean blockInventoryDuringScene = plugin.getConfig().getBoolean("player.blockInventoryDuringScene", true);
+        session.setBlockingInventory(blockInventoryDuringScene);
 
         CutscenePath cutscenePath = buildCutscenePath(scene);
         session.setCutscenePath(cutscenePath);
@@ -117,10 +118,16 @@ public class SceneSessionManager {
         applyMovementLock(player);
         applyCameraZoomEffect(player);
 
-        player.setGameMode(GameMode.SPECTATOR);
-        protocolAdapter.applySpectatorCamera(player, rig);
-        session.setPlayerCameraActive(false);
-        startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
+        if (blockInventoryDuringScene) {
+            player.setGameMode(GameMode.SPECTATOR);
+            protocolAdapter.applySpectatorCamera(player, rig);
+            session.setPlayerCameraActive(false);
+            startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
+        } else {
+            protocolAdapter.applySpectatorCamera(player, rig);
+            session.setPlayerCameraActive(true);
+            session.setSpectatorHandshakeComplete(true);
+        }
 
         plugin.getRuntimeEngine().startSession(session);
 
