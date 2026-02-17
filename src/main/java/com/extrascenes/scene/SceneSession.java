@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -50,6 +51,8 @@ public class SceneSession {
     private int spectatorHandshakeAttempts;
     private java.util.List<CutsceneFrame> cameraTimeline = java.util.Collections.emptyList();
     private int lastAppliedSegmentIndex = -1;
+    private CutscenePath cutscenePath;
+    private final Set<Integer> executedSegmentCommands = new LinkedHashSet<>();
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -385,4 +388,21 @@ public class SceneSession {
     public void setLastAppliedSegmentIndex(int lastAppliedSegmentIndex) {
         this.lastAppliedSegmentIndex = lastAppliedSegmentIndex;
     }
+
+    public CutscenePath getCutscenePath() {
+        return cutscenePath;
+    }
+
+    public void setCutscenePath(CutscenePath cutscenePath) {
+        this.cutscenePath = cutscenePath;
+    }
+
+    public boolean markSegmentCommandExecuted(int segmentIndex) {
+        return executedSegmentCommands.add(segmentIndex);
+    }
+
+    public void resetSegmentCommandExecution() {
+        executedSegmentCommands.clear();
+    }
 }
+
