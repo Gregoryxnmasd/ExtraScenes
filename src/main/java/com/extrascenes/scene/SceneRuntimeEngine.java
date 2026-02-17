@@ -540,23 +540,21 @@ public class SceneRuntimeEngine {
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
             ActorTickAction action = template.getTickAction(tick);
-            if (action != null && action.isDespawn()) {
+            boolean shouldBeSpawned = shouldActorBeSpawnedAtTick(template, tick);
+            if (!shouldBeSpawned) {
+                if (action != null) {
+                    applyActorTickAction(viewer, template, handle, action, tick, true);
+                }
                 handle.getEntity().setInvisible(true);
                 handle.setSpawned(false);
-                applyActorTickAction(viewer, template, handle, action, tick, true);
                 continue;
             }
-            if (action != null && action.isSpawn()) {
-                if (handle.getLastTransform() != null) {
-                    handle.getEntity().setInvisible(false);
-                    handle.setSpawned(true);
-                }
-            }
-            if (!handle.isSpawned() && tick > 0) {
-                continue;
-            }
+
             ActorTransformTick transformTick = resolveTransformTick(template, tick);
             Transform transform = transformTick != null ? transformTick.getTransform() : handle.getLastTransform();
+            if (action != null && action.isSpawn() && transform == null) {
+                transform = resolveTransformForPreview(template, tick);
+            }
             if (transform != null) {
                 Location loc = handle.getEntity().getLocation().clone();
                 transform.applyTo(loc);
@@ -564,15 +562,40 @@ public class SceneRuntimeEngine {
                 handle.getEntity().setInvisible(false);
                 applyScale(handle.getEntity(), template.getScale());
                 handle.setLastTransform(transform);
+                handle.setSpawned(true);
                 List<String> executedActions = applyActorTickAction(viewer, template, handle, action, tick, true);
                 maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true, executedActions);
             } else if (action != null) {
                 applyActorTickAction(viewer, template, handle, action, tick, true);
                 handle.getEntity().setInvisible(true);
+                handle.setSpawned(false);
+            } else {
+                handle.getEntity().setInvisible(true);
+                handle.setSpawned(false);
             }
         }
         cleanupStalePreviewActors(viewer, handles, liveActorIds);
         emitDebugPreview(viewer);
+    }
+
+    private boolean shouldActorBeSpawnedAtTick(SceneActorTemplate template, int tick) {
+        if (template == null) {
+            return false;
+        }
+        boolean spawned = template.getTickActions().values().stream()
+                .noneMatch(ActorTickAction::isSpawn);
+        for (ActorTickAction candidate : template.getTickActions().values()) {
+            if (candidate == null || candidate.getTick() > tick) {
+                break;
+            }
+            if (candidate.isSpawn()) {
+                spawned = true;
+            }
+            if (candidate.isDespawn()) {
+                spawned = false;
+            }
+        }
+        return spawned;
     }
 
     private Location resolvePreviewSpawnLocation(Player viewer, SceneActorTemplate template, int tick) {
