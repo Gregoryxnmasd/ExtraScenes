@@ -133,7 +133,6 @@ public class SceneRuntimeEngine {
         runCutscenePathCommands(player, session, time);
         updateCameraRigTransform(player, session, time);
         ensureSpectatorTarget(player, session);
-        ensureZoomSlowness(player, time);
         tickSessionActors(player, session, time);
         maybeLogDebugCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
@@ -778,12 +777,6 @@ public class SceneRuntimeEngine {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
-        if (frame != null && frame.isPlayerCamera()) {
-            if (player.getSpectatorTarget() != null) {
-                protocolAdapter.clearSpectatorCamera(player);
-            }
-            return;
-        }
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
@@ -800,17 +793,6 @@ public class SceneRuntimeEngine {
         Location point = frame.getLocation().clone();
         point.setWorld(player.getWorld());
 
-        if (frame.isPlayerCamera()) {
-            if (player.getSpectatorTarget() != null) {
-                protocolAdapter.clearSpectatorCamera(player);
-            }
-            player.teleport(point);
-            player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS,
-                    3, 0, false, false, false));
-            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
-            return;
-        }
-
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");
@@ -820,6 +802,7 @@ public class SceneRuntimeEngine {
         visibilityController.showEntityToPlayer(cameraRig, player);
 
         Location from = cameraRig.getLocation().clone();
+        clampCameraDelta(from, point, session, timeTicks);
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
         session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
@@ -845,50 +828,6 @@ public class SceneRuntimeEngine {
         }
         for (String command : path.getSegmentCommands(currentSegment)) {
             dispatchConsoleCommand(player, command);
-        }
-    }
-
-    private void dispatchConsoleCommand(Player player, String rawCommand) {
-        if (rawCommand == null || rawCommand.isBlank()) {
-            return;
-        }
-        String command = rawCommand
-                .replace("{player}", player.getName())
-                .replace("%player%", player.getName());
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.startsWith("/") ? command.substring(1) : command);
-    }
-
-    private void applySegmentCommands(Player player, SceneSession session, CutsceneFrame frame) {
-        if (frame == null) {
-            return;
-        }
-        int segmentIndex = frame.getSegmentIndex();
-        if (segmentIndex == session.getLastAppliedSegmentIndex()) {
-            return;
-        }
-        session.setLastAppliedSegmentIndex(segmentIndex);
-        CutscenePath path = session.getCutscenePath();
-        if (path == null || !session.markSegmentCommandExecuted(segmentIndex)) {
-            return;
-        }
-        executeConfiguredCommands(player, path.getSegmentCommands(segmentIndex), segmentIndex);
-    }
-
-    private void executeConfiguredCommands(Player player, List<String> commands, int segmentIndex) {
-        if (commands == null || commands.isEmpty()) {
-            return;
-        }
-        for (String rawCommand : commands) {
-            if (rawCommand == null || rawCommand.isBlank()) {
-                continue;
-            }
-            String command = rawCommand.trim()
-                    .replace("{player}", player.getName())
-                    .replace("{segment}", String.valueOf(segmentIndex));
-            if (command.startsWith("/")) {
-                command = command.substring(1);
-            }
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
     }
 
@@ -919,19 +858,6 @@ public class SceneRuntimeEngine {
                     "[camera-clamp] session=%s tick=%d delta=%.3f clampedTo=%.3f",
                     session.getSessionId(), tick, distance, MAX_CAMERA_STEP_DISTANCE));
         }
-    }
-
-    private void ensureZoomSlowness(Player player, int tick) {
-        if (tick % 20 != 0) {
-            return;
-        }
-        org.bukkit.potion.PotionEffectType type = org.bukkit.potion.PotionEffectType.SLOWNESS;
-        org.bukkit.potion.PotionEffect current = player.getPotionEffect(type);
-        if (current != null && current.getAmplifier() >= 4 && current.isInfinite()) {
-            return;
-        }
-        player.addPotionEffect(new org.bukkit.potion.PotionEffect(type, Integer.MAX_VALUE, 4,
-                false, false, true));
     }
 
     private Transform interpolateCamera(Player player, SceneSession session, List<CameraKeyframe> keyframes, int timeTicks) {
