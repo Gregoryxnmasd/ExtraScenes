@@ -120,6 +120,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
         Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [tick|start:20] [duration:10s|200t] [preview:on|off]");
         Text.send(sender, "&b" + "/scene actor record stop");
+        Text.send(sender, "&b" + "/scene actor record delete <scene> <actorId> confirm");
         Text.send(sender, "&b" + "/scene selftest <name>");
     }
 
@@ -697,13 +698,21 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private void handleActorRecord(CommandSender sender, Player player, String[] args) {
-        if (args.length >= 3 && "stop".equalsIgnoreCase(args[2])) {
+        if (args.length < 3) {
+            Text.send(sender, "&c" + "Usage: /scene actor record <start|stop|delete> ...");
+            return;
+        }
+        if ("stop".equalsIgnoreCase(args[2])) {
             boolean stopped = actorRecordingService.stopRecording(player, true);
             Text.send(sender, stopped ? "&a" + "Actor recording stopped and saved."
                     : "&c" + "No active actor recording.");
             return;
         }
-        if (args.length < 5 || !"start".equalsIgnoreCase(args[2])) {
+        if ("delete".equalsIgnoreCase(args[2])) {
+            handleActorRecordDelete(sender, args);
+            return;
+        }
+        if (!"start".equalsIgnoreCase(args[2]) || args.length < 5) {
             Text.send(sender, "&c" + "Usage: /scene actor record start <scene> <actorId> [tick|start:<tick>] [duration:10s|200t] [preview:on|off]");
             return;
         }
@@ -785,6 +794,37 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&a" + "Recording actor " + template.getActorId() + " from tick " + startTick
                 + " for " + displayDuration + durationUnit.suffix()
                 + " (preview others: " + (previewOthers ? "on" : "off") + ", countdown 3..2..1).");
+    }
+
+
+    private void handleActorRecordDelete(CommandSender sender, String[] args) {
+        if (args.length < 6 || !"confirm".equalsIgnoreCase(args[5])) {
+            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> confirm");
+            return;
+        }
+        Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
+        if (scene == null) {
+            Text.send(sender, "&c" + "Scene not found.");
+            return;
+        }
+        SceneActorTemplate template = scene.getActorTemplate(args[4]);
+        if (template == null) {
+            Text.send(sender, "&c" + "Actor not found.");
+            return;
+        }
+        int removedTicks = template.getTransformTicks().size();
+        if (removedTicks == 0) {
+            Text.send(sender, "&e" + "This actor has no recorded transform ticks.");
+            return;
+        }
+        template.getTransformTicks().clear();
+        scene.setDirty(true);
+        try {
+            sceneManager.saveScene(scene);
+            Text.send(sender, "&a" + "Deleted " + removedTicks + " recorded tick(s) from actor " + template.getActorId() + ".");
+        } catch (Exception ex) {
+            Text.send(sender, "&c" + "Failed to save scene.");
+        }
     }
 
     private Integer parsePositiveInt(String raw) {
@@ -883,7 +923,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 return filterPrefix(List.of("add", "rename", "delete", "skin", "playback", "scale", "record"), args[1]);
             }
             if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
-                return filterPrefix(List.of("start", "stop"), args[2]);
+                return filterPrefix(List.of("start", "stop", "delete"), args[2]);
             }
             if (args.length == 3 && List.of("add", "rename", "delete", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
@@ -903,14 +943,17 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             if (args.length == 5 && "scale".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("snap", "1.0", "0.5", "1.5"), args[4]);
             }
-            if (args.length == 4 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
+            if (args.length == 4 && "record".equalsIgnoreCase(args[1]) && List.of("start", "delete").contains(args[2].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[3]);
             }
-            if (args.length == 5 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
+            if (args.length == 5 && "record".equalsIgnoreCase(args[1]) && List.of("start", "delete").contains(args[2].toLowerCase(Locale.ROOT))) {
                 Scene sc = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
                 if (sc != null) {
                     return filterPrefix(new ArrayList<>(sc.getActorTemplates().keySet()), args[4]);
                 }
+            }
+            if (args.length == 6 && "record".equalsIgnoreCase(args[1]) && "delete".equalsIgnoreCase(args[2])) {
+                return filterPrefix(List.of("confirm"), args[5]);
             }
             if (args.length >= 6 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
                 return filterPrefix(List.of("1", "20", "start:20", "duration:10s", "duration:200t", "preview:on", "preview:off"), args[args.length - 1]);

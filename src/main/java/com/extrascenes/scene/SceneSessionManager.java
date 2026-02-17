@@ -21,9 +21,9 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -84,17 +84,17 @@ public class SceneSessionManager {
             plugin.getLogger().warning("Camera rig world mismatch corrected for " + player.getName());
         }
         Entity rig = ensureCameraRig(session, player, rigStartLocation);
-        if (!(rig instanceof ArmorStand armorStand)) {
+        if (rig == null) {
             sessions.remove(player.getUniqueId());
             plugin.getLogger().severe("Unable to spawn camera rig for " + player.getName()
                     + " at " + rigStartLocation + "; aborting scene start.");
             return null;
         }
         forceLoadRigChunk(session, rigStartLocation);
-        visibilityController.hideEntityFromAllExcept(armorStand, player);
-        visibilityController.showEntityToPlayer(armorStand, player);
-        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + armorStand.getUniqueId()
-                + " marker=" + armorStand.isMarker());
+        visibilityController.hideEntityFromAllExcept(rig, player);
+        visibilityController.showEntityToPlayer(rig, player);
+        plugin.getLogger().info("Camera rig spawned for " + player.getName() + " rig=" + rig.getUniqueId()
+                + " type=" + rig.getType());
 
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
@@ -105,8 +105,8 @@ public class SceneSessionManager {
 
         teleportPlayerWithDebug(player, rigStartLocation, "start_scene_rig");
         player.setGameMode(GameMode.SPECTATOR);
-        protocolAdapter.applySpectatorCamera(player, armorStand);
-        startSpectatorHandshake(session, player.getUniqueId(), armorStand.getUniqueId());
+        protocolAdapter.applySpectatorCamera(player, rig);
+        startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
 
@@ -226,7 +226,7 @@ public class SceneSessionManager {
         if (spawnLocation.getWorld() == null) {
             return null;
         }
-        ArmorStand rig = spawnCameraRig(spawnLocation);
+        Entity rig = spawnCameraRig(spawnLocation);
         if (rig == null) {
             return null;
         }
@@ -269,24 +269,38 @@ public class SceneSessionManager {
         return null;
     }
 
-    private ArmorStand spawnCameraRig(Location location) {
-        Entity raw = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
-        if (!(raw instanceof ArmorStand rig)) {
-            if (raw != null && raw.isValid()) {
-                raw.remove();
-            }
+    private Entity spawnCameraRig(Location location) {
+        Entity rig = null;
+        try {
+            rig = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
+        } catch (Throwable ignored) {
+            // Fallback below for legacy compatibility.
+        }
+        if (rig == null) {
+            rig = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        }
+        if (rig == null || !rig.isValid()) {
             return null;
         }
-        rig.setInvisible(true);
-        // Marker=false keeps a stable spectator target hitbox across server variants.
-        rig.setMarker(false);
-        rig.setGravity(false);
         rig.setSilent(true);
         rig.setInvulnerable(true);
-        rig.setCollidable(false);
-        rig.setSmall(true);
+        rig.setGravity(false);
         rig.setPersistent(false);
-        rig.setBasePlate(false);
+        rig.setVisibleByDefault(false);
+        if (rig instanceof Interaction interaction) {
+            interaction.setResponsive(false);
+            interaction.setInteractionHeight(0.1F);
+            interaction.setInteractionWidth(0.1F);
+            return interaction;
+        }
+        if (rig instanceof org.bukkit.entity.ArmorStand armorStand) {
+            armorStand.setInvisible(true);
+            armorStand.setMarker(false);
+            armorStand.setCollidable(false);
+            armorStand.setSmall(true);
+            armorStand.setBasePlate(false);
+            return armorStand;
+        }
         return rig;
     }
 
