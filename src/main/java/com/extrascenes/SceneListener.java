@@ -166,6 +166,9 @@ public class SceneListener implements Listener {
         if (!editorEngine.getPlugin().getConfig().getBoolean("locks.movement", true)) {
             return;
         }
+        if (event.getPlayer().getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+            return;
+        }
         if (event.getFrom().getX() != event.getTo().getX()
                 || event.getFrom().getY() != event.getTo().getY()
                 || event.getFrom().getZ() != event.getTo().getZ()) {

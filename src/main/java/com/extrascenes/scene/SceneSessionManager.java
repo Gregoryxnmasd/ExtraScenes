@@ -114,6 +114,7 @@ public class SceneSessionManager {
         }
         applyCinematicZoom(player);
         applyMovementLock(player);
+        applyCameraZoomEffect(player);
 
         player.setGameMode(GameMode.SPECTATOR);
         protocolAdapter.applySpectatorCamera(player, rig);
@@ -594,6 +595,19 @@ public class SceneSessionManager {
         }
         return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments,
                 startCommands, segmentCommands);
+    }
+
+
+    private void applyCameraZoomEffect(Player player) {
+        if (player == null) {
+            return;
+        }
+        if (!plugin.getConfig().getBoolean("camera.zoom.enabled", true)) {
+            return;
+        }
+        int amplifier = Math.max(0, plugin.getConfig().getInt("camera.zoom.slowness-level", 6) - 1);
+        PotionEffect effect = new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, amplifier, false, false, false);
+        player.addPotionEffect(effect, true);
     }
 
     private void applyMovementLock(Player player) {
