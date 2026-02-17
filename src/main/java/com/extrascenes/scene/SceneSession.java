@@ -54,6 +54,7 @@ public class SceneSession {
     private int lastAppliedSegmentIndex = -1;
     private final Set<Integer> executedSegmentCommands = new LinkedHashSet<>();
     private boolean playerCameraActive;
+    private final java.util.Map<Integer, UUID> cameraPointRigIds = new java.util.HashMap<>();
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -412,5 +413,24 @@ public class SceneSession {
 
     public void setPlayerCameraActive(boolean playerCameraActive) {
         this.playerCameraActive = playerCameraActive;
+    }
+
+    public void registerCameraPointRig(int pointIndex, UUID entityId) {
+        if (pointIndex < 0 || entityId == null) {
+            return;
+        }
+        cameraPointRigIds.put(pointIndex, entityId);
+    }
+
+    public UUID getCameraPointRigId(int pointIndex) {
+        return cameraPointRigIds.get(pointIndex);
+    }
+
+    public java.util.Map<Integer, UUID> getCameraPointRigIds() {
+        return java.util.Collections.unmodifiableMap(cameraPointRigIds);
+    }
+
+    public void clearCameraPointRigs() {
+        cameraPointRigIds.clear();
     }
 }
