@@ -53,6 +53,9 @@ public class SceneProtocolAdapter {
     }
 
     public void clearSpectatorCamera(Player player) {
+        if (player == null || player.getGameMode() != GameMode.SPECTATOR) {
+            return;
+        }
         player.setSpectatorTarget(null);
     }
 
