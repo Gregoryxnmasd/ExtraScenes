@@ -2,6 +2,7 @@ package com.extrascenes;
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
@@ -10,21 +11,19 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.key.Key;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
 public class SceneProtocolAdapter {
-    private static final double PUMPKIN_MOVEMENT_LOCK_AMOUNT = -10.0;
     private final ExtraScenesPlugin plugin;
     private final boolean protocolLibAvailable;
-    private final org.bukkit.NamespacedKey cutsceneSpeedLockKey;
+    private final NamespacedKey cutsceneSpeedLockKey;
 
     public SceneProtocolAdapter(ExtraScenesPlugin plugin) {
         this.plugin = plugin;
         this.protocolLibAvailable = plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib");
-        this.cutsceneSpeedLockKey = new org.bukkit.NamespacedKey(plugin, "cutscene_speed_lock");
+        this.cutsceneSpeedLockKey = new NamespacedKey(plugin, "cutscene_speed_lock");
     }
 
     public boolean isProtocolLibAvailable() {
@@ -57,14 +56,14 @@ public class SceneProtocolAdapter {
         player.setSpectatorTarget(null);
     }
 
-    public void sendFakeHelmet(Player player, ItemStack itemStack) {
-        ensurePumpkinMovementLock(itemStack);
+    public void sendFakeHelmet(Player player, ItemStack itemStack, double movementSpeedAmount) {
+        ensurePumpkinMovementModifier(itemStack, movementSpeedAmount);
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    public ItemStack createMovementLockedPumpkin() {
+    public ItemStack createMovementLockedPumpkin(double movementSpeedAmount) {
         ItemStack itemStack = new ItemStack(Material.CARVED_PUMPKIN);
-        ensurePumpkinMovementLock(itemStack);
+        ensurePumpkinMovementModifier(itemStack, movementSpeedAmount);
         return itemStack;
     }
 
@@ -72,7 +71,7 @@ public class SceneProtocolAdapter {
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    private void ensurePumpkinMovementLock(ItemStack itemStack) {
+    private void ensurePumpkinMovementModifier(ItemStack itemStack, double movementSpeedAmount) {
         if (itemStack == null || itemStack.getType() != Material.CARVED_PUMPKIN) {
             return;
         }
@@ -91,8 +90,8 @@ public class SceneProtocolAdapter {
                 if (!AttributeModifiers.hasKey(modifier, cutsceneSpeedLockKey)) {
                     continue;
                 }
-                if (modifier.getAmount() == PUMPKIN_MOVEMENT_LOCK_AMOUNT
-                        && modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR
+                if (modifier.getAmount() == movementSpeedAmount
+                        && modifier.getOperation() == AttributeModifier.Operation.ADD_NUMBER
                         && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
                 } else {
@@ -103,8 +102,8 @@ public class SceneProtocolAdapter {
         if (!hasCorrectModifier) {
             AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
-                    PUMPKIN_MOVEMENT_LOCK_AMOUNT,
-                    AttributeModifier.Operation.ADD_SCALAR,
+                    movementSpeedAmount,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     EquipmentSlot.HEAD.getGroup()
             );
             meta.addAttributeModifier(attribute, modifier);
