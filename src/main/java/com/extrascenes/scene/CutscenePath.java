@@ -17,8 +17,7 @@ public class CutscenePath {
 
     public CutscenePath(int durationTicks, double stepResolution, SmoothingMode defaultSmoothing,
                         List<CameraKeyframe> points, List<IntRange> playerSegments,
-                        List<String> startCommands,
-                        Map<Integer, List<String>> segmentCommands) {
+                        List<String> startCommands, Map<Integer, List<String>> segmentCommands) {
         this.durationTicks = Math.max(1, durationTicks);
         this.stepResolution = stepResolution <= 0.0D ? 0.35D : stepResolution;
         this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.SMOOTH : defaultSmoothing;
@@ -29,18 +28,14 @@ public class CutscenePath {
         this.startCommands = startCommands == null
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(startCommands));
-        if (segmentCommands == null || segmentCommands.isEmpty()) {
-            this.segmentCommands = Collections.emptyMap();
-        } else {
-            Map<Integer, List<String>> copy = new LinkedHashMap<>();
+        Map<Integer, List<String>> builtSegmentCommands = new LinkedHashMap<>();
+        if (segmentCommands != null) {
             for (Map.Entry<Integer, List<String>> entry : segmentCommands.entrySet()) {
-                if (entry == null || entry.getKey() == null || entry.getValue() == null) {
-                    continue;
-                }
-                copy.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
+                List<String> commands = entry.getValue() == null ? Collections.emptyList() : entry.getValue();
+                builtSegmentCommands.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(commands)));
             }
-            this.segmentCommands = Collections.unmodifiableMap(copy);
         }
+        this.segmentCommands = Collections.unmodifiableMap(builtSegmentCommands);
     }
 
     public int getDurationTicks() {

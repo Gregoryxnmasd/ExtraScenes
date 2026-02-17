@@ -85,6 +85,7 @@ public class SceneSessionManager {
             plugin.getLogger().severe("Scene " + scene.getName() + " has no camera points, aborting start for " + player.getName());
             return null;
         }
+        session.setCutscenePath(cutscenePath);
         session.setCameraTimeline(timeline);
 
         Location rigStartLocation = timeline.get(0).getLocation().clone();
@@ -564,16 +565,13 @@ public class SceneSessionManager {
                 ? Math.max(1, points.stream().mapToInt(CameraKeyframe::getTimeTicks).max().orElse(0) + 1)
                 : scene.getDurationTicks();
         java.util.List<String> startCommands = plugin.getConfig().getStringList("camera.start-commands");
-        java.util.Map<Integer, java.util.List<String>> segmentCommands = new java.util.HashMap<>();
-        ConfigurationSection segmentSection = plugin.getConfig().getConfigurationSection("camera.segment-commands");
-        if (segmentSection != null) {
-            for (String key : segmentSection.getKeys(false)) {
+        java.util.Map<Integer, java.util.List<String>> segmentCommands = new java.util.LinkedHashMap<>();
+        org.bukkit.configuration.ConfigurationSection section = plugin.getConfig().getConfigurationSection("camera.segment-commands");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
                 try {
-                    int segmentIndex = Integer.parseInt(key.trim());
-                    java.util.List<String> commands = segmentSection.getStringList(key);
-                    if (!commands.isEmpty()) {
-                        segmentCommands.put(segmentIndex, commands);
-                    }
+                    int segment = Integer.parseInt(key.trim());
+                    segmentCommands.put(segment, section.getStringList(key));
                 } catch (NumberFormatException ignored) {
                 }
             }
