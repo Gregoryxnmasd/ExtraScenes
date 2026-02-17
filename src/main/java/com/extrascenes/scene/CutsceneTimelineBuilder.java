@@ -45,7 +45,7 @@ public final class CutsceneTimelineBuilder {
             for (int step = 0; step < steps; step++) {
                 double t = directToPoint ? 1.0D : step / (double) steps;
                 double eased = applySmoothing(mode, t);
-                frames.add(buildFrame(index, a, b, eased, path));
+                frames.add(buildFrame(index, a, b, eased, path, from.isAllowPlayerLook()));
             }
         }
 
@@ -55,19 +55,20 @@ public final class CutsceneTimelineBuilder {
             Location location = new Location(null, transform.getX(), transform.getY(), transform.getZ(),
                     transform.getYaw(), transform.getPitch());
             frames.add(new CutsceneFrame(location, Math.max(0, keyframes.size() - 2),
-                    path.isPlayerCameraSegment(Math.max(0, keyframes.size() - 2))));
+                    path.isPlayerCameraSegment(Math.max(0, keyframes.size() - 2)), last.isAllowPlayerLook()));
         }
         return frames;
     }
 
-    private static CutsceneFrame buildFrame(int segmentIndex, Transform a, Transform b, double eased, CutscenePath path) {
+    private static CutsceneFrame buildFrame(int segmentIndex, Transform a, Transform b, double eased, CutscenePath path,
+                                            boolean allowPlayerLook) {
         double x = a.getX() + (b.getX() - a.getX()) * eased;
         double y = a.getY() + (b.getY() - a.getY()) * eased;
         double z = a.getZ() + (b.getZ() - a.getZ()) * eased;
         float yaw = lerpAngle(a.getYaw(), b.getYaw(), (float) eased);
         float pitch = (float) (a.getPitch() + (b.getPitch() - a.getPitch()) * eased);
         Location location = new Location(null, x, y, z, yaw, pitch);
-        return new CutsceneFrame(location, segmentIndex, path.isPlayerCameraSegment(segmentIndex));
+        return new CutsceneFrame(location, segmentIndex, path.isPlayerCameraSegment(segmentIndex), allowPlayerLook);
     }
 
     private static List<CutsceneFrame> stretchToDuration(int durationTicks, List<CutsceneFrame> rawFrames) {
@@ -112,7 +113,7 @@ public final class CutsceneTimelineBuilder {
         float yaw = lerpAngle(a.getYaw(), b.getYaw(), (float) t);
         float pitch = (float) (a.getPitch() + (b.getPitch() - a.getPitch()) * t);
         Location location = new Location(null, x, y, z, yaw, pitch);
-        return new CutsceneFrame(location, from.getSegmentIndex(), from.isPlayerCamera());
+        return new CutsceneFrame(location, from.getSegmentIndex(), from.isPlayerCamera(), from.isAllowPlayerLook());
     }
 
     private static double applySmoothing(SmoothingMode mode, double t) {

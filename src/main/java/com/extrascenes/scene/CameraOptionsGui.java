@@ -27,7 +27,8 @@ public class CameraOptionsGui implements EditorGui {
         inventory.setItem(4, GuiUtils.makeItem(Material.COMPASS, "Camera Options",
                 List.of("Tick " + tick, "Smoothing: " + keyframe.getSmoothingMode(),
                         "LookAt: " + (keyframe.getLookAt().getMode() == LookAtTarget.Mode.NONE ? "OFF"
-                                : keyframe.getLookAt().getMode()))));
+                                : keyframe.getLookAt().getMode()),
+                        "Movimiento libre de cámara: " + (keyframe.isAllowPlayerLook() ? "ON" : "OFF"))));
 
         inventory.setItem(10, GuiUtils.makeItem(Material.REPEATER, "Smoothing: " + keyframe.getSmoothingMode(),
                 List.of("Cycle easing mode.")));
@@ -35,6 +36,9 @@ public class CameraOptionsGui implements EditorGui {
                 List.of("Aim at your current location.")));
         inventory.setItem(14, GuiUtils.makeItem(Material.REDSTONE_BLOCK, "Clear LookAt",
                 List.of("Disable look-at.")));
+        inventory.setItem(16, GuiUtils.makeItem(Material.ENDER_EYE,
+                "Movimiento libre: " + (keyframe.isAllowPlayerLook() ? "ON" : "OFF"),
+                List.of("ON: jugador puede mover su cámara.", "OFF: cámara bloqueada al punto.")));
 
         inventory.setItem(18, GuiUtils.makeItem(Material.ARROW, "Back", List.of("Return to tick menu.")));
         inventory.setItem(22, GuiUtils.makeItem(Material.BARRIER, "Close", List.of("Exit editor.")));
@@ -74,6 +78,11 @@ public class CameraOptionsGui implements EditorGui {
             editorEngine.markDirty(session.getScene());
             refresh(session);
             return;
+        }
+        if (slot == 16) {
+            keyframe.setAllowPlayerLook(!keyframe.isAllowPlayerLook());
+            editorEngine.markDirty(session.getScene());
+            refresh(session);
         }
     }
 
