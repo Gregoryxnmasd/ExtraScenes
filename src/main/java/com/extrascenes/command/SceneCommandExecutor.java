@@ -339,7 +339,11 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 return;
             }
         }
-        sessionManager.startScene(target, scene, false, startTick, endTick);
+        SceneSession started = sessionManager.startScene(target, scene, false, startTick, endTick);
+        if (started == null) {
+            Text.send(sender, "&c" + "Scene could not be started. Check console logs for details.");
+            return;
+        }
         Text.send(sender, "&a" + "Scene playing for " + target.getName());
     }
 
@@ -771,8 +775,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
 
     private void handleActorRecordDelete(CommandSender sender, String[] args) {
-        if (args.length < 5) {
-            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> [confirm]");
+        if (args.length < 6) {
+            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> [fromTick] [toTick] confirm");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
@@ -785,8 +789,12 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             Text.send(sender, "&c" + "Actor not found.");
             return;
         }
-        boolean confirmed = args.length >= 6 && "confirm".equalsIgnoreCase(args[args.length - 1]);
-        int optionalLimit = confirmed ? args.length - 1 : args.length;
+        if (!"confirm".equalsIgnoreCase(args[args.length - 1])) {
+            Text.send(sender, "&e" + "Confirm deletion with: /scene actor record delete "
+                    + args[3] + " " + args[4] + " [fromTick] [toTick] confirm");
+            return;
+        }
+
         Integer fromTick = null;
         Integer toTick = null;
         if (optionalLimit >= 6) {
@@ -803,10 +811,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 return;
             }
         }
-        boolean requiresConfirm = fromTick == null;
-        if (requiresConfirm && !confirmed) {
-            Text.send(sender, "&e" + "Deleting all recorded ticks requires confirmation.");
-            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> confirm");
+        if (args.length > 8) {
+            Text.send(sender, "&c" + "Too many arguments. Usage: /scene actor record delete <scene> <actorId> [fromTick] [toTick] confirm");
             return;
         }
         if (fromTick != null && toTick != null && toTick < fromTick) {
@@ -921,6 +927,28 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             }
             if (args.length == 3 && "record".equalsIgnoreCase(args[1])) {
                 return filterPrefix(List.of("start", "stop", "delete"), args[2]);
+            }
+            if (args.length == 4 && "record".equalsIgnoreCase(args[1])
+                    && List.of("start", "delete").contains(args[2].toLowerCase(Locale.ROOT))) {
+                return filterPrefix(sceneManager.listScenes(), args[3]);
+            }
+            if (args.length == 5 && "record".equalsIgnoreCase(args[1])
+                    && List.of("start", "delete").contains(args[2].toLowerCase(Locale.ROOT))) {
+                Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
+                if (scene != null) {
+                    return filterPrefix(new ArrayList<>(scene.getActorTemplates().keySet()), args[4]);
+                }
+            }
+            if (args.length >= 6 && "record".equalsIgnoreCase(args[1]) && "delete".equalsIgnoreCase(args[2])) {
+                if (args.length == 6) {
+                    return filterPrefix(List.of("confirm", "1", "20", "100"), args[5]);
+                }
+                if (args.length == 7) {
+                    return filterPrefix(List.of("confirm", "20", "100", "200"), args[6]);
+                }
+                if (args.length == 8) {
+                    return filterPrefix(List.of("confirm"), args[7]);
+                }
             }
             if (args.length == 3 && List.of("add", "rename", "delete", "skin", "playback", "scale").contains(args[1].toLowerCase(Locale.ROOT))) {
                 return filterPrefix(sceneManager.listScenes(), args[2]);
