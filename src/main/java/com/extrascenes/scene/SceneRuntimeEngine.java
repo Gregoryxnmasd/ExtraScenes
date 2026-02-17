@@ -301,6 +301,9 @@ public class SceneRuntimeEngine {
             ActorTransformTick transformTick = resolveTransformTick(template, tick);
             Transform transform = transformTick != null ? transformTick.getTransform() : handle.getLastTransform();
             if (transform == null) {
+                transform = resolveTransformForPreview(template, tick);
+            }
+            if (transform == null) {
                 continue;
             }
             handle.setLastTransform(transform);

@@ -12,3 +12,26 @@ chunks:
   preloadRadius: 3
 commands:
   allowGlobalDefault: false
+camera:
+  entity-type: armor_stand
+  camera-entity: armor_stand
+  armorstand-invisible: true
+  hide-others: true
+  fake-equip: true
+  fake-helmet-movement-speed: 10.0
+  zoom-slowness-amplifier: 3
+  zoom-slowness-duration-ticks: 1200
+  step-resolution: 0.35
+  player-segments: ""
+  start-commands: []
+  segment-commands: {}
+  zoom:
+    enabled: true
+    slowness-level: 6
+locks:
+  movement: true
+  hud: true
+
+cutscene:
+  fake-equip: true
+  fake-helmet-movement-speed: 10.0
