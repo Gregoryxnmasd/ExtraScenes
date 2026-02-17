@@ -31,6 +31,9 @@ import org.bukkit.scheduler.BukkitTask;
 
 public class SceneRuntimeEngine {
     private static final double MAX_CAMERA_STEP_DISTANCE = 1.75D;
+    private static final String PREVIEW_TAG = "extrascenes_preview";
+    private static final String PREVIEW_VIEWER_PREFIX = "extrascenes_viewer_";
+    private static final String PREVIEW_ACTOR_PREFIX = "extrascenes_actor_";
     private final ExtraScenesPlugin plugin;
     private final SceneSessionManager sessionManager;
     private final SceneVisibilityController visibilityController;
@@ -286,16 +289,13 @@ public class SceneRuntimeEngine {
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
             ActorTickAction action = template.getTickAction(tick);
-            if (action != null && action.isSpawn()) {
-                handle.getEntity().setInvisible(false);
-                handle.setSpawned(true);
-            }
-            if (action != null && action.isDespawn()) {
+            boolean shouldBeSpawned = isActorSpawnedAtTick(template, tick);
+            handle.setSpawned(shouldBeSpawned);
+            if (!shouldBeSpawned) {
+                if (action != null) {
+                    applyActorTickAction(viewer, template, handle, action, tick, false);
+                }
                 handle.getEntity().setInvisible(true);
-                handle.setSpawned(false);
-                continue;
-            }
-            if (!handle.isSpawned() && tick > 0) {
                 continue;
             }
 
@@ -496,6 +496,9 @@ public class SceneRuntimeEngine {
             liveActorIds.add(actorKey);
             SessionActorHandle handle = handles.get(actorKey);
             if (handle == null || handle.getEntity() == null || !handle.getEntity().isValid()) {
+                if (handle != null) {
+                    handles.remove(actorKey);
+                }
                 Object npc = citizensAdapter.createNpc(template.getEntityType(), template.getDisplayName());
                 if (npc == null) {
                     continue;
@@ -517,6 +520,7 @@ public class SceneRuntimeEngine {
                 entity.setInvulnerable(true);
                 entity.setGravity(false);
                 entity.setInvisible(true);
+                tagPreviewEntity(entity, viewer, actorKey);
                 if (entity instanceof LivingEntity livingEntity) {
                     livingEntity.setAI(false);
                 }
@@ -531,35 +535,28 @@ public class SceneRuntimeEngine {
                 }
                 visibilityController.showEntityToPlayer(entity, viewer);
                 handle = new SessionActorHandle(template.getActorId(), npc, entity);
-                Integer firstSpawnTick = template.getTickActions().values().stream()
-                        .filter(ActorTickAction::isSpawn)
-                        .map(ActorTickAction::getTick)
-                        .min(Integer::compareTo)
-                        .orElse(0);
-                if (firstSpawnTick > 0) {
-                    handle.setSpawned(false);
-                }
+                handle.setSpawned(isActorSpawnedAtTick(template, tick));
                 editorPreviewController.register(viewer, handle);
             }
             clearNameplate(handle.getEntity(), handle.getCitizensNpc());
+            tagPreviewEntity(handle.getEntity(), viewer, actorKey);
+            cleanupDuplicateTaggedPreviewEntities(viewer, actorKey, handle.getEntity());
             ActorTickAction action = template.getTickAction(tick);
-            if (action != null && action.isDespawn()) {
-                handle.getEntity().setInvisible(true);
-                handle.setSpawned(false);
-                applyActorTickAction(viewer, template, handle, action, tick, true);
-                continue;
-            }
-            if (action != null && action.isSpawn()) {
-                if (handle.getLastTransform() != null) {
-                    handle.getEntity().setInvisible(false);
-                    handle.setSpawned(true);
+            boolean shouldBeSpawned = isActorSpawnedAtTick(template, tick);
+            handle.setSpawned(shouldBeSpawned);
+            if (!shouldBeSpawned) {
+                if (action != null) {
+                    applyActorTickAction(viewer, template, handle, action, tick, true);
                 }
-            }
-            if (!handle.isSpawned() && tick > 0) {
+                handle.getEntity().setInvisible(true);
                 continue;
             }
+
             ActorTransformTick transformTick = resolveTransformTick(template, tick);
             Transform transform = transformTick != null ? transformTick.getTransform() : handle.getLastTransform();
+            if (action != null && action.isSpawn() && transform == null) {
+                transform = resolveTransformForPreview(template, tick);
+            }
             if (transform != null) {
                 Location loc = handle.getEntity().getLocation().clone();
                 transform.applyTo(loc);
@@ -567,15 +564,40 @@ public class SceneRuntimeEngine {
                 handle.getEntity().setInvisible(false);
                 applyScale(handle.getEntity(), template.getScale());
                 handle.setLastTransform(transform);
+                handle.setSpawned(true);
                 List<String> executedActions = applyActorTickAction(viewer, template, handle, action, tick, true);
                 maybeLogActorTransform(viewer, template.getActorId(), tick, transform, handle, true, executedActions);
             } else if (action != null) {
                 applyActorTickAction(viewer, template, handle, action, tick, true);
                 handle.getEntity().setInvisible(true);
+                handle.setSpawned(false);
+            } else {
+                handle.getEntity().setInvisible(true);
+                handle.setSpawned(false);
             }
         }
         cleanupStalePreviewActors(viewer, handles, liveActorIds);
         emitDebugPreview(viewer);
+    }
+
+    private boolean shouldActorBeSpawnedAtTick(SceneActorTemplate template, int tick) {
+        if (template == null) {
+            return false;
+        }
+        boolean spawned = template.getTickActions().values().stream()
+                .noneMatch(ActorTickAction::isSpawn);
+        for (ActorTickAction candidate : template.getTickActions().values()) {
+            if (candidate == null || candidate.getTick() > tick) {
+                break;
+            }
+            if (candidate.isSpawn()) {
+                spawned = true;
+            }
+            if (candidate.isDespawn()) {
+                spawned = false;
+            }
+        }
+        return spawned;
     }
 
     private Location resolvePreviewSpawnLocation(Player viewer, SceneActorTemplate template, int tick) {
@@ -601,6 +623,26 @@ public class SceneRuntimeEngine {
             return null;
         }
         return first.getValue().getTransform();
+    }
+
+    private boolean isActorSpawnedAtTick(SceneActorTemplate template, int tick) {
+        if (template == null) {
+            return false;
+        }
+        boolean hasExplicitSpawnAction = template.getTickActions().values().stream().anyMatch(ActorTickAction::isSpawn);
+        boolean spawned = !hasExplicitSpawnAction;
+        for (ActorTickAction action : template.getTickActions().values()) {
+            if (action == null || action.getTick() > tick) {
+                continue;
+            }
+            if (action.isSpawn()) {
+                spawned = true;
+            }
+            if (action.isDespawn()) {
+                spawned = false;
+            }
+        }
+        return spawned;
     }
 
     private void cleanupStalePreviewActors(Player viewer, Map<String, SessionActorHandle> handles, Set<String> liveActorIds) {
@@ -636,8 +678,51 @@ public class SceneRuntimeEngine {
             return;
         }
         editorPreviewController.cleanup(viewer);
+        cleanupTaggedPreviewEntities(viewer, null);
         if (actorDebugEnabled) {
             plugin.getLogger().info("preview.cleanup(" + viewer.getUniqueId() + ") reason=" + reason);
+        }
+    }
+
+    private void tagPreviewEntity(Entity entity, Player viewer, String actorKey) {
+        if (entity == null || viewer == null || actorKey == null || actorKey.isBlank()) {
+            return;
+        }
+        entity.addScoreboardTag(PREVIEW_TAG);
+        entity.addScoreboardTag(PREVIEW_VIEWER_PREFIX + viewer.getUniqueId().toString().replace("-", ""));
+        entity.addScoreboardTag(PREVIEW_ACTOR_PREFIX + actorKey.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private void cleanupDuplicateTaggedPreviewEntities(Player viewer, String actorKey, Entity expectedEntity) {
+        cleanupTaggedPreviewEntities(viewer, actorKey, expectedEntity);
+    }
+
+    private void cleanupTaggedPreviewEntities(Player viewer, String actorKey) {
+        cleanupTaggedPreviewEntities(viewer, actorKey, null);
+    }
+
+    private void cleanupTaggedPreviewEntities(Player viewer, String actorKey, Entity expectedEntity) {
+        if (viewer == null) {
+            return;
+        }
+        String viewerTag = PREVIEW_VIEWER_PREFIX + viewer.getUniqueId().toString().replace("-", "");
+        String actorTag = actorKey == null ? null : PREVIEW_ACTOR_PREFIX + actorKey.toLowerCase(java.util.Locale.ROOT);
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                Set<String> tags = entity.getScoreboardTags();
+                if (!tags.contains(PREVIEW_TAG) || !tags.contains(viewerTag)) {
+                    continue;
+                }
+                if (actorTag != null && !tags.contains(actorTag)) {
+                    continue;
+                }
+                if (expectedEntity != null && entity.getUniqueId().equals(expectedEntity.getUniqueId())) {
+                    continue;
+                }
+                if (entity.isValid()) {
+                    entity.remove();
+                }
+            }
         }
     }
 
@@ -739,6 +824,7 @@ public class SceneRuntimeEngine {
         Location from = cameraRig.getLocation().clone();
         cameraRig.teleport(point);
         session.setLastCameraLocation(from);
+        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
     }
 
     private boolean isPlayerCameraFrame(SceneSession session, int tick) {
@@ -1052,7 +1138,13 @@ public class SceneRuntimeEngine {
                     Text.send(player, "&c" + "Model entry missing modelId; spawn skipped.");
                     return;
                 }
-                Entity base = adapter.spawnModelBase(player, location);
+                Entity base;
+                try {
+                    base = adapter.spawnModelBase(player, location);
+                } catch (IllegalStateException ex) {
+                    plugin.getLogger().warning("Model anchor spawn failed: " + ex.getMessage());
+                    return;
+                }
                 adapter.bindModel(base, modelId);
                 session.registerEntity(base);
                 sessionManager.registerSceneEntity(session, base);
@@ -1096,6 +1188,7 @@ public class SceneRuntimeEngine {
                     if (entity != null) {
                         session.unregisterEntity(entity);
                         sessionManager.unregisterSceneEntity(entity);
+                        adapter.unregisterModelBase(player, entity);
                         entity.remove();
                     }
                 }
