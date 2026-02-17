@@ -25,8 +25,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 public class SceneSessionManager {
     private final ExtraScenesPlugin plugin;
@@ -109,7 +107,6 @@ public class SceneSessionManager {
             player.getInventory().setHelmet(protocolAdapter.createMovementLockedPumpkin());
         }
         applyMovementLock(player);
-        applyPlaybackZoomEffect(player);
 
         player.setGameMode(GameMode.SPECTATOR);
         protocolAdapter.applySpectatorCamera(player, rig);
@@ -322,7 +319,6 @@ public class SceneSessionManager {
         protocolAdapter.clearSpectatorCamera(player);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
-        clearPlaybackZoomEffect(player);
         player.getInventory().setHelmet(session.getOriginalHelmet());
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
         player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
@@ -565,18 +561,6 @@ public class SceneSessionManager {
                 ? Math.max(1, points.stream().mapToInt(CameraKeyframe::getTimeTicks).max().orElse(0) + 1)
                 : scene.getDurationTicks();
         return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments);
-    }
-
-    private void applyPlaybackZoomEffect(Player player) {
-        PotionEffectType type = PotionEffectType.SLOWNESS;
-        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 4, false, false, true);
-        player.addPotionEffect(effect);
-        plugin.getLogger().info("[scene-zoom] applied slowness zoom effect to " + player.getName()
-                + " amplifier=" + effect.getAmplifier());
-    }
-
-    private void clearPlaybackZoomEffect(Player player) {
-        player.removePotionEffect(PotionEffectType.SLOWNESS);
     }
 
     private void applyMovementLock(Player player) {

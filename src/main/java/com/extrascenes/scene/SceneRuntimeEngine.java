@@ -836,6 +836,15 @@ public class SceneRuntimeEngine {
         return timeline.get(frameIndex).isPlayerCamera();
     }
 
+    private boolean isPlayerCameraFrame(SceneSession session, int tick) {
+        List<CutsceneFrame> timeline = session.getCameraTimeline();
+        if (timeline.isEmpty()) {
+            return false;
+        }
+        int frameIndex = Math.min(Math.max(0, tick), timeline.size() - 1);
+        return timeline.get(frameIndex).isPlayerCamera();
+    }
+
     private void clampCameraDelta(Location from, Location to, SceneSession session, int tick) {
         if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
                 || !from.getWorld().equals(to.getWorld())) {
