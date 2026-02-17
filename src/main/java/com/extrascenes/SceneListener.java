@@ -80,6 +80,16 @@ public class SceneListener implements Listener {
         editorEngine.getPlugin().getRuntimeEngine().previewCleanup(event.getPlayer(), "player_kick");
         sessionManager.markRestorePending(event.getPlayer().getUniqueId());
         sessionManager.abortSession(event.getPlayer().getUniqueId(), "player_kick");
+        if (editorSessionManager != null) {
+            EditorSession editorSession = editorSessionManager.getSession(event.getPlayer().getUniqueId());
+            if (editorSession != null && editorEngine.hasArmedPlacement(editorSession)) {
+                editorEngine.cancelPlacementSilent(event.getPlayer(), editorSession);
+            }
+            editorSessionManager.removeSession(event.getPlayer().getUniqueId());
+        }
+        if (inputManager != null) {
+            inputManager.clearPrompt(event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler
