@@ -5,19 +5,25 @@ import java.util.Collections;
 import java.util.List;
 
 public class CutscenePath {
+    private final int durationTicks;
     private final double stepResolution;
     private final SmoothingMode defaultSmoothing;
     private final List<CameraKeyframe> points;
     private final List<IntRange> playerSegments;
 
-    public CutscenePath(double stepResolution, SmoothingMode defaultSmoothing,
+    public CutscenePath(int durationTicks, double stepResolution, SmoothingMode defaultSmoothing,
                         List<CameraKeyframe> points, List<IntRange> playerSegments) {
+        this.durationTicks = Math.max(1, durationTicks);
         this.stepResolution = stepResolution <= 0.0D ? 0.35D : stepResolution;
         this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.SMOOTH : defaultSmoothing;
         this.points = points == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(points));
         this.playerSegments = playerSegments == null
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(playerSegments));
+    }
+
+    public int getDurationTicks() {
+        return durationTicks;
     }
 
     public double getStepResolution() {

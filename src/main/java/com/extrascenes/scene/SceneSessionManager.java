@@ -561,12 +561,15 @@ public class SceneSessionManager {
                 }
             }
         }
-        return new CutscenePath(stepResolution, scene.getDefaultSmoothing(), points, segments);
+        int durationTicks = scene.getDurationTicks() <= 0
+                ? Math.max(1, points.stream().mapToInt(CameraKeyframe::getTimeTicks).max().orElse(0) + 1)
+                : scene.getDurationTicks();
+        return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments);
     }
 
     private void applyPlaybackZoomEffect(Player player) {
         PotionEffectType type = PotionEffectType.SLOWNESS;
-        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 4, false, false, false);
+        PotionEffect effect = new PotionEffect(type, Integer.MAX_VALUE, 4, false, false, true);
         player.addPotionEffect(effect);
         plugin.getLogger().info("[scene-zoom] applied slowness zoom effect to " + player.getName()
                 + " amplifier=" + effect.getAmplifier());

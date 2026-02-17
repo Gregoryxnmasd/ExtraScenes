@@ -132,6 +132,7 @@ public class SceneRuntimeEngine {
 
         updateCameraRigTransform(player, session, time);
         ensureSpectatorTarget(player, session);
+        ensureZoomSlowness(player, time);
         tickSessionActors(player, session, time);
         maybeLogDebugCamera(player, session, time);
         handleKeyframes(player, session, time, duration);
@@ -846,6 +847,19 @@ public class SceneRuntimeEngine {
                     "[camera-clamp] session=%s tick=%d delta=%.3f clampedTo=%.3f",
                     session.getSessionId(), tick, distance, MAX_CAMERA_STEP_DISTANCE));
         }
+    }
+
+    private void ensureZoomSlowness(Player player, int tick) {
+        if (tick % 20 != 0) {
+            return;
+        }
+        org.bukkit.potion.PotionEffectType type = org.bukkit.potion.PotionEffectType.SLOWNESS;
+        org.bukkit.potion.PotionEffect current = player.getPotionEffect(type);
+        if (current != null && current.getAmplifier() >= 4 && current.isInfinite()) {
+            return;
+        }
+        player.addPotionEffect(new org.bukkit.potion.PotionEffect(type, Integer.MAX_VALUE, 4,
+                false, false, true));
     }
 
     private Transform interpolateCamera(Player player, SceneSession session, List<CameraKeyframe> keyframes, int timeTicks) {
