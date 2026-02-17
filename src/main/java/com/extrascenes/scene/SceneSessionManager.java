@@ -275,7 +275,14 @@ public class SceneSessionManager {
         try {
             rig = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
         } catch (Throwable ignored) {
-            // Fallback below for legacy compatibility.
+            // Legacy fallback below.
+        }
+        if (rig == null) {
+            try {
+                rig = location.getWorld().spawnEntity(location, EntityType.AREA_EFFECT_CLOUD);
+            } catch (Throwable ignored) {
+                // Legacy fallback below.
+            }
         }
         if (rig == null) {
             rig = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);

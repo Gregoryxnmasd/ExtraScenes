@@ -43,14 +43,35 @@ public class SceneModelTrackAdapter {
     }
 
     public Entity spawnModelBase(Player owner, Location location) {
-        ArmorStand base = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
-        base.setAI(false);
+        Entity base;
+        try {
+            base = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
+        } catch (Throwable ignored) {
+            base = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+        }
+        if (base == null || !base.isValid()) {
+            return null;
+        }
         base.setSilent(true);
         base.setInvulnerable(true);
         base.setGravity(false);
-        base.setInvisible(true);
-        base.setMarker(true);
+        base.setVisibleByDefault(false);
+        base.addScoreboardTag("extrascenes_model_anchor");
+        if (base instanceof org.bukkit.entity.Interaction interaction) {
+            interaction.setResponsive(false);
+            interaction.setInteractionHeight(0.02F);
+            interaction.setInteractionWidth(0.02F);
+        }
+        if (base instanceof ArmorStand armorStand) {
+            armorStand.setAI(false);
+            armorStand.setInvisible(true);
+            armorStand.setMarker(true);
+            armorStand.setCollidable(false);
+            armorStand.setSmall(true);
+            armorStand.setBasePlate(false);
+        }
         visibilityController.hideEntityFromAllExcept(base, owner);
+        visibilityController.showEntityToPlayer(base, owner);
         return base;
     }
 
