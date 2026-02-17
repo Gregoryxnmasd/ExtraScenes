@@ -53,6 +53,7 @@ public class SceneSession {
     private CutscenePath cutscenePath;
     private int lastAppliedSegmentIndex = -1;
     private final Set<Integer> executedSegmentCommands = new LinkedHashSet<>();
+    private boolean playerCameraActive;
 
     public SceneSession(Player player, Scene scene, boolean preview) {
         this(player, scene, preview, 0, scene.getDurationTicks() <= 0 ? Integer.MAX_VALUE : scene.getDurationTicks());
@@ -403,5 +404,13 @@ public class SceneSession {
 
     public void resetSegmentCommandExecution() {
         executedSegmentCommands.clear();
+    }
+
+    public boolean isPlayerCameraActive() {
+        return playerCameraActive;
+    }
+
+    public void setPlayerCameraActive(boolean playerCameraActive) {
+        this.playerCameraActive = playerCameraActive;
     }
 }

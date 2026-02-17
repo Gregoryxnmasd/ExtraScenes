@@ -109,11 +109,10 @@ public class SceneSessionManager {
         session.setRestorePending(false);
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
-        if (isFakeEquipEnabled()) {
-            double fakeHelmetMovementSpeed = getFakeHelmetMovementSpeed();
-            protocolAdapter.sendFakeHelmet(player,
-                    protocolAdapter.createMovementLockedPumpkin(fakeHelmetMovementSpeed),
-                    fakeHelmetMovementSpeed);
+        if (plugin.getConfig().getBoolean("camera.fake-equip", true)) {
+            ItemStack cinematicHelmet = protocolAdapter.createMovementLockedPumpkin();
+            player.getInventory().setHelmet(cinematicHelmet);
+            protocolAdapter.sendFakeHelmet(player, cinematicHelmet);
         }
         applyCinematicZoom(player);
         applyMovementLock(player);
@@ -121,6 +120,7 @@ public class SceneSessionManager {
 
         player.setGameMode(GameMode.SPECTATOR);
         protocolAdapter.applySpectatorCamera(player, rig);
+        session.setPlayerCameraActive(false);
         startSpectatorHandshake(session, player.getUniqueId(), rig.getUniqueId());
 
         plugin.getRuntimeEngine().startSession(session);
@@ -328,8 +328,10 @@ public class SceneSessionManager {
 
     private void restorePlayerState(Player player, SceneSession session) {
         protocolAdapter.clearSpectatorCamera(player);
+        session.setPlayerCameraActive(false);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
+        player.getInventory().setHelmet(session.getOriginalHelmet());
         protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
         player.getInventory().setArmorContents(session.getSnapshot().getArmorContents());
