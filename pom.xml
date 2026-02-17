@@ -54,21 +54,9 @@
             <systemPath>${project.basedir}/libs/ProtocolLib-6.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>me.clip</groupId>
-            <artifactId>placeholderapi</artifactId>
-            <version>2.11.6</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.ticxo.modelengine</groupId>
-            <artifactId>ModelEngine</artifactId>
-            <version>R4.0.9</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

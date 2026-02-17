@@ -1,138 +1,43 @@
 package com.extrascenes;
 
-import com.extrascenes.command.SceneCommandExecutor;
-import com.extrascenes.scene.EditorChatListener;
-import com.extrascenes.scene.ActorRecordingService;
-import com.extrascenes.scene.EditorSessionManager;
-import com.extrascenes.scene.SceneEditorEngine;
-import com.extrascenes.scene.SceneEditorListener;
-import com.extrascenes.scene.SceneManager;
-import com.extrascenes.scene.SceneRuntimeEngine;
-import com.extrascenes.scene.SkinLibrary;
-import com.extrascenes.scene.SceneSessionManager;
-import com.extrascenes.scene.CutscenePathRegistry;
-import com.extrascenes.visibility.SceneVisibilityController;
-import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.plugin.Plugin;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.extrascenes.command.SceneCommand;
+import com.extrascenes.core.Scene;
+import com.extrascenes.gui.GuiListener;
+import com.extrascenes.runtime.ActorController;
+import com.extrascenes.runtime.CameraRigController;
+import com.extrascenes.runtime.CutsceneRuntime;
+import com.extrascenes.runtime.ZoomController;
+import com.extrascenes.storage.SceneStorage;
+
 public class ExtraScenesPlugin extends JavaPlugin {
-    private SceneManager sceneManager;
-    private SceneSessionManager sessionManager;
-    private SceneRuntimeEngine runtimeEngine;
-    private SceneVisibilityController visibilityController;
-    private SceneProtocolAdapter protocolAdapter;
-    private SceneModelTrackAdapter modelTrackAdapter;
-    private CitizensAdapter citizensAdapter;
-    private EditorSessionManager editorSessionManager;
-    private SceneEditorEngine editorEngine;
-    private ActorRecordingService actorRecordingService;
-    private SkinLibrary skinLibrary;
-    private CutscenePathRegistry cutscenePathRegistry;
+    private SceneStorage storage;
+    private final Map<String, Scene> scenes = new HashMap<>();
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        storage = new SceneStorage(getDataFolder().toPath());
+        scenes.clear();
+        scenes.putAll(storage.load());
 
-        this.protocolAdapter = new SceneProtocolAdapter(this);
-        this.citizensAdapter = new CitizensAdapter(this);
-        this.visibilityController = new SceneVisibilityController(this);
-        this.sceneManager = new SceneManager(this);
-        this.actorRecordingService = new ActorRecordingService(this);
-        this.skinLibrary = new SkinLibrary(getDataFolder());
-        this.editorSessionManager = new EditorSessionManager();
-        this.editorEngine = new SceneEditorEngine(this, sceneManager, editorSessionManager);
-        this.cutscenePathRegistry = new CutscenePathRegistry(this);
-        this.cutscenePathRegistry.reload();
-        this.sessionManager = new SceneSessionManager(this, visibilityController, protocolAdapter);
-        this.runtimeEngine = new SceneRuntimeEngine(this, sessionManager, visibilityController, protocolAdapter);
-        this.modelTrackAdapter = new SceneModelTrackAdapter(this, visibilityController);
-        Plugin modelEngine = Bukkit.getPluginManager().getPlugin("ModelEngine");
-        boolean modelEngineDetected = modelEngine != null && modelEngine.isEnabled();
-        getLogger().info("ModelEngine detected " + (modelEngineDetected ? "YES" : "NO"));
+        CameraRigController cameraRigController = new CameraRigController(this);
+        ZoomController zoomController = new ZoomController(this);
+        ActorController actorController = new ActorController(this);
+        CutsceneRuntime runtime = new CutsceneRuntime(this, cameraRigController, zoomController, actorController);
+        new GuiListener(this, runtime);
 
-        Bukkit.getPluginManager().registerEvents(new SceneListener(sessionManager, visibilityController,
-                editorSessionManager, editorEngine.getInputManager(), editorEngine, actorRecordingService), this);
-        Bukkit.getPluginManager().registerEvents(new SceneEditorListener(editorEngine, editorSessionManager), this);
-        Bukkit.getPluginManager().registerEvents(new EditorChatListener(this, editorEngine.getInputManager(), editorEngine), this);
-
-        PluginCommand command = getCommand("scene");
-        if (command != null) {
-            SceneCommandExecutor commandExecutor = new SceneCommandExecutor(this, sceneManager, sessionManager, editorEngine);
-            command.setExecutor(commandExecutor);
-            command.setTabCompleter(commandExecutor);
-        }
-
-        runtimeEngine.start();
-
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            new ScenePlaceholderExpansion(this, sessionManager).register();
-        }
+        SceneCommand sceneCommand = new SceneCommand(scenes, storage, runtime);
+        getCommand("scene").setExecutor(sceneCommand);
+        getLogger().info("ExtraScenes core mode enabled.");
     }
 
     @Override
     public void onDisable() {
-        if (actorRecordingService != null) {
-            actorRecordingService.stopAll(true);
-        }
-        if (runtimeEngine != null) {
-            runtimeEngine.stop();
-        }
-        if (sessionManager != null) {
-            sessionManager.stopAll("plugin_disable");
-        }
-        if (sceneManager != null) {
-            sceneManager.saveAllDirty();
-        }
-        if (editorSessionManager != null) {
-            editorSessionManager.clear();
-        }
-    }
-
-    public SceneManager getSceneManager() {
-        return sceneManager;
-    }
-
-    public SceneSessionManager getSessionManager() {
-        return sessionManager;
-    }
-
-    public SceneProtocolAdapter getProtocolAdapter() {
-        return protocolAdapter;
-    }
-
-    public SceneModelTrackAdapter getModelTrackAdapter() {
-        return modelTrackAdapter;
-    }
-
-
-    public CitizensAdapter getCitizensAdapter() {
-        return citizensAdapter;
-    }
-
-
-    public ActorRecordingService getActorRecordingService() {
-        return actorRecordingService;
-    }
-
-    public SceneEditorEngine getEditorEngine() {
-        return editorEngine;
-    }
-
-    public SceneRuntimeEngine getRuntimeEngine() {
-        return runtimeEngine;
-    }
-
-    public SceneVisibilityController getVisibilityController() {
-        return visibilityController;
-    }
-
-    public SkinLibrary getSkinLibrary() {
-        return skinLibrary;
-    }
-
-    public CutscenePathRegistry getCutscenePathRegistry() {
-        return cutscenePathRegistry;
+        storage.save(scenes);
     }
 }
