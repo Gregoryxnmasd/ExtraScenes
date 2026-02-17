@@ -21,6 +21,9 @@ camera:
   player-segments: ""
   start-commands: []
   segment-commands: {}
+  zoom:
+    enabled: true
+    slowness-level: 6
 locks:
   movement: true
   hud: true
