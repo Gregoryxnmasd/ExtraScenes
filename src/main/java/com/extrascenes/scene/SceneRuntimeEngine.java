@@ -776,10 +776,9 @@ public class SceneRuntimeEngine {
         if (player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             player.setGameMode(org.bukkit.GameMode.SPECTATOR);
         }
-        if (session.isPlayerCameraActive()) {
-            if (player.getSpectatorTarget() != null) {
-                protocolAdapter.clearSpectatorCamera(player);
-            }
+        CutsceneFrame frame = getCameraFrameAtTick(session, session.getTimeTicks());
+        if (frame != null && frame.isPlayerCamera()) {
+            player.setSpectatorTarget(null);
             return;
         }
         Entity cameraRig = getCameraRig(session, player);
@@ -804,24 +803,15 @@ public class SceneRuntimeEngine {
         if (frame == null || frame.getLocation() == null) {
             return;
         }
-        applyFrameLocation(player, session, frame);
-        session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
-    }
-
-    private void applyFrameLocation(Player player, SceneSession session, CutsceneFrame frame) {
-        Location point = frame.getLocation().clone();
-        point.setWorld(player.getWorld());
         if (frame.isPlayerCamera()) {
-            protocolAdapter.clearSpectatorCamera(player);
-            if (player.getLocation().distanceSquared(point) > 0.0001D) {
-                player.teleport(point);
-            } else {
-                player.setRotation(point.getYaw(), point.getPitch());
-            }
-            session.setPlayerCameraActive(true);
+            Location playerPoint = frame.getLocation().clone();
+            playerPoint.setWorld(player.getWorld());
+            player.teleport(playerPoint);
+            player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS, 6, 0, false, false, false), true);
+            session.setLastAppliedSegmentIndex(frame.getSegmentIndex());
             return;
         }
-
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS);
         Entity cameraRig = getCameraRig(session, player);
         if (cameraRig == null) {
             sessionManager.abortSession(session.getPlayerId(), "camera_rig_missing");

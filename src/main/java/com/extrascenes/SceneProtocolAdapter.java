@@ -56,14 +56,14 @@ public class SceneProtocolAdapter {
         player.setSpectatorTarget(null);
     }
 
-    public void sendFakeHelmet(Player player, ItemStack itemStack, double movementSpeedAmount) {
-        ensurePumpkinMovementModifier(itemStack, movementSpeedAmount);
+    public void sendFakeHelmet(Player player, ItemStack itemStack) {
+        ensurePumpkinMovementLock(itemStack, -10.0D);
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    public ItemStack createMovementLockedPumpkin(double movementSpeedAmount) {
+    public ItemStack createMovementLockedPumpkin(double amount) {
         ItemStack itemStack = new ItemStack(Material.CARVED_PUMPKIN);
-        ensurePumpkinMovementModifier(itemStack, movementSpeedAmount);
+        ensurePumpkinMovementLock(itemStack, amount);
         return itemStack;
     }
 
@@ -71,7 +71,7 @@ public class SceneProtocolAdapter {
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, itemStack);
     }
 
-    private void ensurePumpkinMovementModifier(ItemStack itemStack, double movementSpeedAmount) {
+    private void ensurePumpkinMovementLock(ItemStack itemStack, double amount) {
         if (itemStack == null || itemStack.getType() != Material.CARVED_PUMPKIN) {
             return;
         }
@@ -90,7 +90,7 @@ public class SceneProtocolAdapter {
                 if (!AttributeModifiers.hasKey(modifier, cutsceneSpeedLockKey)) {
                     continue;
                 }
-                if (modifier.getAmount() == movementSpeedAmount
+                if (modifier.getAmount() == amount
                         && modifier.getOperation() == AttributeModifier.Operation.ADD_NUMBER
                         && modifier.getSlotGroup() == EquipmentSlotGroup.HEAD) {
                     hasCorrectModifier = true;
@@ -102,7 +102,7 @@ public class SceneProtocolAdapter {
         if (!hasCorrectModifier) {
             AttributeModifier modifier = AttributeModifiers.newModifier(
                     cutsceneSpeedLockKey,
-                    movementSpeedAmount,
+                    amount,
                     AttributeModifier.Operation.ADD_NUMBER,
                     EquipmentSlot.HEAD.getGroup()
             );

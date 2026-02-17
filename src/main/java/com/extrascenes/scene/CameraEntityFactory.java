@@ -12,7 +12,8 @@ public final class CameraEntityFactory {
     }
 
     public static Entity spawn(ExtraScenesPlugin plugin, Location location) {
-        String type = plugin.getConfig().getString("camera.entity-type", "armor_stand").toLowerCase(java.util.Locale.ROOT);
+        String type = plugin.getConfig().getString("camera.camera-entity",
+                plugin.getConfig().getString("camera.entity-type", "armor_stand")).toLowerCase(java.util.Locale.ROOT);
         Entity entity = switch (type) {
             case "item_display" -> location.getWorld().spawnEntity(location, EntityType.ITEM_DISPLAY);
             case "text_display" -> location.getWorld().spawnEntity(location, EntityType.TEXT_DISPLAY);

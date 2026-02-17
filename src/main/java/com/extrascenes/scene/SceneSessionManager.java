@@ -110,9 +110,8 @@ public class SceneSessionManager {
         ItemStack originalHelmet = session.getSnapshot().getHelmet();
         session.setOriginalHelmet(originalHelmet == null ? null : originalHelmet.clone());
         if (plugin.getConfig().getBoolean("camera.fake-equip", true)) {
-            ItemStack cinematicHelmet = protocolAdapter.createMovementLockedPumpkin();
-            player.getInventory().setHelmet(cinematicHelmet);
-            protocolAdapter.sendFakeHelmet(player, cinematicHelmet);
+            double speed = plugin.getConfig().getDouble("camera.fake-helmet-movement-speed", 10.0D);
+            protocolAdapter.sendFakeHelmet(player, protocolAdapter.createMovementLockedPumpkin(speed));
         }
         applyCinematicZoom(player);
         applyMovementLock(player);
@@ -331,6 +330,7 @@ public class SceneSessionManager {
         session.setPlayerCameraActive(false);
         player.setGameMode(session.getSnapshot().getGameMode());
         removeMovementLock(player);
+        protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setHelmet(session.getOriginalHelmet());
         protocolAdapter.sendFakeEquipmentRestore(player, session.getOriginalHelmet());
         player.getInventory().setContents(session.getSnapshot().getInventoryContents());
@@ -598,8 +598,14 @@ public class SceneSessionManager {
                 }
             }
         }
+        java.util.Set<Integer> directPoints = new java.util.LinkedHashSet<>();
+        org.bukkit.Particle particle = org.bukkit.Particle.END_ROD;
+        CutscenePath stored = plugin.getCutscenePathRegistry() == null ? null : plugin.getCutscenePathRegistry().getPath(scene.getName());
+        if (stored != null) {
+            return stored;
+        }
         return new CutscenePath(durationTicks, stepResolution, scene.getDefaultSmoothing(), points, segments,
-                startCommands, segmentCommands);
+                directPoints, startCommands, segmentCommands, particle);
     }
 
 
