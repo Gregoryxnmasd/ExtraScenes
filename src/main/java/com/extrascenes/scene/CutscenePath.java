@@ -2,7 +2,9 @@ package com.extrascenes.scene;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CutscenePath {
     private final int durationTicks;
@@ -10,9 +12,13 @@ public class CutscenePath {
     private final SmoothingMode defaultSmoothing;
     private final List<CameraKeyframe> points;
     private final List<IntRange> playerSegments;
+    private final List<String> startCommands;
+    private final Map<Integer, List<String>> segmentCommands;
 
     public CutscenePath(int durationTicks, double stepResolution, SmoothingMode defaultSmoothing,
-                        List<CameraKeyframe> points, List<IntRange> playerSegments) {
+                        List<CameraKeyframe> points, List<IntRange> playerSegments,
+                        List<String> startCommands,
+                        Map<Integer, List<String>> segmentCommands) {
         this.durationTicks = Math.max(1, durationTicks);
         this.stepResolution = stepResolution <= 0.0D ? 0.35D : stepResolution;
         this.defaultSmoothing = defaultSmoothing == null ? SmoothingMode.SMOOTH : defaultSmoothing;
@@ -20,6 +26,21 @@ public class CutscenePath {
         this.playerSegments = playerSegments == null
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(playerSegments));
+        this.startCommands = startCommands == null
+                ? Collections.emptyList()
+                : Collections.unmodifiableList(new ArrayList<>(startCommands));
+        if (segmentCommands == null || segmentCommands.isEmpty()) {
+            this.segmentCommands = Collections.emptyMap();
+        } else {
+            Map<Integer, List<String>> copy = new LinkedHashMap<>();
+            for (Map.Entry<Integer, List<String>> entry : segmentCommands.entrySet()) {
+                if (entry == null || entry.getKey() == null || entry.getValue() == null) {
+                    continue;
+                }
+                copy.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
+            }
+            this.segmentCommands = Collections.unmodifiableMap(copy);
+        }
     }
 
     public int getDurationTicks() {
@@ -45,6 +66,14 @@ public class CutscenePath {
             }
         }
         return false;
+    }
+
+    public List<String> getStartCommands() {
+        return startCommands;
+    }
+
+    public List<String> getSegmentCommands(int segmentIndex) {
+        return segmentCommands.getOrDefault(segmentIndex, Collections.emptyList());
     }
 
     public record IntRange(int startInclusive, int endInclusive) {
