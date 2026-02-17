@@ -12,3 +12,13 @@ chunks:
   preloadRadius: 3
 commands:
   allowGlobalDefault: false
+camera:
+  entity-type: armor_stand
+  armorstand-invisible: true
+  hide-others: true
+  fake-equip: true
+  step-resolution: 0.35
+  player-segments: ""
+locks:
+  movement: true
+  hud: true
