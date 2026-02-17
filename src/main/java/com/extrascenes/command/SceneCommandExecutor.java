@@ -795,6 +795,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             return;
         }
 
+        int optionalLimit = args.length - 1;
         Integer fromTick = null;
         Integer toTick = null;
         if (optionalLimit >= 6) {
