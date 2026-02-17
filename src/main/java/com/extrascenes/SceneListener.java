@@ -169,7 +169,18 @@ public class SceneListener implements Listener {
         if (event.getFrom().getX() != event.getTo().getX()
                 || event.getFrom().getY() != event.getTo().getY()
                 || event.getFrom().getZ() != event.getTo().getZ()) {
-            event.setTo(event.getFrom());
+            org.bukkit.Location locked = event.getFrom().clone();
+            locked.setYaw(event.getFrom().getYaw());
+            locked.setPitch(event.getFrom().getPitch());
+            event.setTo(locked);
+            return;
+        }
+        if (event.getFrom().getYaw() != event.getTo().getYaw()
+                || event.getFrom().getPitch() != event.getTo().getPitch()) {
+            org.bukkit.Location locked = event.getTo().clone();
+            locked.setYaw(event.getFrom().getYaw());
+            locked.setPitch(event.getFrom().getPitch());
+            event.setTo(locked);
         }
     }
 
