@@ -25,6 +25,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -274,7 +275,14 @@ public class SceneSessionManager {
         try {
             rig = location.getWorld().spawnEntity(location, EntityType.INTERACTION);
         } catch (Throwable ignored) {
-            // Fallback below for legacy compatibility.
+            // Legacy fallback below.
+        }
+        if (rig == null) {
+            try {
+                rig = location.getWorld().spawnEntity(location, EntityType.AREA_EFFECT_CLOUD);
+            } catch (Throwable ignored) {
+                // Legacy fallback below.
+            }
         }
         if (rig == null) {
             rig = location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
@@ -282,26 +290,38 @@ public class SceneSessionManager {
         if (rig == null || !rig.isValid()) {
             return null;
         }
+        configureCameraRigBase(rig);
+        if (rig instanceof Interaction interaction) {
+            interaction.setResponsive(false);
+            interaction.setInteractionHeight(0.0001F);
+            interaction.setInteractionWidth(0.0001F);
+            return interaction;
+        }
+        if (rig instanceof ArmorStand armorStand) {
+            configureArmorStandRig(armorStand);
+            return armorStand;
+        }
+        return rig;
+    }
+
+    private void configureCameraRigBase(Entity rig) {
         rig.setSilent(true);
         rig.setInvulnerable(true);
         rig.setGravity(false);
         rig.setPersistent(false);
         rig.setVisibleByDefault(false);
-        if (rig instanceof Interaction interaction) {
-            interaction.setResponsive(false);
-            interaction.setInteractionHeight(0.1F);
-            interaction.setInteractionWidth(0.1F);
-            return interaction;
-        }
-        if (rig instanceof org.bukkit.entity.ArmorStand armorStand) {
-            armorStand.setInvisible(true);
-            armorStand.setMarker(false);
-            armorStand.setCollidable(false);
-            armorStand.setSmall(true);
-            armorStand.setBasePlate(false);
-            return armorStand;
-        }
-        return rig;
+        rig.setCustomName(null);
+        rig.setCustomNameVisible(false);
+    }
+
+    private void configureArmorStandRig(ArmorStand armorStand) {
+        armorStand.setInvisible(true);
+        armorStand.setMarker(true);
+        armorStand.setSmall(true);
+        armorStand.setBasePlate(false);
+        armorStand.setArms(false);
+        armorStand.setCanMove(false);
+        armorStand.setCanTick(false);
     }
 
     public void reapplyVisibility(Player player) {

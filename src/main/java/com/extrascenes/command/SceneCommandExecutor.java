@@ -120,7 +120,7 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
         Text.send(sender, "&b" + "/scene actor scale <scene> <actorId> <value|snap>");
         Text.send(sender, "&b" + "/scene actor record start <scene> <actorId> [tick|start:20] [duration:10s|200t] [preview:on|off]");
         Text.send(sender, "&b" + "/scene actor record stop");
-        Text.send(sender, "&b" + "/scene actor record delete <scene> <actorId> confirm");
+        Text.send(sender, "&b" + "/scene actor record delete <scene> <actorId> [confirm]");
         Text.send(sender, "&b" + "/scene selftest <name>");
     }
 
@@ -798,8 +798,8 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
 
 
     private void handleActorRecordDelete(CommandSender sender, String[] args) {
-        if (args.length < 6 || !"confirm".equalsIgnoreCase(args[5])) {
-            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> confirm");
+        if (args.length < 5) {
+            Text.send(sender, "&e" + "Usage: /scene actor record delete <scene> <actorId> [confirm]");
             return;
         }
         Scene scene = sceneManager.loadScene(args[3].toLowerCase(Locale.ROOT));
@@ -812,16 +812,55 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
             Text.send(sender, "&c" + "Actor not found.");
             return;
         }
-        int removedTicks = template.getTransformTicks().size();
+        Integer fromTick = null;
+        Integer toTick = null;
+        if (args.length >= 7) {
+            fromTick = parsePositiveInt(args[5]);
+            if (fromTick == null) {
+                Text.send(sender, "&c" + "Invalid fromTick value.");
+                return;
+            }
+        }
+        if (args.length >= 8) {
+            toTick = parsePositiveInt(args[6]);
+            if (toTick == null) {
+                Text.send(sender, "&c" + "Invalid toTick value.");
+                return;
+            }
+        }
+        if (fromTick != null && toTick != null && toTick < fromTick) {
+            int swap = fromTick;
+            fromTick = toTick;
+            toTick = swap;
+        }
+
+        int removedTicks;
+        if (fromTick == null) {
+            removedTicks = template.getTransformTicks().size();
+            template.getTransformTicks().clear();
+        } else {
+            final int start = fromTick;
+            final int end = toTick == null ? fromTick : toTick;
+            removedTicks = (int) template.getTransformTicks().keySet().stream()
+                    .filter(tick -> tick >= start && tick <= end)
+                    .count();
+            template.getTransformTicks().keySet().removeIf(tick -> tick >= start && tick <= end);
+        }
+
         if (removedTicks == 0) {
-            Text.send(sender, "&e" + "This actor has no recorded transform ticks.");
+            Text.send(sender, "&e" + "No recorded transform ticks matched the requested range.");
             return;
         }
-        template.getTransformTicks().clear();
         scene.setDirty(true);
         try {
             sceneManager.saveScene(scene);
-            Text.send(sender, "&a" + "Deleted " + removedTicks + " recorded tick(s) from actor " + template.getActorId() + ".");
+            if (fromTick == null) {
+                Text.send(sender, "&a" + "Deleted " + removedTicks + " recorded tick(s) from actor " + template.getActorId() + ".");
+            } else {
+                int effectiveEnd = toTick == null ? fromTick : toTick;
+                Text.send(sender, "&a" + "Deleted " + removedTicks + " recorded tick(s) from actor " + template.getActorId()
+                        + " in range " + fromTick + "-" + effectiveEnd + ".");
+            }
         } catch (Exception ex) {
             Text.send(sender, "&c" + "Failed to save scene.");
         }
@@ -953,7 +992,13 @@ public class SceneCommandExecutor implements CommandExecutor, TabCompleter {
                 }
             }
             if (args.length == 6 && "record".equalsIgnoreCase(args[1]) && "delete".equalsIgnoreCase(args[2])) {
-                return filterPrefix(List.of("confirm"), args[5]);
+                return filterPrefix(List.of("confirm", "1", "20", "100"), args[5]);
+            }
+            if (args.length == 7 && "record".equalsIgnoreCase(args[1]) && "delete".equalsIgnoreCase(args[2])) {
+                return filterPrefix(List.of("confirm", "20", "100", "200"), args[6]);
+            }
+            if (args.length == 8 && "record".equalsIgnoreCase(args[1]) && "delete".equalsIgnoreCase(args[2])) {
+                return filterPrefix(List.of("confirm"), args[7]);
             }
             if (args.length >= 6 && "record".equalsIgnoreCase(args[1]) && "start".equalsIgnoreCase(args[2])) {
                 return filterPrefix(List.of("1", "20", "start:20", "duration:10s", "duration:200t", "preview:on", "preview:off"), args[args.length - 1]);
